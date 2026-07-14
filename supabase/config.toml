@@ -87,3 +87,15 @@ verify_jwt = false
 
 [functions.notifications-send]
 verify_jwt = false
+
+[functions.flag-late-payments]
+verify_jwt = false
+
+[functions.contact-admin]
+verify_jwt = false
+
+[functions.admin-contacts]
+verify_jwt = false
+
+[functions.member-receipts]
+verify_jwt = false

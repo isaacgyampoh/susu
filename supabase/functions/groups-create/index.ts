@@ -14,32 +14,33 @@ Deno.serve(async (req) => {
   const id     = url.searchParams.get('id')
 
   try {
-    // POST — create a new group
     if (method === 'POST') {
       const body = await req.json()
       const {
         name, description, contribution_amount, contribution_frequency,
-        cycle_days, max_members, registration_fee, rules, start_date,
+        cycle_days, max_members, registration_fee, cashout_amount,
+        payment_deadline, penalty_per_late_day, rules, admin_notes,
       } = body
 
-      if (!name || !contribution_amount || !max_members) {
-        return error('name, contribution_amount, and max_members are required')
+      if (!name || !contribution_amount || !max_members || !cycle_days) {
+        return error('name, contribution_amount, max_members, cycle_days are required')
       }
 
       const { data: group, error: dbErr } = await supabaseAdmin
         .from('susu_groups')
         .insert({
-          name,
-          description,
-          contribution_amount: parseFloat(contribution_amount),
+          name, description,
+          contribution_amount:   parseFloat(contribution_amount),
           contribution_frequency: contribution_frequency ?? 'daily',
-          cycle_days:       parseInt(cycle_days ?? max_members),
-          max_members:      parseInt(max_members),
-          registration_fee: parseFloat(registration_fee ?? 0),
-          rules,
-          start_date:       start_date ?? null,
-          status:           'open',
-          created_by:       admin.sub,
+          cycle_days:            parseInt(cycle_days),
+          max_members:           parseInt(max_members),
+          registration_fee:      parseFloat(registration_fee ?? 0),
+          cashout_amount:        cashout_amount ? parseFloat(cashout_amount) : null,
+          payment_deadline:      payment_deadline ?? '18:00:00',
+          penalty_per_late_day:  parseFloat(penalty_per_late_day ?? 0),
+          rules, admin_notes,
+          status:                'open',
+          created_by:            admin.sub,
         })
         .select()
         .single()
@@ -48,33 +49,24 @@ Deno.serve(async (req) => {
       return json({ group }, 201)
     }
 
-    // PATCH ?id=xxx — update group details
     if (method === 'PATCH' && id) {
       const body = await req.json()
       const { data: group, error: dbErr } = await supabaseAdmin
-        .from('susu_groups')
-        .update(body)
-        .eq('id', id)
-        .select()
-        .single()
-
+        .from('susu_groups').update(body).eq('id', id).select().single()
       if (dbErr) return error(dbErr.message, 500)
       return json({ group })
     }
 
-    // GET — list all groups (admin view with full details)
     if (method === 'GET') {
-      const { data: groups, error: dbErr } = await supabaseAdmin
-        .from('susu_groups')
-        .select(`
-          *,
-          group_memberships(count),
-          payouts(count)
-        `)
+      let query = supabaseAdmin.from('susu_groups')
+        .select('*, group_memberships(count)')
         .order('created_at', { ascending: false })
 
+      if (id) query = supabaseAdmin.from('susu_groups').select('*, group_memberships(*)').eq('id', id)
+
+      const { data, error: dbErr } = await query
       if (dbErr) return error(dbErr.message, 500)
-      return json({ groups })
+      return json(id ? { group: data } : { groups: data })
     }
 
     return error('Method not allowed', 405)

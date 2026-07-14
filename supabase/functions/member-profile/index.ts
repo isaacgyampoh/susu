@@ -21,67 +21,117 @@ Deno.serve(async (req) => {
 
     if (mErr || !member) return error('Member not found', 404)
 
-    // Active memberships with group info and payout details
+    // ALL active memberships with group details + payout info
     const { data: memberships } = await supabaseAdmin
       .from('group_memberships')
       .select(`
         id, payout_position, payout_date, payout_amount, payout_received, status, joined_at,
-        susu_groups (id, name, contribution_amount, contribution_frequency, cycle_days, max_members, current_members, status, start_date)
+        susu_groups (
+          id, name, description, contribution_amount, contribution_frequency,
+          cycle_days, max_members, current_members, status, start_date, end_date,
+          cashout_amount, payment_deadline, penalty_per_late_day, registration_fee
+        )
       `)
       .eq('member_id', memberId)
       .eq('status', 'active')
 
-    // Pending contributions (due today or overdue) — max 20
+    // For each membership build balance summary
+    const plansWithBalance = await Promise.all(
+      (memberships ?? []).map(async (m: any) => {
+        const { data: bal } = await supabaseAdmin.rpc('get_member_plan_balance', {
+          p_member_id: memberId,
+          p_group_id:  m.susu_groups.id,
+        })
+        const balance = bal?.[0] ?? {}
+
+        // Next pending contribution for this group
+        const { data: nextContrib } = await supabaseAdmin
+          .from('contributions')
+          .select('id, amount, due_date, status, is_late, is_flagged, penalty_due')
+          .eq('member_id', memberId)
+          .eq('group_id', m.susu_groups.id)
+          .in('status', ['pending', 'overdue'])
+          .order('due_date', { ascending: true })
+          .limit(1)
+
+        return { ...m, balance, nextContribution: nextContrib?.[0] ?? null }
+      })
+    )
+
+    // Recent payments across all groups (last 30)
+    const { data: recentPayments } = await supabaseAdmin
+      .from('contributions')
+      .select('id, amount, due_date, paid_at, status, paystack_ref, is_late, is_flagged, penalty_due, susu_groups(id, name)')
+      .eq('member_id', memberId)
+      .order('due_date', { ascending: false })
+      .limit(50)
+
+    // Pending / overdue across all groups
     const { data: pendingContributions } = await supabaseAdmin
       .from('contributions')
-      .select('id, amount, due_date, status, group_id, susu_groups(name)')
+      .select('id, amount, due_date, status, is_late, is_flagged, penalty_due, group_id, susu_groups(id, name, payment_deadline)')
       .eq('member_id', memberId)
       .in('status', ['pending', 'overdue'])
       .order('due_date', { ascending: true })
-      .limit(20)
-
-    // Recent payment history — last 30
-    const { data: recentPayments } = await supabaseAdmin
-      .from('contributions')
-      .select('id, amount, due_date, paid_at, status, paystack_ref, susu_groups(name)')
-      .eq('member_id', memberId)
-      .order('due_date', { ascending: false })
       .limit(30)
 
-    // Payouts
+    // All payouts
     const { data: payouts } = await supabaseAdmin
       .from('payouts')
-      .select('id, total_amount, scheduled_date, paid_at, status, susu_groups(name)')
+      .select('id, total_amount, scheduled_date, paid_at, status, susu_groups(id, name)')
       .eq('member_id', memberId)
       .order('scheduled_date', { ascending: true })
 
-    // Announcements (global or for member's groups)
-    const groupIds = memberships?.map((m: { susu_groups: { id: string } }) => m.susu_groups?.id).filter(Boolean) ?? []
-    const { data: announcements } = await supabaseAdmin
+    // Penalty balance
+    const { data: penalties } = await supabaseAdmin
+      .from('payment_penalties')
+      .select('id, amount, reason, is_paid, created_at, susu_groups(name)')
+      .eq('member_id', memberId)
+      .eq('is_paid', false)
+
+    // Announcements
+    const groupIds = (memberships ?? []).map((m: any) => m.susu_groups?.id).filter(Boolean)
+    const announcementQuery = supabaseAdmin
       .from('announcements')
       .select('id, title, content, created_at, susu_groups(name)')
-      .or(`is_global.eq.true,group_id.in.(${groupIds.join(',') || 'null'})`)
       .order('created_at', { ascending: false })
       .limit(10)
 
-    // Summary stats
-    const totalPaid    = recentPayments?.filter((c: {status: string}) => c.status === 'paid').reduce((sum: number, c: {amount: number}) => sum + Number(c.amount), 0) ?? 0
-    const totalPending = pendingContributions?.reduce((sum: number, c: {amount: number}) => sum + Number(c.amount), 0) ?? 0
-    const nextPayout   = payouts?.find((p: {status: string}) => p.status === 'upcoming')
+    const { data: announcements } = groupIds.length > 0
+      ? await announcementQuery.or(`is_global.eq.true,group_id.in.(${groupIds.join(',')})`)
+      : await announcementQuery.eq('is_global', true)
+
+    // Contact messages (member's own)
+    const { data: myMessages } = await supabaseAdmin
+      .from('contact_messages')
+      .select('id, subject, message, is_read, reply_text, replied_at, created_at')
+      .eq('member_id', memberId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    // Global summary
+    const totalPaidAll    = (recentPayments ?? []).filter((c: any) => c.status === 'paid').reduce((s: number, c: any) => s + Number(c.amount), 0)
+    const totalPendingAll = (pendingContributions ?? []).reduce((s: number, c: any) => s + Number(c.amount), 0)
+    const totalPenalties  = (penalties ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0)
+    const nextPayout      = (payouts ?? []).find((p: any) => p.status === 'upcoming')
 
     return json({
       member,
-      memberships,
+      plans: plansWithBalance,          // memberships enriched with balance + next contribution
       pendingContributions,
       recentPayments,
       payouts,
+      penalties,
       announcements,
+      myMessages,
       summary: {
-        totalPaid,
-        totalPending,
+        totalPaidAll,
+        totalPendingAll,
+        totalPenalties,
+        activePlans:      (memberships ?? []).length,
         nextPayoutDate:   nextPayout?.scheduled_date ?? null,
         nextPayoutAmount: nextPayout?.total_amount ?? null,
-        activeGroups:     memberships?.length ?? 0,
+        nextPayoutGroup:  (nextPayout as any)?.susu_groups?.name ?? null,
       },
     })
   } catch (e) {
