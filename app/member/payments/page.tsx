@@ -42,13 +42,13 @@ export default function PaymentsPage() {
   async function handlePay(c: Contribution) {
     const token = getMemberToken()
     setPayingId(c.id)
-    const { data, error } = await callFunction<{ authorization_url: string }>(
+    const { data, error } = await callFunction<{ authorization_url?: string; dev_mode?: boolean; message?: string }>(
       'payments-initialize',
       { method: 'POST', body: { contribution_id: c.id }, token: token! }
     )
     setPayingId(null)
     if (error) { alert(error); return }
-    window.location.href = data!.authorization_url
+    if (data?.dev_mode) { window.location.reload() } else if (data?.authorization_url) { window.location.href = data.authorization_url }
   }
 
   const totalPaid    = contributions.filter(c => c.status === 'paid').reduce((s, c) => s + Number(c.amount), 0)

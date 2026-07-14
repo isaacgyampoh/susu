@@ -50,7 +50,7 @@ export default function MemberDashboard() {
   async function handlePay(contribution: Contribution) {
     const token = getMemberToken()
     setPayingId(contribution.id)
-    const { data, error } = await callFunction<{ authorization_url: string }>(
+    const { data, error } = await callFunction<{ authorization_url?: string; reference?: string; dev_mode?: boolean; message?: string }>(
       'payments-initialize', { method: 'POST', body: { contribution_id: contribution.id }, token: token! }
     )
     setPayingId(null)
