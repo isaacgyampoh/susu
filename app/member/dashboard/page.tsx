@@ -60,7 +60,7 @@ export default function MemberDashboard() {
         const token = getMemberToken()
         callFunction<MemberDashboard>("member-profile", { token: token! }).then(({ data }) => setData(data))
       } else {
-        window.location.href = data!.authorization_url
+        window.location.href = data!.authorization_url!
       }
   }
 
