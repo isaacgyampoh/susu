@@ -2,9 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title:       'Susu Platform — Community Savings Made Simple',
-  description: 'Join a trusted rotating savings group. Contribute daily, receive your payout on schedule.',
-  keywords:    'susu, savings, Ghana, rotating savings, community finance',
+  title: 'SusuPlatform — Member Portal',
+  description: 'Susu savings platform — manage your contributions, track payouts, and grow together.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

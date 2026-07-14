@@ -94,7 +94,7 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-gray-500">
             Don't have an account?{' '}
-            <Link href="/plans" className="text-brand-green font-semibold hover:underline">Join a group</Link>
+            <Link href="/" className="text-brand-green font-semibold hover:underline">Contact your admin to join</Link>
           </p>
         </form>
 
