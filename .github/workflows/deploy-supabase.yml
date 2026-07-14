@@ -6,7 +6,7 @@ on:
     paths:
       - 'supabase/functions/**'
       - '.github/workflows/deploy-supabase.yml'
-  workflow_dispatch:   # allows manual trigger from the Actions tab
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -21,6 +21,14 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
+
+      - name: Push Edge Function secrets
+        run: |
+          supabase secrets set \
+            JWT_SECRET="${{ secrets.SUPABASE_JWT_SECRET }}" \
+            FRONTEND_URL="${{ secrets.SUPABASE_FRONTEND_URL }}" \
+            --project-ref "$PROJECT_REF"
+          echo "✅ Secrets pushed"
 
       - name: Deploy all Edge Functions
         run: |
