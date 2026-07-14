@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { @apply border-gray-200; }
+  body {
+    @apply bg-white text-gray-900 font-sans antialiased;
+  }
+  h1, h2, h3, h4 { @apply font-display; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand-gold text-brand-green font-semibold rounded-xl hover:bg-brand-gold-mid transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand-green text-white font-semibold rounded-xl hover:bg-brand-green-mid transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-brand-green text-brand-green font-semibold rounded-xl hover:bg-brand-green-light transition-all duration-200;
+  }
+  .card {
+    @apply bg-white rounded-2xl border border-gray-100 shadow-sm;
+  }
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-transparent transition-all;
+  }
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1.5;
+  }
+  .badge-green  { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700; }
+  .badge-gold   { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700; }
+  .badge-red    { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700; }
+  .badge-gray   { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600; }
+  .badge-blue   { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700; }
+}

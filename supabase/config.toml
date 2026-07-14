@@ -1,0 +1,89 @@
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://susuplatform.vercel.app"]
+jwt_expiry = 3600
+enable_signup = false
+
+[edge_runtime]
+enabled = true
+
+[functions.auth-admin-login]
+verify_jwt = false
+
+[functions.auth-member-login]
+verify_jwt = false
+
+[functions.kyc-submit]
+verify_jwt = false
+
+[functions.groups-public]
+verify_jwt = false
+
+[functions.payments-webhook]
+verify_jwt = false
+
+[functions.kyc-review]
+verify_jwt = false
+
+[functions.groups-create]
+verify_jwt = false
+
+[functions.groups-activate]
+verify_jwt = false
+
+[functions.contributions-list]
+verify_jwt = false
+
+[functions.payments-initialize]
+verify_jwt = false
+
+[functions.payments-verify]
+verify_jwt = false
+
+[functions.payouts-admin]
+verify_jwt = false
+
+[functions.payouts-mark-paid]
+verify_jwt = false
+
+[functions.member-profile]
+verify_jwt = false
+
+[functions.admin-dashboard]
+verify_jwt = false
+
+[functions.admin-members]
+verify_jwt = false
+
+[functions.admin-member-action]
+verify_jwt = false
+
+[functions.announcements]
+verify_jwt = false
+
+[functions.notifications-send]
+verify_jwt = false
