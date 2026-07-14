@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Member } from '@/types'
 import { format } from 'date-fns'
-import { Loader2, Search, Users, ChevronRight } from 'lucide-react'
+import { Loader2, Search, Users, ChevronRight, UserPlus } from 'lucide-react'
 
 type StatusFilter = 'active' | 'pending' | 'suspended' | 'all'
 
@@ -46,11 +46,15 @@ export default function MembersPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-12 animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-extrabold text-white">Members</h1>
           <p className="text-gray-400 text-sm mt-1">{total} total members</p>
         </div>
+        <Link href="/admin/members/new"
+          className="flex items-center gap-2 px-4 py-2.5 bg-brand-gold text-brand-green font-semibold rounded-xl text-sm hover:bg-amber-400 transition-colors">
+          <UserPlus size={16} /> Add Member
+        </Link>
       </div>
 
       {/* Controls */}
@@ -78,7 +82,8 @@ export default function MembersPage() {
       ) : members.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
           <Users size={40} className="mx-auto mb-3 opacity-30" />
-          No {filter} members found
+          <p>No {filter} members found</p>
+          <Link href="/admin/members/new" className="text-brand-gold text-sm hover:underline mt-2 inline-block">Add your first member →</Link>
         </div>
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">

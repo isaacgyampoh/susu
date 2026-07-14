@@ -1,63 +1,115 @@
-# Susu Platform
+# SusuPlatform — Management Portal
 
-Full-stack rotating savings platform built for Ghana.
+Admin + Member portal for a Ghanaian rotating savings (Susu) platform.
 
-**Stack:** Supabase (Postgres + Edge Functions + Storage) · Next.js 14 (Vercel) · Paystack (optional) · Africa's Talking SMS (optional)
+> **Note:** This repo is the **portal only**. The public marketing homepage will be a separate site that links here as a subdomain (e.g. `portal.yourdomain.com`).
+
+**Stack:** Supabase (Postgres + Edge Functions + Storage) · Next.js 14 · Vercel · Paystack *(optional)* · Africa's Talking SMS *(optional)*
 
 ---
 
-## ✅ Quick Setup (UI First — No Paystack/SMS needed)
+## Routes
 
-### Step 1 — Run SQL in Supabase
-Go to your Supabase dashboard → SQL Editor → run these two files IN ORDER:
+| Route | Who | Purpose |
+|-------|-----|---------|
+| `/` | Public | Portal entry — pick Member or Admin |
+| `/login` | Member | Login with phone + 6-digit passcode |
+| `/member/dashboard` | Member | All active plans, balances, next payment, 6PM countdown |
+| `/member/payments` | Member | Full payment history + pay now |
+| `/member/profile` | Member | Profile, payout schedule, contact admin |
+| `/admin/login` | Admin | Login with email + password |
+| `/admin` | Admin | Dashboard: stats, upcoming payouts, groups |
+| `/admin/members` | Admin | Member list, search, filter |
+| `/admin/members/new` | Admin | **Add a member** (generates passcode) |
+| `/admin/members/[id]` | Admin | Member detail, suspend/reactivate |
+| `/admin/groups` | Admin | Group list + activate (generates schedules) |
+| `/admin/groups/new` | Admin | Create group (set cashout, deadline, penalty) |
+| `/admin/contributions` | Admin | Track all contributions |
+| `/admin/payouts` | Admin | Upcoming payouts, mark as paid |
+| `/admin/messages` | Admin | Read + reply to member messages |
+| `/admin/announcements` | Admin | Broadcast to members |
+| `/admin/kyc` | Admin | Review KYC apps *(for when public site is live)* |
 
-1. `supabase/migrations/01_initial_schema.sql`
-2. `supabase/migrations/02_v2_business_rules.sql`
+---
 
-### Step 2 — Create Storage Bucket
-Supabase dashboard → Storage → New bucket → name: `kyc-documents` → Public ✓
+## Setup
 
-### Step 3 — Set Edge Function Secrets
-Supabase dashboard → Edge Functions → Manage Secrets → add:
+### 1. Supabase — run SQL
+SQL Editor → run in order:
+1. `supabase/migrations/20240101000000_initial_schema.sql`
+2. `supabase/migrations/20240102000000_v2_business_rules.sql`
+
+### 2. Supabase — storage bucket
+Storage → New bucket → name: `kyc-documents` → **Public** ✓
+
+### 3. Supabase — Edge Function secrets
+Edge Functions → Manage Secrets:
 
 | Key | Value |
 |-----|-------|
 | `JWT_SECRET` | `a45ff29522fcf5f5347f36b4ca5105ad` |
-| `FRONTEND_URL` | Your Vercel URL (or `http://localhost:3000`) |
+| `FRONTEND_URL` | Your Vercel URL |
 
-> Paystack and Africa's Talking are optional — the system works without them.
-> In dev mode: payments are marked as paid instantly, credentials shown in admin UI.
+*Paystack and SMS are optional — the system runs in dev mode without them.*
 
-### Step 4 — Deploy Frontend to Vercel
-1. Go to [vercel.com](https://vercel.com) → New Project → Import `isaacgyampoh/susu`
-2. Set **Root Directory** to `frontend`
-3. Add Environment Variables:
-   - `NEXT_PUBLIC_SUPABASE_URL` = `https://qaelfwtbaehdwhnxkpid.supabase.co`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhZWxmd3RiYWVoZHdobnhrcGlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4OTU2MTMsImV4cCI6MjA5OTQ3MTYxM30.ZYKQHQRG_auKaTameu0VBrFkiNHoczSHDExyz0IgMBk`
-4. Deploy
+### 4. Supabase — deploy functions
+```bash
+supabase link --project-ref qaelfwtbaehdwhnxkpid
+supabase functions deploy
+```
 
-### Step 5 — First Admin Login
-URL: `https://your-app.vercel.app/admin/login`
-- Email: `admin@susuplatform.com`
-- Password: `Admin@1234`
-
-⚠️ Change this password immediately after first login.
+### 5. Vercel — environment variables
+| Key | Value |
+|-----|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://qaelfwtbaehdwhnxkpid.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *(your anon key)* |
 
 ---
 
-## How to Test Everything
+## First Login
 
-1. **Create a group** → Admin → Groups → New Group → fill in name, GHS 55/day, 11 members, 30 days, cashout GHS 16,430, reg fee GHS 110
-2. **Submit KYC** → Visit `/plans` → Join → fill the form (upload any image for Ghana Card)
-3. **Approve member** → Admin → KYC → click Eye → Approve → copy the credentials shown
-4. **Member login** → `/login` → enter the phone + passcode from step 3
-5. **See dashboard** → member sees their plan, schedule, and can click Pay (marks as paid instantly in dev mode)
+`/admin/login` → `admin@susuplatform.com` / `Admin@1234`
+
+⚠️ Change immediately:
+```sql
+UPDATE admin_users SET password_hash = crypt('YourNewPassword', gen_salt('bf'))
+WHERE email = 'admin@susuplatform.com';
+```
 
 ---
 
-## Adding Paystack + SMS Later
-Just add these secrets in Supabase Edge Functions → Manage Secrets:
-- `PAYSTACK_SECRET_KEY` = your key from dashboard.paystack.com
-- `AT_API_KEY` + `AT_USERNAME` + `AT_SENDER_ID` = from africastalking.com
+## Test Flow
 
-The system automatically switches to live mode when the keys are present.
+1. **Create a group** → `/admin/groups/new`
+   Name, GHS 55/day, 11 members, 30 cycle days, cashout GHS 16,430, reg fee GHS 110, deadline 18:00
+2. **Add members** → `/admin/members/new` → copy the passcode shown
+3. **Activate group** → `/admin/groups` → Activate → set start date
+   *(generates every contribution + payout automatically)*
+4. **Member logs in** → `/login` → phone + passcode
+5. **Member pays** → dashboard → Pay button *(instant in dev mode)*
+6. **Admin marks payout** → `/admin/payouts` → Mark Paid
+
+---
+
+## Dev Mode vs Live Mode
+
+The system auto-detects based on env secrets:
+
+| | Dev (no keys) | Live (keys set) |
+|---|---|---|
+| Payments | Marked paid instantly | Paystack checkout |
+| SMS | Logged to console | Sent via Africa's Talking |
+| Credentials | Shown in admin UI | Sent via SMS |
+
+To go live, just add `PAYSTACK_SECRET_KEY` and `AT_API_KEY` + `AT_USERNAME` + `AT_SENDER_ID`.
+
+---
+
+## Business Rules
+
+- Admin sets the **cashout amount manually** — not locked to a formula
+- Payment deadline is **6:00 PM** (configurable per group)
+- Late payments are **auto-flagged** with a penalty (run via `/admin` → Run Late Check)
+- Registration fee is **added to the member's cashout** on payout day
+- Members can join **multiple groups** — each shows separately in their portal
+- Payout position is assigned in join order; schedule generated on group activation

@@ -1,0 +1,155 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { callFunction, getAdminToken } from '@/lib/supabase'
+import { format } from 'date-fns'
+import { Loader2, MessageCircle, Send, CheckCircle, Mail, MailOpen } from 'lucide-react'
+
+type Msg = {
+  id: string; subject: string; message: string
+  is_read: boolean; reply_text?: string; replied_at?: string; created_at: string
+  members?: { member_id: string; full_name: string; phone: string }
+}
+
+export default function MessagesPage() {
+  const [messages, setMessages] = useState<Msg[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [selected, setSelected] = useState<Msg | null>(null)
+  const [reply, setReply]       = useState('')
+  const [sending, setSending]   = useState(false)
+  const [toast, setToast]       = useState('')
+  const [filter, setFilter]     = useState<'all' | 'unread' | 'replied'>('all')
+
+  function showToast(m: string) { setToast(m); setTimeout(() => setToast(''), 3000) }
+
+  async function load() {
+    setLoading(true)
+    const token = getAdminToken()
+    const { data } = await callFunction<{ messages: Msg[] }>('admin-contacts', { token: token! })
+    setMessages(data?.messages ?? [])
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function sendReply() {
+    if (!selected || !reply.trim()) return
+    setSending(true)
+    const token = getAdminToken()
+    const { error } = await callFunction(`admin-contacts?id=${selected.id}`, {
+      method: 'PATCH', body: { reply_text: reply }, token: token!,
+    })
+    setSending(false)
+    if (error) { alert(error); return }
+    showToast('✅ Reply sent to member')
+    setSelected(null); setReply('')
+    load()
+  }
+
+  const filtered = messages.filter(m => {
+    if (filter === 'unread')  return !m.reply_text
+    if (filter === 'replied') return !!m.reply_text
+    return true
+  })
+
+  const unreadCount = messages.filter(m => !m.reply_text).length
+
+  return (
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-12 animate-fade-in">
+      {toast && <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg text-sm">{toast}</div>}
+
+      <div className="mb-6">
+        <h1 className="text-2xl font-extrabold text-white">Member Messages</h1>
+        <p className="text-gray-400 text-sm mt-1">
+          {messages.length} total {unreadCount > 0 && <span className="text-brand-gold">· {unreadCount} awaiting reply</span>}
+        </p>
+      </div>
+
+      <div className="flex gap-2 mb-6">
+        {(['all', 'unread', 'replied'] as const).map(s => (
+          <button key={s} onClick={() => setFilter(s)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-brand-gold text-brand-green' : 'bg-gray-800 text-gray-400 hover:text-white'}`}>
+            {s} {s === 'unread' && unreadCount > 0 && `(${unreadCount})`}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-brand-gold" size={32} /></div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20 text-gray-500">
+          <MessageCircle size={40} className="mx-auto mb-3 opacity-20" />
+          No {filter === 'all' ? '' : filter} messages
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(msg => (
+            <button key={msg.id} onClick={() => { setSelected(msg); setReply(msg.reply_text ?? '') }}
+              className="w-full text-left bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-600 transition-colors">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  {msg.reply_text
+                    ? <MailOpen size={16} className="text-emerald-400 shrink-0" />
+                    : <Mail size={16} className="text-brand-gold shrink-0" />
+                  }
+                  <h3 className="font-bold text-white text-sm">{msg.subject}</h3>
+                </div>
+                <span className="text-xs text-gray-500 shrink-0">{format(new Date(msg.created_at), 'MMM d, HH:mm')}</span>
+              </div>
+              <p className="text-gray-400 text-sm line-clamp-2 mb-2">{msg.message}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-500">
+                  {msg.members?.full_name} · {msg.members?.member_id} · {msg.members?.phone}
+                </p>
+                {msg.reply_text
+                  ? <span className="badge-green">Replied</span>
+                  : <span className="badge-gold">Awaiting reply</span>
+                }
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Reply modal */}
+      {selected && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+            <div>
+              <h2 className="font-bold text-white text-lg">{selected.subject}</h2>
+              <p className="text-gray-500 text-xs mt-1">
+                From {selected.members?.full_name} ({selected.members?.member_id}) · {selected.members?.phone}
+              </p>
+              <p className="text-gray-500 text-xs">{format(new Date(selected.created_at), 'MMMM d, yyyy · HH:mm')}</p>
+            </div>
+
+            <div className="p-4 bg-gray-800 rounded-xl">
+              <p className="text-gray-300 text-sm whitespace-pre-wrap">{selected.message}</p>
+            </div>
+
+            {selected.reply_text && (
+              <div className="p-4 bg-brand-green/10 border border-brand-green/30 rounded-xl">
+                <p className="text-xs font-semibold text-green-400 mb-1">Your reply</p>
+                <p className="text-gray-300 text-sm whitespace-pre-wrap">{selected.reply_text}</p>
+                {selected.replied_at && <p className="text-xs text-gray-500 mt-2">{format(new Date(selected.replied_at), 'MMM d, yyyy · HH:mm')}</p>}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">{selected.reply_text ? 'Update reply' : 'Your reply'}</label>
+              <textarea className="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold resize-none"
+                rows={4} value={reply} onChange={e => setReply(e.target.value)} placeholder="Type your reply — the member will see it in their portal…" />
+            </div>
+
+            <button onClick={sendReply} disabled={sending || !reply.trim()}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-gold text-brand-green font-bold rounded-xl hover:bg-amber-400 transition-colors disabled:opacity-50">
+              {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              {selected.reply_text ? 'Update Reply' : 'Send Reply'}
+            </button>
+            <button onClick={() => setSelected(null)} className="w-full text-gray-500 text-sm hover:text-gray-300 py-2">Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
