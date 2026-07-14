@@ -1,62 +1,44 @@
-const AT_API_KEY   = Deno.env.get('AT_API_KEY')!
+const AT_API_KEY   = Deno.env.get('AT_API_KEY')
 const AT_USERNAME  = Deno.env.get('AT_USERNAME') ?? 'sandbox'
 const AT_SENDER_ID = Deno.env.get('AT_SENDER_ID') ?? 'SUSU'
-const SMS_BASE     = 'https://api.africastalking.com/version1/messaging'
 
-/** Send an SMS via Africa's Talking */
+/** Send SMS — silently skips if AT_API_KEY not configured */
 export async function sendSMS(to: string | string[], message: string): Promise<boolean> {
-  const recipients = Array.isArray(to) ? to.join(',') : to
+  if (!AT_API_KEY) {
+    console.log('[SMS SKIPPED — no AT_API_KEY] To:', to, '| Msg:', message)
+    return true // gracefully skip, don't break the flow
+  }
 
-  // Ensure Ghana numbers start with +233
-  const formatted = recipients
-    .split(',')
-    .map((n) => n.trim().replace(/^0/, '+233').replace(/^\+?233/, '+233'))
+  const recipients = Array.isArray(to) ? to : [to]
+  const formatted  = recipients
+    .map(n => n.trim().replace(/^0/, '+233').replace(/^\+?233/, '+233'))
     .join(',')
 
-  const body = new URLSearchParams({
-    username: AT_USERNAME,
-    to: formatted,
-    message,
-    from: AT_SENDER_ID,
-  })
-
   try {
-    const res = await fetch(SMS_BASE, {
+    const res = await fetch('https://api.africastalking.com/version1/messaging', {
       method: 'POST',
-      headers: {
-        apiKey: AT_API_KEY,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json',
-      },
-      body: body.toString(),
+      headers: { apiKey: AT_API_KEY, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: new URLSearchParams({ username: AT_USERNAME, to: formatted, message, from: AT_SENDER_ID }).toString(),
     })
     const data = await res.json()
-    return data?.SMSMessageData?.Recipients?.some(
-      (r: { status: string }) => r.status === 'Success'
-    ) ?? false
+    return data?.SMSMessageData?.Recipients?.some((r: { status: string }) => r.status === 'Success') ?? false
   } catch (e) {
-    console.error('SMS send error:', e)
+    console.error('SMS error (non-fatal):', e)
     return false
   }
 }
 
-/** Build common SMS templates */
 export const smsTemplates = {
   welcome: (name: string, memberId: string, passcode: string, portalUrl: string) =>
-    `Hello ${name}! Welcome to Susu Platform.\nMember ID: ${memberId}\nPasscode: ${passcode}\nPortal: ${portalUrl}\nKeep your passcode safe.`,
-
+    `Welcome to SusuPlatform, ${name}! ID: ${memberId} | Passcode: ${passcode} | Login: ${portalUrl}`,
   paymentReminder: (name: string, amount: string, dueDate: string, portalUrl: string) =>
-    `Hi ${name}, your Susu contribution of GHS ${amount} is due on ${dueDate}.\nPay now: ${portalUrl}\nDo not default to avoid losing your slot.`,
-
+    `Hi ${name}, your GHS ${amount} Susu contribution is due ${dueDate}. Pay before 6PM: ${portalUrl}`,
   paymentConfirmed: (name: string, amount: string, ref: string) =>
-    `Hi ${name}, your payment of GHS ${amount} has been confirmed.\nRef: ${ref}. Thank you!`,
-
+    `Hi ${name}, your GHS ${amount} payment is confirmed. Ref: ${ref}. Thank you!`,
   payoutAlert: (name: string, amount: string, date: string) =>
-    `Congratulations ${name}! You will receive your Susu payout of GHS ${amount} on ${date}. Stay active!`,
-
+    `Congratulations ${name}! Your Susu payout of GHS ${amount} is scheduled for ${date}.`,
   applicationApproved: (name: string, memberId: string, passcode: string, portalUrl: string) =>
-    `Great news ${name}! Your Susu application has been approved.\nMember ID: ${memberId}\nPasscode: ${passcode}\nLogin: ${portalUrl}`,
-
+    `Great news ${name}! Your application is approved. ID: ${memberId} | Passcode: ${passcode} | Login: ${portalUrl}`,
   applicationRejected: (name: string, reason: string) =>
-    `Hi ${name}, unfortunately your Susu application was not approved.\nReason: ${reason}\nContact us for more info.`,
+    `Hi ${name}, your Susu application was not approved. Reason: ${reason}. Contact us for help.`,
 }

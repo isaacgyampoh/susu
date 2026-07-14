@@ -5,7 +5,6 @@ import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
 
 const PORTAL_URL = Deno.env.get('FRONTEND_URL') ?? 'https://susuplatform.vercel.app'
 
-/** Generate a random 6-digit passcode */
 function generatePasscode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
@@ -13,6 +12,26 @@ function generatePasscode(): string {
 Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
+
+  // Support both GET (list KYC) and POST (review action)
+  if (req.method === 'GET') {
+    const admin = await requireAdmin(req)
+    if (!admin) return error('Unauthorized', 401)
+    const url    = new URL(req.url)
+    const status = url.searchParams.get('status') ?? 'pending'
+
+    let query = supabaseAdmin
+      .from('kyc_applications')
+      .select('*, susu_groups(id, name, registration_fee)')
+      .order('submitted_at', { ascending: false })
+
+    if (status !== 'all') query = query.eq('status', status)
+    const { data, error: dbErr } = await query
+    if (dbErr) return error(dbErr.message, 500)
+    return json(data)
+  }
+
+  if (req.method !== 'POST') return error('Method not allowed', 405)
 
   const admin = await requireAdmin(req)
   if (!admin) return error('Unauthorized', 401)
@@ -22,69 +41,51 @@ Deno.serve(async (req) => {
     const kycId  = url.searchParams.get('id')
     const { action, rejection_reason } = await req.json()
 
-    if (!kycId)                         return error('KYC application ID is required')
-    if (!['approve','reject'].includes(action)) return error('action must be approve or reject')
+    if (!kycId) return error('KYC application ID required')
+    if (!['approve', 'reject'].includes(action)) return error('action must be approve or reject')
 
-    // Fetch the KYC application
-    const { data: kyc, error: kycErr } = await supabaseAdmin
+    const { data: kyc } = await supabaseAdmin
       .from('kyc_applications')
-      .select('*, susu_groups(name, max_members, current_members, registration_fee)')
+      .select('*, susu_groups(id, name, max_members, current_members)')
       .eq('id', kycId)
       .single()
 
-    if (kycErr || !kyc) return error('KYC application not found', 404)
-    if (kyc.status !== 'pending')       return error('Application has already been reviewed')
-    if (!kyc.registration_fee_paid && kyc.registration_fee_amount > 0) {
-      return error('Registration fee has not been paid yet')
-    }
+    if (!kyc) return error('KYC application not found', 404)
+    if (kyc.status !== 'pending') return error('Application already reviewed')
 
     if (action === 'reject') {
-      await supabaseAdmin
-        .from('kyc_applications')
+      await supabaseAdmin.from('kyc_applications')
         .update({ status: 'rejected', rejection_reason, reviewer_id: admin.sub, reviewed_at: new Date().toISOString() })
         .eq('id', kycId)
-
-      // Notify applicant via SMS
       await sendSMS(kyc.phone, smsTemplates.applicationRejected(kyc.full_name, rejection_reason ?? 'Application did not meet requirements'))
-
-      return json({ message: 'Application rejected and applicant notified' })
+      return json({ message: 'Application rejected' })
     }
 
-    // APPROVE — create member account
-    // Check group still has space
+    // APPROVE
     const group = kyc.susu_groups
-    if (group.current_members >= group.max_members) {
-      return error('Group is now full. Cannot approve.', 400)
-    }
+    if (group.current_members >= group.max_members) return error('Group is now full', 400)
 
-    // Generate passcode
     const passcode = generatePasscode()
 
-    // Hash passcode using Postgres crypt via RPC
-    const { data: hashData } = await supabaseAdmin
-      .rpc('hash_passcode', { p_passcode: passcode })
-      .single()
+    // Hash the passcode using Postgres
+    const { data: hashData } = await supabaseAdmin.rpc('hash_passcode', { p_passcode: passcode })
 
-    // Create member record
+    // Create member
     const { data: member, error: memErr } = await supabaseAdmin
       .from('members')
       .insert({
-        full_name:             kyc.full_name,
-        phone:                 kyc.phone,
-        email:                 kyc.email,
-        whatsapp_number:       kyc.mobile_money_number ?? kyc.phone,
-        ghana_card_number:     kyc.ghana_card_number,
-        ghana_card_front_url:  kyc.ghana_card_front_url,
-        ghana_card_back_url:   kyc.ghana_card_back_url,
-        passcode_hash:         hashData ?? passcode, // fallback if RPC not set up
-        status:                'active',
-        date_of_birth:         kyc.date_of_birth,
-        occupation:            kyc.occupation,
-        residential_address:   kyc.residential_address,
-        bank_name:             kyc.bank_name,
-        bank_account_number:   kyc.bank_account_number,
-        bank_account_name:     kyc.bank_account_name,
-        mobile_money_number:   kyc.mobile_money_number,
+        full_name: kyc.full_name, phone: kyc.phone, email: kyc.email,
+        whatsapp_number: kyc.mobile_money_number ?? kyc.phone,
+        ghana_card_number: kyc.ghana_card_number,
+        ghana_card_front_url: kyc.ghana_card_front_url,
+        ghana_card_back_url:  kyc.ghana_card_back_url,
+        passcode_hash: hashData ?? passcode,
+        status: 'active',
+        date_of_birth: kyc.date_of_birth, occupation: kyc.occupation,
+        residential_address: kyc.residential_address,
+        bank_name: kyc.bank_name, bank_account_number: kyc.bank_account_number,
+        bank_account_name: kyc.bank_account_name,
+        mobile_money_number: kyc.mobile_money_number,
         mobile_money_provider: kyc.mobile_money_provider,
       })
       .select('id, member_id')
@@ -92,70 +93,32 @@ Deno.serve(async (req) => {
 
     if (memErr) return error(memErr.message, 500)
 
-    // Assign to group — next available payout position
-    const { data: existingSlots } = await supabaseAdmin
-      .from('group_memberships')
-      .select('payout_position')
+    // Assign next available payout position
+    const { data: slots } = await supabaseAdmin
+      .from('group_memberships').select('payout_position')
       .eq('group_id', kyc.selected_group_id)
-      .order('payout_position', { ascending: false })
-      .limit(1)
+      .order('payout_position', { ascending: false }).limit(1)
 
-    const nextPosition = (existingSlots?.[0]?.payout_position ?? 0) + 1
+    const nextPosition = (slots?.[0]?.payout_position ?? 0) + 1
 
     await supabaseAdmin.from('group_memberships').insert({
-      member_id:      member.id,
-      group_id:       kyc.selected_group_id,
-      payout_position: nextPosition,
-      status:         'active',
+      member_id: member.id, group_id: kyc.selected_group_id,
+      payout_position: nextPosition, status: 'active',
     })
 
-    // Update KYC record
-    await supabaseAdmin
-      .from('kyc_applications')
-      .update({
-        status:            'approved',
-        reviewer_id:       admin.sub,
-        reviewed_at:       new Date().toISOString(),
-        created_member_id: member.id,
-      })
+    // Update KYC
+    await supabaseAdmin.from('kyc_applications')
+      .update({ status: 'approved', reviewer_id: admin.sub, reviewed_at: new Date().toISOString(), created_member_id: member.id })
       .eq('id', kycId)
 
-    // Record registration fee transaction
-    if (kyc.registration_fee_ref) {
-      await supabaseAdmin.from('transactions').insert({
-        member_id:    member.id,
-        type:         'registration_fee',
-        amount:       kyc.registration_fee_amount,
-        reference:    kyc.registration_fee_ref,
-        description:  `Registration fee for group: ${group.name}`,
-        status:       'success',
-      })
-    }
-
-    // Send welcome SMS with credentials
-    await sendSMS(
-      kyc.phone,
-      smsTemplates.applicationApproved(
-        kyc.full_name,
-        member.member_id,
-        passcode,
-        `${PORTAL_URL}/login`
-      )
-    )
-
-    // Log notification
-    await supabaseAdmin.from('notifications').insert({
-      member_id: member.id,
-      type:      'sms',
-      message:   `Welcome SMS sent with credentials`,
-      status:    'sent',
-      sent_at:   new Date().toISOString(),
-    })
+    // Send welcome SMS (skipped silently if no AT key)
+    await sendSMS(kyc.phone, smsTemplates.applicationApproved(kyc.full_name, member.member_id, passcode, `${PORTAL_URL}/login`))
 
     return json({
-      message:   'Member approved and credentials sent via SMS',
-      member_id: member.member_id,
-      member_db_id: member.id,
+      message:    'Member approved and credentials sent via SMS',
+      member_id:  member.member_id,
+      passcode,   // also returned in response so admin can share manually if no SMS
+      portal_url: `${PORTAL_URL}/login`,
     })
   } catch (e) {
     console.error(e)

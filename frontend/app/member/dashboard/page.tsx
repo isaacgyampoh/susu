@@ -55,7 +55,13 @@ export default function MemberDashboard() {
     )
     setPayingId(null)
     if (error) { alert(error); return }
-    window.location.href = data!.authorization_url
+    if (data?.dev_mode) {
+        setData(null)
+        const token = getMemberToken()
+        callFunction<MemberDashboard>("member-profile", { token: token! }).then(({ data }) => setData(data))
+      } else {
+        window.location.href = data!.authorization_url
+      }
   }
 
   if (loading) return (
