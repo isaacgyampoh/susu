@@ -10,6 +10,7 @@ export default function GroupsPage() {
   const [groups, setGroups]   = useState<SusuGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [activating, setActivating] = useState<string | null>(null)
+  const [activateErr, setActivateErr] = useState('')
   const [startDate, setStartDate]   = useState('')
   const [activateTarget, setActivateTarget] = useState<SusuGroup | null>(null)
   const [toast, setToast]     = useState('')
@@ -26,15 +27,16 @@ export default function GroupsPage() {
 
   useEffect(() => { load() }, [])
 
-  async function activateGroup() {
-    if (!activateTarget || !startDate) { alert('Please set a start date'); return }
+  async function activateGroup(force = false) {
+    if (!activateTarget || !startDate) { setActivateErr('Please set a start date'); return }
     setActivating(activateTarget.id)
+    setActivateErr('')
     const token = getAdminToken()
     const { error } = await callFunction('groups-activate', {
-      method: 'POST', body: { group_id: activateTarget.id, start_date: startDate }, token: token!,
+      method: 'POST', body: { group_id: activateTarget.id, start_date: startDate, force }, token: token!,
     })
     setActivating(null)
-    if (error) { alert(error); return }
+    if (error) { setActivateErr(error); return }
     showToast('Group activated! Contribution schedule generated and members notified via SMS.')
     setActivateTarget(null)
     load()
@@ -114,7 +116,7 @@ export default function GroupsPage() {
 
                 {/* Activate button — only show for full/open groups */}
                 {(g.status === 'full' || g.status === 'open') && g.current_members > 0 && (
-                  <button onClick={() => { setActivateTarget(g); setStartDate('') }}
+                  <button onClick={() => { setActivateTarget(g); setStartDate(''); setActivateErr('') }}
                     className="flex items-center justify-center gap-2 w-full py-2.5 bg-green text-white font-semibold rounded-[10px] text-sm transition-colors">
                     <Play size={14} /> Activate Group
                   </button>
@@ -150,7 +152,19 @@ export default function GroupsPage() {
                 Group runs from <strong>{format(new Date(startDate), 'MMM d')}</strong> to <strong>{format(new Date(new Date(startDate).getTime() + activateTarget.max_members * activateTarget.cycle_days * 86400000), 'MMM d, yyyy')}</strong>
               </div>
             )}
-            <button onClick={activateGroup} disabled={!!activating || !startDate}
+            {activateErr && (
+              <div className="p-3 rounded-[3px] border border-red-200 bg-red-50">
+                <p className="text-[12px] text-red-700 font-medium">{activateErr}</p>
+                {activateErr.includes('already active') && (
+                  <button onClick={() => activateGroup(true)}
+                    className="text-[11px] font-bold text-red-700 underline underline-offset-2 mt-2">
+                    Rebuild the schedule anyway
+                  </button>
+                )}
+              </div>
+            )}
+
+            <button onClick={() => activateGroup(false)} disabled={!!activating || !startDate}
               className="w-full flex items-center justify-center gap-2 py-3.5 bg-green text-white font-bold rounded-[10px] transition-colors disabled:opacity-50">
               {activating ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
               Activate & Notify Members

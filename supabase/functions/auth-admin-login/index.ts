@@ -13,14 +13,26 @@ Deno.serve(async (req) => {
 
     if (!email || !password) return error('Email and password are required')
 
+    const ident = email.toLowerCase().trim()
+    const { data: gate } = await supabaseAdmin.rpc('check_login_allowed', {
+      p_identifier: ident, p_kind: 'admin',
+    })
+    if (gate?.[0] && !gate[0].allowed) {
+      const mins = Math.ceil((gate[0].retry_after_seconds ?? 900) / 60)
+      return error(`Too many failed attempts. Try again in ${mins} minute${mins === 1 ? '' : 's'}.`, 429)
+    }
+
     const { data, error: dbErr } = await supabaseAdmin.rpc('verify_admin_password', {
       p_email: email.toLowerCase().trim(),
       p_password: password,
     })
 
     if (dbErr || !data || data.length === 0) {
+      await supabaseAdmin.rpc('record_login_attempt', { p_identifier: ident, p_kind: 'admin', p_ok: false })
       return error('Invalid email or password', 401)
     }
+
+    await supabaseAdmin.rpc('record_login_attempt', { p_identifier: ident, p_kind: 'admin', p_ok: true })
 
     const admin = data[0]
     const token = await signJWT({

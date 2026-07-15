@@ -1,6 +1,7 @@
 import { handleCors, json, error } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
+import { verifyPaystackSignature, isPaystackConfigured } from '../_shared/paystack-verify.ts'
 
 Deno.serve(async (req) => {
   const cors = handleCors(req)
@@ -9,8 +10,21 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return error('Method not allowed', 405)
 
   try {
-    const rawBody  = await req.text()
-    const payload  = JSON.parse(rawBody)
+    const rawBody = await req.text()
+
+    // Reject anything that isn't provably from Paystack.
+    // Without this, this endpoint hands out free contributions.
+    if (!isPaystackConfigured()) {
+      console.error('webhook: PAYSTACK_SECRET_KEY not set — rejecting')
+      return error('Webhook not configured', 503)
+    }
+    const signature = req.headers.get('x-paystack-signature')
+    if (!(await verifyPaystackSignature(rawBody, signature))) {
+      console.warn('webhook: invalid signature — rejected')
+      return error('Invalid signature', 401)
+    }
+
+    const payload = JSON.parse(rawBody)
     const { event, data } = payload
 
     if (event !== 'charge.success') return json({ received: true })
@@ -52,6 +66,17 @@ Deno.serve(async (req) => {
     // Handle contribution payment
     if (metadata?.type === 'contribution') {
       const { contribution_id, member_id } = metadata
+
+      // Paystack is authoritative on amount, but confirm it covers the debt —
+      // a short payment must not clear a full contribution.
+      const { data: owed } = await supabaseAdmin
+        .from('contributions').select('amount, penalty_due')
+        .eq('id', contribution_id).single()
+      const due = Number(owed?.amount ?? 0) + Number(owed?.penalty_due ?? 0)
+      if (owed && amountGHS + 0.01 < due) {
+        console.warn(`webhook: short payment ${amountGHS} < ${due} for ${contribution_id}`)
+        return json({ received: true, ignored: 'amount below due' })
+      }
 
       await supabaseAdmin
         .from('contributions')

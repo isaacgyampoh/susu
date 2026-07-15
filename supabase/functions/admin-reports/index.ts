@@ -5,11 +5,20 @@ import { requireAdmin }                   from '../_shared/jwt.ts'
 function toCSV(rows: Record<string, unknown>[]): string {
   if (!rows.length) return ''
   const headers = Object.keys(rows[0])
+
   const esc = (v: unknown) => {
-    const s = v === null || v === undefined ? '' : String(v)
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+    let s = v === null || v === undefined ? '' : String(v)
+
+    // CSV injection: members choose their own names at KYC. A name beginning
+    // = + - @ or a control char is executed as a formula when the export is
+    // opened in Excel or Sheets. Neutralise it with a leading apostrophe.
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
+
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
-  return [headers.join(','), ...rows.map(r => headers.map(h => esc(r[h])).join(','))].join('\n')
+
+  // BOM so Excel reads UTF-8 names (Ghanaian names use diacritics)
+  return '\uFEFF' + [headers.join(','), ...rows.map(r => headers.map(h => esc(r[h])).join(','))].join('\r\n')
 }
 
 Deno.serve(async (req) => {

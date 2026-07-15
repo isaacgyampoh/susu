@@ -15,16 +15,23 @@ Deno.serve(async (req) => {
   if (!admin) return error('Unauthorized', 401)
 
   try {
-    const { group_id, start_date } = await req.json()
+    const { group_id, start_date, force } = await req.json()
     if (!group_id || !start_date) return error('group_id and start_date are required')
 
-    // Activate group — this generates all contributions and payouts
+    // Reject a start date in the past — it would back-date everyone as overdue
+    const today = new Date().toISOString().split('T')[0]
+    if (start_date < today && !force) {
+      return error('Start date is in the past. Members would immediately be marked overdue.', 400)
+    }
+
     const { error: activateErr } = await supabaseAdmin.rpc('activate_group', {
       p_group_id:   group_id,
       p_start_date: start_date,
+      p_force:      !!force,
     })
 
-    if (activateErr) return error(activateErr.message, 500)
+    // The DB guards against rebuilding a schedule members have paid into
+    if (activateErr) return error(activateErr.message, 409)
 
     // Notify all members in the group
     const { data: memberships } = await supabaseAdmin

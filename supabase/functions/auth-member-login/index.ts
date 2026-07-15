@@ -15,14 +15,30 @@ Deno.serve(async (req) => {
 
     const normalised = phone.trim().replace(/^0/, '+233').replace(/^\+?233/, '+233')
 
+    // A 6-digit passcode is a million combinations. Rate limit it.
+    const { data: gate } = await supabaseAdmin.rpc('check_login_allowed', {
+      p_identifier: normalised, p_kind: 'member',
+    })
+    if (gate?.[0] && !gate[0].allowed) {
+      const mins = Math.ceil((gate[0].retry_after_seconds ?? 900) / 60)
+      return error(`Too many failed attempts. Try again in ${mins} minute${mins === 1 ? '' : 's'}.`, 429)
+    }
+
     const { data, error: dbErr } = await supabaseAdmin.rpc('verify_member_passcode', {
       p_phone:    normalised,
       p_passcode: String(passcode),
     })
 
     if (dbErr || !data || data.length === 0) {
+      await supabaseAdmin.rpc('record_login_attempt', {
+        p_identifier: normalised, p_kind: 'member', p_ok: false,
+      })
       return error('Invalid phone or passcode', 401)
     }
+
+    await supabaseAdmin.rpc('record_login_attempt', {
+      p_identifier: normalised, p_kind: 'member', p_ok: true,
+    })
 
     const member = data[0]
 
