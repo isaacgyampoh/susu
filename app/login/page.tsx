@@ -3,82 +3,68 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { callFunction, setMemberToken } from '@/lib/supabase'
-import { Loader2, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Loader2, ArrowRight, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 
-export default function MemberLoginPage() {
+export default function LoginPage() {
   const router = useRouter()
-  const [phone, setPhone]       = useState('')
-  const [passcode, setPasscode] = useState('')
-  const [show, setShow]         = useState(false)
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
+  const [phone, setPhone]   = useState('')
+  const [pc, setPc]         = useState('')
+  const [show, setShow]     = useState(false)
+  const [busy, setBusy]     = useState(false)
+  const [err, setErr]       = useState('')
 
-  async function signIn(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true); setError('')
-    const { data, error: err } = await callFunction<{ token: string; member: any }>(
-      'auth-member-login', { method: 'POST', body: { phone, passcode } }
-    )
-    setLoading(false)
-    if (err) { setError(err); return }
-    setMemberToken(data!.token)
-    localStorage.setItem('member_user', JSON.stringify(data!.member))
+  async function go(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setErr('')
+    const { data, error } = await callFunction<any>('auth-member-login',
+      { method: 'POST', body: { phone, passcode: pc } })
+    setBusy(false)
+    if (error) { setErr(error); return }
+    setMemberToken(data.token)
+    localStorage.setItem('member_user', JSON.stringify(data.member))
     router.push('/member/dashboard')
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-5 max-w-lg mx-auto">
+    <div className="min-h-screen flex flex-col max-w-[430px] mx-auto px-[18px]">
       <div className="flex-1 flex flex-col justify-center py-12 animate-slide-up">
-        <div className="w-12 h-12 rounded-2xl bg-forest grid place-items-center mb-8">
-          <span className="text-gold font-extrabold text-xl">S</span>
-        </div>
-
-        <h1 className="display text-[40px] mb-3">
-          Welcome
-          <br />
-          <span className="text-forest">back</span>
+        <p className="stencil text-dim-field mb-3">Members</p>
+        <h1 className="text-[40px] font-black tracking-[-.04em] leading-[.92] mb-9">
+          Open<br /><span className="text-gold">your card.</span>
         </h1>
-        <p className="text-muted text-[15px] mb-9">Sign in with the phone number and passcode your admin gave you.</p>
 
-        <form onSubmit={signIn} className="space-y-4">
-          {error && (
-            <div className="flex items-start gap-2.5 p-4 bg-red-50 border border-red-200 rounded-2xl">
-              <AlertCircle size={16} className="text-red-600 mt-0.5 shrink-0" />
-              <p className="text-red-800 text-sm">{error}</p>
+        <form onSubmit={go} className="space-y-4">
+          {err && (
+            <div className="flex items-start gap-2.5 bg-stamp/15 border border-stamp/30 rounded-[3px] p-3.5">
+              <AlertTriangle size={15} className="text-stamp mt-0.5 shrink-0" />
+              <p className="text-[13px] font-medium">{err}</p>
             </div>
           )}
-
           <div>
-            <label className="field-label">Phone number</label>
-            <input className="field tnum" type="tel" required autoComplete="tel" inputMode="tel"
+            <label className="field-lbl">Phone number</label>
+            <input className="field-in tnum" type="tel" required inputMode="tel" autoComplete="tel"
               value={phone} onChange={e => setPhone(e.target.value)} placeholder="024 000 0000" />
           </div>
-
           <div>
-            <label className="field-label">Passcode</label>
+            <label className="field-lbl">Passcode</label>
             <div className="relative">
-              <input className="field tnum pr-14 tracking-[0.3em] font-semibold"
-                type={show ? 'text' : 'password'} required maxLength={6} inputMode="numeric"
-                value={passcode} onChange={e => setPasscode(e.target.value.replace(/\D/g, ''))}
-                placeholder="••••••" />
-              <button type="button" onClick={() => setShow(!show)}
-                aria-label={show ? 'Hide passcode' : 'Show passcode'}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors">
-                {show ? <EyeOff size={18} /> : <Eye size={18} />}
+              <input className="field-in tnum pr-12 tracking-[.3em] font-bold" maxLength={6} required inputMode="numeric"
+                type={show ? 'text' : 'password'} value={pc}
+                onChange={e => setPc(e.target.value.replace(/\D/g, ''))} placeholder="000000" />
+              <button type="button" onClick={() => setShow(!show)} aria-label={show ? 'Hide passcode' : 'Show passcode'}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-dim hover:text-ink transition-colors">
+                {show ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
           </div>
-
-          <button type="submit" disabled={loading} className="pill-ink w-full !py-4 text-[15px] mt-2">
-            {loading ? <Loader2 size={18} className="animate-spin" /> : <>Sign in <ArrowRight size={17} /></>}
+          <button type="submit" disabled={busy} className="btn-gold w-full !py-4 mt-2">
+            {busy ? <Loader2 size={17} className="animate-spin" /> : <>Sign in <ArrowRight size={16} /></>}
           </button>
         </form>
       </div>
-
-      <div className="pb-8 text-center space-y-3">
-        <p className="text-[13px] text-muted">Lost your passcode? Ask your Susu admin to reset it.</p>
-        <Link href="/admin/login" className="text-[13px] text-muted/70 hover:text-ink transition-colors inline-block">
-          Admin sign in
+      <div className="pb-8 text-center space-y-2.5">
+        <p className="text-[12px] font-medium text-dim-field">Lost your passcode? Ask your collector to reset it.</p>
+        <Link href="/admin/login" className="text-[12px] font-bold text-dim-field/60 hover:text-card transition-colors inline-block">
+          Collector sign in
         </Link>
       </div>
     </div>
