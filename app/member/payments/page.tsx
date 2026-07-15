@@ -3,8 +3,6 @@ import { useEffect, useState } from 'react'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { Contribution } from '@/types'
 import { format } from 'date-fns'
-import { Loader2, X } from 'lucide-react'
-
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const PRESETS = [7, 14, 30]
 
@@ -77,7 +75,7 @@ export default function Payments() {
         {(['all', 'pending', 'paid'] as const).map(f => (
           <button key={f} onClick={() => setF(f)}
             className={`text-[13px] pb-2.5 border-b-2 -mb-px capitalize transition-colors ${
-              filter === f ? 'font-bold text-green border-green' : 'font-medium text-ink-2 border-transparent'
+              filter === f ? 'font-bold text-blue border-blue' : 'font-medium text-ink-2 border-transparent'
             }`}>
             {f === 'pending' ? 'Due' : f}
           </button>
@@ -85,7 +83,7 @@ export default function Payments() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-14"><Loader2 className="animate-spin text-ink-3" size={20} /></div>
+        <div className="flex justify-center py-14">'…'</div>
       ) : rows.length === 0 ? (
         <p className="t-meta py-10">{filter === 'paid' ? 'Nothing paid yet.' : "You're all caught up."}</p>
       ) : (
@@ -108,7 +106,7 @@ export default function Payments() {
                     {paid
                       ? <span className="text-[13px] font-bold tnum">{n2(c.amount)}</span>
                       : <button onClick={() => payOne(c)} disabled={paying === c.id} className="act-gold act-sm">
-                          {paying === c.id ? <Loader2 size={12} className="animate-spin" /> : `Pay ${n2(c.amount)}`}
+                          {paying === c.id ? '…' : `Pay ${n2(c.amount)}`}
                         </button>}
                   </td>
                 </tr>
@@ -121,7 +119,7 @@ export default function Payments() {
       {/* Pay-ahead sheet */}
       {sheet && (
         <div className="fixed inset-0 z-50 bg-ink/25 flex items-end sm:items-center justify-center" onClick={() => setSheet(false)}>
-          <div className="bg-surface w-full sm:max-w-[400px] sm:rounded-[4px] px-6 pt-6 pb-8 max-h-[88vh] overflow-y-auto"
+          <div className="bg-paper w-full sm:max-w-[400px] sm:rounded-[4px] px-6 pt-6 pb-8 max-h-[88vh] overflow-y-auto"
                onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-6">
               <div>
@@ -129,15 +127,14 @@ export default function Payments() {
                 <p className="t-meta mt-1">One MoMo payment, several days covered.</p>
               </div>
               <button onClick={() => setSheet(false)} aria-label="Close" className="text-ink-3 hover:text-ink transition-colors">
-                <X size={18} />
-              </button>
+                </button>
             </div>
 
             <div className="flex gap-5 border-b border-line mb-5">
               {PRESETS.map(d => (
                 <button key={d} onClick={() => setDays(d)}
                   className={`text-[13px] pb-2.5 border-b-2 -mb-px transition-colors ${
-                    days === d ? 'font-bold text-green border-green' : 'font-medium text-ink-2 border-transparent'
+                    days === d ? 'font-bold text-blue border-blue' : 'font-medium text-ink-2 border-transparent'
                   }`}>
                   {d} days
                 </button>
@@ -154,7 +151,7 @@ export default function Payments() {
             </div>
 
             {loadingPrev ? (
-              <div className="flex justify-center py-10"><Loader2 className="animate-spin text-ink-3" size={20} /></div>
+              <div className="flex justify-center py-10">'…'</div>
             ) : prev?.count > 0 ? (
               <>
                 <div className="border-y border-line py-5 mb-5 space-y-2.5">
@@ -176,7 +173,7 @@ export default function Payments() {
                   </div>
                 </div>
                 <button onClick={payBulk} disabled={bulkBusy} className="act-gold w-full !h-12">
-                  {bulkBusy ? <Loader2 size={16} className="animate-spin" /> : `Pay GHS ${n2(prev.total)}`}
+                  {bulkBusy ? '…' : `Pay GHS ${n2(prev.total)}`}
                 </button>
               </>
             ) : (

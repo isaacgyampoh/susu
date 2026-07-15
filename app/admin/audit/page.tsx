@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import { format } from 'date-fns'
-import { Loader2, Shield, User, Wallet, UserX, Layers } from 'lucide-react'
-
 type Entry = {
   id: string; admin_name: string; action: string
   entity_type: string; entity_label: string
@@ -11,11 +9,11 @@ type Entry = {
 }
 
 function actionMeta(action: string) {
-  if (action.startsWith('payout'))     return { icon: Wallet, color: 'text-ink bg-green-50/50', label: 'Payout' }
-  if (action.startsWith('membership')) return { icon: UserX,  color: 'text-red bg-green-50/50',         label: 'Forfeiture' }
-  if (action.startsWith('member'))     return { icon: User,   color: 'text-ink bg-green-50/50',       label: 'Member' }
-  if (action.startsWith('group'))      return { icon: Layers, color: 'text-ink-2 bg-green-50/50',     label: 'Group' }
-  return { icon: Shield, color: 'text-ink-2 bg-green-50/50', label: 'System' }
+  if (action.startsWith('payout'))     return { color: 'text-ink bg-tint', label: 'Payout' }
+  if (action.startsWith('membership')) return { color: 'text-red bg-tint',         label: 'Forfeiture' }
+  if (action.startsWith('member'))     return { color: 'text-ink bg-tint',       label: 'Member' }
+  if (action.startsWith('group'))      return { color: 'text-ink-2 bg-tint',     label: 'Group' }
+  return { color: 'text-ink-2 bg-tint', label: 'System' }
 }
 
 export default function AuditPage() {
@@ -33,17 +31,16 @@ export default function AuditPage() {
   }, [page])
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto pb-12 animate-fade-in">
+    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-ink">Audit Log</h1>
         <p className="text-ink-2 text-sm mt-1">Every money-related action, permanently recorded</p>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-ink" size={32} /></div>
+        <div className="flex justify-center py-20">'…'</div>
       ) : entries.length === 0 ? (
         <div className="text-center py-20 text-ink-2">
-          <Shield size={40} className="mx-auto mb-3 opacity-20" />
           <p>No activity recorded yet</p>
           <p className="text-xs text-ink-3 mt-1">Payouts and forfeitures will appear here</p>
         </div>
@@ -51,12 +48,9 @@ export default function AuditPage() {
         <>
           <div className="space-y-2">
             {entries.map(e => {
-              const { icon: Icon, color, label } = actionMeta(e.action)
+              const { color, label } = actionMeta(e.action)
               return (
-                <div key={e.id} className="bg-surface border border-line rounded-[10px] p-4 flex gap-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-                    <Icon size={16} />
-                  </div>
+                <div key={e.id} className="bg-paper border border-line rounded-[10px] p-4 flex gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
                       <div>
@@ -90,9 +84,9 @@ export default function AuditPage() {
               <span className="text-sm text-ink-2">Page {page} · {total} entries</span>
               <div className="flex gap-2">
                 <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
-                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
+                  className="px-3 py-1.5 text-sm bg-tint text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
                 <button onClick={() => setPage(p => p+1)} disabled={page*50>=total}
-                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
+                  className="px-3 py-1.5 text-sm bg-tint text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
               </div>
             </div>
           )}

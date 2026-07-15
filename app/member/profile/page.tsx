@@ -3,8 +3,6 @@ import { useEffect, useState } from 'react'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { MemberDashboard } from '@/types'
 import { format } from 'date-fns'
-import { Loader2 } from 'lucide-react'
-
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })
 
@@ -42,7 +40,7 @@ export default function Profile() {
     setTimeout(() => setSent(false), 5000)
   }
 
-  if (loading) return <div className="grid place-items-center h-[60vh]"><Loader2 className="animate-spin text-ink-3" size={22} /></div>
+  if (loading) return <div className="grid place-items-center h-[60vh]">'…'</div>
   if (!d)      return <div className="p-10 text-center t-meta">Could not load your profile.</div>
 
   const { member, plans, payouts, myMessages } = d
@@ -125,7 +123,7 @@ export default function Profile() {
               <input className="in" required value={subj} onChange={e => setSubj(e.target.value)} placeholder="Subject" />
               <textarea className="in-area" required rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="Your message" />
               <button type="submit" disabled={busy} className="act-primary w-full">
-                {busy ? <Loader2 size={15} className="animate-spin" /> : 'Send'}
+                {busy ? '…' : 'Send'}
               </button>
             </form>
 
@@ -139,7 +137,7 @@ export default function Profile() {
                     </div>
                     <p className="t-meta mt-1">{m.message}</p>
                     {m.reply_text && (
-                      <div className="mt-3 pl-3 border-l-2 border-green">
+                      <div className="mt-3 pl-3 border-l-2 border-blue">
                         <p className="t-label !text-ink">Reply</p>
                         <p className="text-[13px] mt-1">{m.reply_text}</p>
                       </div>

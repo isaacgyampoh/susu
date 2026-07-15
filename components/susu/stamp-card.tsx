@@ -44,7 +44,7 @@ export default function StampCard({
 
           if (!paid && onPayDay) return (
             <button key={c.id} onClick={() => onPayDay(c)} disabled={payingId === c.id}
-              className={`${cls} hover:border-green disabled:opacity-40`} title={label} aria-label={label}>
+              className={`${cls} hover:border-blue disabled:opacity-40`} title={label} aria-label={label}>
               {payingId === c.id ? '·' : dayNo}
             </button>
           )
@@ -53,9 +53,9 @@ export default function StampCard({
       </div>
 
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3.5 t-meta !text-[11.5px]">
-        <span className="flex items-center gap-1.5"><i className="w-3 h-3 rounded-[3px] bg-green" />Paid</span>
-        <span className="flex items-center gap-1.5"><i className="w-3 h-3 rounded-[3px] border border-line bg-surface" />Due</span>
-        <span className="flex items-center gap-1.5"><i className="w-3 h-3 rounded-[3px] bg-amber-50 border border-gold" />Today</span>
+        <span className="flex items-center gap-1.5"><i className="w-3 h-3 rounded-[3px] bg-blue" />Paid</span>
+        <span className="flex items-center gap-1.5"><i className="w-3 h-3 rounded-[3px] border border-line bg-paper" />Due</span>
+        <span className="flex items-center gap-1.5"><i className="w-3 h-3 rounded-[3px] bg-amber-50 border border-blue" />Today</span>
         <span className="flex items-center gap-1.5"><i className="w-3 h-3 rounded-[3px] bg-red-50 border border-red/40" />Missed</span>
       </div>
     </div>

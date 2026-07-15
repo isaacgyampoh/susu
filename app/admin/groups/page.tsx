@@ -4,8 +4,6 @@ import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { SusuGroup } from '@/types'
 import { format } from 'date-fns'
-import { Loader2, Plus, Play, Users } from 'lucide-react'
-
 export default function GroupsPage() {
   const [groups, setGroups]   = useState<SusuGroup[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,21 +46,21 @@ export default function GroupsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto pb-12 animate-fade-in">
-      {toast && <div className="fixed top-4 right-4 z-50 bg-surface text-ink px-5 py-3 rounded-[10px]  text-sm">{toast}</div>}
+    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
+      {toast && <div className="fixed top-4 right-4 z-50 bg-paper text-ink px-5 py-3 rounded-[10px]  text-sm">{toast}</div>}
 
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-extrabold text-ink">Groups</h1>
           <p className="text-ink-2 text-sm mt-1">{groups.length} susu groups</p>
         </div>
-        <Link href="/admin/groups/new" className="flex items-center gap-2 px-4 py-2.5 bg-gold text-ink font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
-          <Plus size={16} /> New Group
+        <Link href="/admin/groups/new" className="flex items-center gap-2 px-4 py-2.5 bg-blue text-ink font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
+          New Group
         </Link>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-ink" size={32} /></div>
+        <div className="flex justify-center py-20">'…'</div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {groups.map(g => {
@@ -109,21 +107,21 @@ export default function GroupsPage() {
                     <span>Members filled</span>
                     <span>{g.current_members}/{g.max_members}</span>
                   </div>
-                  <div className="h-1.5 bg-green-50/50 rounded-[10px] overflow-hidden">
-                    <div className="h-full bg-gold rounded-[10px] transition-all" style={{ width: `${(g.current_members / g.max_members) * 100}%` }} />
+                  <div className="h-1.5 bg-tint rounded-[10px] overflow-hidden">
+                    <div className="h-full bg-blue rounded-[10px] transition-all" style={{ width: `${(g.current_members / g.max_members) * 100}%` }} />
                   </div>
                 </div>
 
                 {/* Activate button — only show for full/open groups */}
                 {(g.status === 'full' || g.status === 'open') && g.current_members > 0 && (
                   <button onClick={() => { setActivateTarget(g); setStartDate(''); setActivateErr('') }}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-green text-white font-semibold rounded-[10px] text-sm transition-colors">
-                    <Play size={14} /> Activate Group
+                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue text-white font-semibold rounded-[10px] text-sm transition-colors">
+                    Activate Group
                   </button>
                 )}
                 {g.status === 'active' && (
                   <div className="flex items-center justify-center gap-2 text-ink text-sm py-2">
-                    <Users size={14} /> Running since {g.start_date ? format(new Date(g.start_date), 'MMM d, yyyy') : '—'}
+                    Running since {g.start_date ? format(new Date(g.start_date), 'MMM d, yyyy') : '—'}
                   </div>
                 )}
               </div>
@@ -143,12 +141,12 @@ export default function GroupsPage() {
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Start Date *</label>
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
+                className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
                 min={new Date().toISOString().split('T')[0]}
               />
             </div>
             {startDate && (
-              <div className="p-3 bg-green-50/50 border border-line rounded-[10px] text-sm text-ink-2">
+              <div className="p-3 bg-tint border border-line rounded-[10px] text-sm text-ink-2">
                 Group runs from <strong>{format(new Date(startDate), 'MMM d')}</strong> to <strong>{format(new Date(new Date(startDate).getTime() + activateTarget.max_members * activateTarget.cycle_days * 86400000), 'MMM d, yyyy')}</strong>
               </div>
             )}
@@ -165,8 +163,8 @@ export default function GroupsPage() {
             )}
 
             <button onClick={() => activateGroup(false)} disabled={!!activating || !startDate}
-              className="w-full flex items-center justify-center gap-2 py-3.5 bg-green text-white font-bold rounded-[10px] transition-colors disabled:opacity-50">
-              {activating ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue text-white font-bold rounded-[10px] transition-colors disabled:opacity-50">
+              {activating ? '…' : ''}
               Activate & Notify Members
             </button>
             <button onClick={() => setActivateTarget(null)} className="w-full text-ink-2 text-sm hover:text-ink transition-colors py-2">Cancel</button>

@@ -3,8 +3,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { callFunction, setAdminToken } from '@/lib/supabase'
-import { Loader2, ChevronLeft, Eye, EyeOff, AlertCircle } from 'lucide-react'
-
 export default function AdminLogin() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -28,9 +26,8 @@ export default function AdminLogin() {
     <div className="min-h-screen max-w-[420px] mx-auto px-5 pb-10">
       <div className="pt-5">
         <Link href="/" aria-label="Back"
-          className="w-10 h-10 rounded-full bg-green-50 grid place-items-center text-green hover:bg-line transition-colors">
-          <ChevronLeft size={19} />
-        </Link>
+          className="w-10 h-10 rounded-full bg-blue-lt grid place-items-center text-blue hover:bg-line transition-colors">
+          </Link>
       </div>
 
       <div className="text-center mt-8 mb-7">
@@ -41,7 +38,6 @@ export default function AdminLogin() {
       <form onSubmit={go} className="space-y-4 animate-slide-up">
         {err && (
           <div className="flex items-start gap-2.5 bg-red-50 border border-red/20 rounded-[12px] p-3.5">
-            <AlertCircle size={16} className="text-red mt-0.5 shrink-0" />
             <p className="text-[13px] text-red font-medium">{err}</p>
           </div>
         )}
@@ -57,12 +53,12 @@ export default function AdminLogin() {
               value={pw} onChange={e => setPw(e.target.value)} placeholder="Enter password" />
             <button type="button" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink transition-colors">
-              {show ? <EyeOff size={17} /> : <Eye size={17} />}
+              {show ? '' : ''}
             </button>
           </div>
         </div>
         <button type="submit" disabled={busy} className="act-primary w-full !mt-6">
-          {busy ? <Loader2 size={17} className="animate-spin" /> : 'Log In'}
+          {busy ? '…' : 'Log In'}
         </button>
       </form>
 

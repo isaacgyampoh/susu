@@ -3,8 +3,6 @@ import { useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Contribution, SusuGroup } from '@/types'
 import { format } from 'date-fns'
-import { Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react'
-
 type StatusFilter = 'pending' | 'paid' | 'overdue' | 'all'
 
 export default function ContributionsPage() {
@@ -42,12 +40,6 @@ export default function ContributionsPage() {
     setLoading(false)
   }
 
-  function statusIcon(s: string) {
-    if (s === 'paid')    return <CheckCircle size={15} className="text-ink" />
-    if (s === 'overdue') return <AlertCircle size={15} className="text-red" />
-    return <Clock size={15} className="text-ink-2" />
-  }
-
   function statusBadge(s: string) {
     if (s === 'paid')    return <span className="badge-green">Paid</span>
     if (s === 'overdue') return <span className="badge-red">Overdue</span>
@@ -55,7 +47,7 @@ export default function ContributionsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-12 animate-fade-in">
+    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-ink">Contributions</h1>
         <p className="text-ink-2 text-sm mt-1">{total} total records</p>
@@ -66,13 +58,13 @@ export default function ContributionsPage() {
         <div className="flex gap-2 flex-wrap">
           {(['pending','paid','overdue','all'] as StatusFilter[]).map(s => (
             <button key={s} onClick={() => { setStatusFilter(s); setPage(1) }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-gold text-ink' : 'bg-green-50/50 text-ink-2 hover:text-ink'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-blue text-ink' : 'bg-tint text-ink-2 hover:text-ink'}`}>
               {s}
             </button>
           ))}
         </div>
         <select
-          className="px-3 py-1.5 bg-green-50/50 border border-line text-ink text-sm rounded-lg focus:outline-none focus:ring-0 focus:border-green"
+          className="px-3 py-1.5 bg-tint border border-line text-ink text-sm rounded-lg focus:outline-none focus:ring-0 focus:border-blue"
           value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setPage(1) }}>
           <option value="all">All Groups</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -80,7 +72,7 @@ export default function ContributionsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-ink" size={32} /></div>
+        <div className="flex justify-center py-20">'…'</div>
       ) : contributions.length === 0 ? (
         <div className="text-center py-20 text-ink-2">No contributions found</div>
       ) : (
@@ -98,10 +90,9 @@ export default function ContributionsPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {contributions.map(c => (
-                <tr key={c.id} className="hover:bg-green-50/50 transition-colors">
+                <tr key={c.id} className="hover:bg-tint transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
-                      {statusIcon(c.status)}
                       <div>
                         <p className="text-ink font-medium text-xs">{(c as any).members?.full_name}</p>
                         <p className="text-ink-2 text-xs font-mono">{(c as any).members?.member_id}</p>
@@ -125,9 +116,9 @@ export default function ContributionsPage() {
               <span className="text-sm text-ink-2">Page {page} · {total} records</span>
               <div className="flex gap-2">
                 <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
-                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
+                  className="px-3 py-1.5 text-sm bg-tint text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
                 <button onClick={() => setPage(p => p+1)} disabled={page*30>=total}
-                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
+                  className="px-3 py-1.5 text-sm bg-tint text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
               </div>
             </div>
           )}

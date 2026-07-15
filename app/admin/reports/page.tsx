@@ -2,13 +2,11 @@
 import { useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { SusuGroup } from '@/types'
-import { Download, FileText, Users, TrendingUp, UserX, Loader2 } from 'lucide-react'
-
 const REPORTS = [
-  { id: 'contributions', label: 'Contributions',   desc: 'Every contribution with status, dates, penalties and references', icon: FileText,   color: 'text-ink bg-green-50/50' },
-  { id: 'payouts',       label: 'Payouts',         desc: 'All payouts with gross, deductions, net and MoMo numbers',        icon: TrendingUp, color: 'text-ink bg-green-50/50' },
-  { id: 'members',       label: 'Members',         desc: 'Full member register with contact and KYC details',               icon: Users,      color: 'text-ink-2 bg-green-50/50' },
-  { id: 'defaulters',    label: 'Defaulters',      desc: 'Forfeited members with reasons and dates',                        icon: UserX,      color: 'text-red bg-green-50/50' },
+  { id: 'contributions', label: 'Contributions',   desc: 'Every contribution with status, dates, penalties and references',   color: 'text-ink bg-tint' },
+  { id: 'payouts',       label: 'Payouts',         desc: 'All payouts with gross, deductions, net and MoMo numbers', color: 'text-ink bg-tint' },
+  { id: 'members',       label: 'Members',         desc: 'Full member register with contact and KYC details',      color: 'text-ink-2 bg-tint' },
+  { id: 'defaulters',    label: 'Defaulters',      desc: 'Forfeited members with reasons and dates',      color: 'text-red bg-tint' },
 ]
 
 export default function ReportsPage() {
@@ -55,7 +53,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto pb-12 animate-fade-in">
+    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-ink">Reports</h1>
         <p className="text-ink-2 text-sm mt-1">Export your data as CSV — opens in Excel or Google Sheets</p>
@@ -65,26 +63,23 @@ export default function ReportsPage() {
       <div className="mb-6">
         <label className="block text-sm text-ink-2 mb-1.5">Filter by group (optional)</label>
         <select value={groupId} onChange={e => setGroupId(e.target.value)}
-          className="w-full sm:w-96 px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green">
+          className="w-full sm:w-96 px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue">
           <option value="">All groups</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        {REPORTS.map(({ id, label, desc, icon: Icon, color }) => (
+        {REPORTS.map(({ id, label, desc, color }) => (
           <div key={id} className="border border-line rounded-[10px] p-5 flex flex-col">
-            <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center mb-3 ${color}`}>
-              <Icon size={19} />
-            </div>
             <h3 className="font-bold text-ink">{label}</h3>
             <p className="text-ink-2 text-sm mt-1 flex-1">{desc}</p>
             {id === 'members' && groupId && (
               <p className="text-xs text-ink-3 mt-2 italic">Group filter doesn't apply to this report</p>
             )}
             <button onClick={() => download(id)} disabled={downloading === id}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-green-50/50 hover:bg-gold hover:text-ink text-ink font-semibold rounded-[10px] text-sm transition-colors disabled:opacity-50">
-              {downloading === id ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-tint hover:bg-blue hover:text-ink text-ink font-semibold rounded-[10px] text-sm transition-colors disabled:opacity-50">
+              {downloading === id ? '…' : ''}
               Download CSV
             </button>
           </div>

@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import { format } from 'date-fns'
-import { Loader2, TrendingUp, TrendingDown, AlertTriangle, Wallet, Users, Target } from 'lucide-react'
-
 type Analytics = {
   collected_today: number; collected_this_week: number; collected_this_month: number
   due_today: number; paid_today_count: number; due_today_count: number
@@ -35,21 +33,21 @@ export default function AnalyticsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="flex justify-center py-32"><Loader2 className="animate-spin text-ink" size={36} /></div>
+  if (loading) return <div className="flex justify-center py-32">'…'</div>
   if (!data?.analytics) return <div className="p-8 text-center text-ink-2">No data yet. Create a group and activate it first.</div>
 
   const a = data.analytics
   const maxTrend = Math.max(...data.trend.map(t => Number(t.expected)), 1)
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 pb-12 animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-6 pb-12 animate-fade-in">
       <div>
         <h1 className="text-2xl font-extrabold text-ink">Analytics</h1>
         <p className="text-ink-2 text-sm mt-1">Collection performance and financial health</p>
       </div>
 
       {/* Today's collection */}
-      <div className="bg-green-50/50 border border-line rounded-[10px] p-6">
+      <div className="bg-tint border border-line rounded-[10px] p-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <p className="text-ink-2 text-sm font-medium">Collected today</p>
@@ -64,8 +62,8 @@ export default function AnalyticsPage() {
           </div>
         </div>
         {/* Progress bar */}
-        <div className="mt-4 h-2.5 bg-green-50/50 rounded-[10px] overflow-hidden">
-          <div className="h-full bg-gold rounded-[10px] transition-all"
+        <div className="mt-4 h-2.5 bg-tint rounded-[10px] overflow-hidden">
+          <div className="h-full bg-blue rounded-[10px] transition-all"
                style={{ width: `${Math.min(Number(a.collection_rate_today), 100)}%` }} />
         </div>
       </div>
@@ -73,15 +71,12 @@ export default function AnalyticsPage() {
       {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'This Week',        value: ghs(a.collected_this_week),  icon: TrendingUp,    color: 'text-ink', bg: 'bg-green-50/50' },
-          { label: 'This Month',       value: ghs(a.collected_this_month), icon: Wallet,        color: 'text-ink',    bg: 'bg-green-50/50' },
-          { label: 'Total Outstanding',value: ghs(a.total_outstanding),    icon: Target,        color: 'text-ink-2',   bg: 'bg-green-50/50' },
-          { label: 'Total Overdue',    value: ghs(a.total_overdue),        icon: AlertTriangle, color: 'text-red',     bg: 'bg-green-50/50' },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
+          { label: 'This Week',        value: ghs(a.collected_this_week),    color: 'text-ink', bg: 'bg-tint' },
+          { label: 'This Month',       value: ghs(a.collected_this_month),        color: 'text-ink',    bg: 'bg-tint' },
+          { label: 'Total Outstanding',value: ghs(a.total_outstanding),        color: 'text-ink-2',   bg: 'bg-tint' },
+          { label: 'Total Overdue',    value: ghs(a.total_overdue), color: 'text-red',     bg: 'bg-tint' },
+        ].map(({ label, value, color, bg }) => (
           <div key={label} className="border border-line rounded-[10px] p-5">
-            <div className={`w-9 h-9 rounded-[10px] ${bg} flex items-center justify-center mb-3`}>
-              <Icon size={17} className={color} />
-            </div>
             <div className="text-lg font-extrabold text-ink">{value}</div>
             <div className="text-xs text-ink-2 mt-0.5">{label}</div>
           </div>
@@ -118,17 +113,17 @@ export default function AnalyticsPage() {
                   <div key={t.day} className="flex-1 flex flex-col items-center gap-1 group relative">
                     <div className="w-full relative flex-1 flex items-end">
                       {/* Expected (background) */}
-                      <div className="absolute bottom-0 w-full bg-green-50/50 rounded-t transition-all"
+                      <div className="absolute bottom-0 w-full bg-tint rounded-t transition-all"
                            style={{ height: `${expH}%` }} />
                       {/* Collected (foreground) */}
-                      <div className={`absolute bottom-0 w-full rounded-t transition-all ${Number(t.rate) >= 90 ? 'bg-ink' : Number(t.rate) >= 60 ? 'bg-gold' : 'bg-red'}`}
+                      <div className={`absolute bottom-0 w-full rounded-t transition-all ${Number(t.rate) >= 90 ? 'bg-ink' : Number(t.rate) >= 60 ? 'bg-blue' : 'bg-red'}`}
                            style={{ height: `${colH}%` }} />
                     </div>
                     <span className={`text-[9px] ${isToday ? 'text-ink font-bold' : 'text-ink-3'}`}>
                       {format(new Date(t.day), 'd')}
                     </span>
                     {/* Tooltip */}
-                    <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 bg-green-50/50 border border-line rounded-lg px-2 py-1.5 text-xs whitespace-nowrap ">
+                    <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 bg-tint border border-line rounded-lg px-2 py-1.5 text-xs whitespace-nowrap ">
                       <p className="text-ink font-medium">{format(new Date(t.day), 'MMM d')}</p>
                       <p className="text-ink-2">Due: {ghs(t.expected)}</p>
                       <p className="text-ink">Paid: {ghs(t.collected)}</p>
@@ -140,9 +135,9 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex items-center gap-4 mt-4 text-xs">
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-ink" /><span className="text-ink-2">≥90%</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-gold" /><span className="text-ink-2">60–89%</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue" /><span className="text-ink-2">60–89%</span></span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red" /><span className="text-ink-2">&lt;60%</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-50/50" /><span className="text-ink-2">Expected</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-tint" /><span className="text-ink-2">Expected</span></span>
             </div>
           </>
         )}
@@ -189,15 +184,15 @@ export default function AnalyticsPage() {
                       {Number(g.collection_rate).toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-1.5 bg-green-50/50 rounded-[10px] overflow-hidden">
-                    <div className={`h-full rounded-[10px] ${Number(g.collection_rate) >= 90 ? 'bg-ink' : Number(g.collection_rate) >= 60 ? 'bg-gold' : 'bg-red'}`}
+                  <div className="h-1.5 bg-tint rounded-[10px] overflow-hidden">
+                    <div className={`h-full rounded-[10px] ${Number(g.collection_rate) >= 90 ? 'bg-ink' : Number(g.collection_rate) >= 60 ? 'bg-blue' : 'bg-red'}`}
                          style={{ width: `${Math.min(Number(g.collection_rate), 100)}%` }} />
                   </div>
                 </div>
 
                 {Number(g.overdue_total) > 0 && (
                   <p className="mt-3 text-xs text-red flex items-center gap-1.5">
-                    <AlertTriangle size={12} /> {ghs(g.overdue_total)} overdue
+                    {ghs(g.overdue_total)} overdue
                     {Number(g.penalties_total) > 0 && ` · ${ghs(g.penalties_total)} in unpaid penalties`}
                   </p>
                 )}

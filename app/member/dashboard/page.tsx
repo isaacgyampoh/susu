@@ -7,8 +7,6 @@ import { format, differenceInCalendarDays, isToday } from 'date-fns'
 import StampCard from '@/components/susu/stamp-card'
 import Rotation from '@/components/susu/rotation'
 import { useDeadline } from '@/components/susu/deadline'
-import { Loader2, AlertTriangle, ChevronRight, Zap, Clock } from 'lucide-react'
-
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })
 
@@ -38,7 +36,7 @@ export default function Dashboard() {
   const group = plan?.susu_groups
   const dl    = useDeadline(group?.payment_deadline?.slice(0, 5) ?? '18:00')
 
-  if (loading) return <div className="grid place-items-center h-[70vh]"><Loader2 className="animate-spin text-green" size={24} /></div>
+  if (loading) return <div className="grid place-items-center h-[70vh]">'…'</div>
   if (!d)      return <div className="p-10 text-center t-meta">Could not load your account.</div>
 
   const { member, plans, summary, pendingContributions, recentPayments, penalties } = d
@@ -60,7 +58,7 @@ export default function Dashboard() {
     <div className="max-w-[420px] mx-auto px-5 pt-6 animate-fade-in">
 
       <header className="flex items-center gap-3 mb-6">
-        <div className="w-11 h-11 rounded-full bg-green grid place-items-center shrink-0">
+        <div className="w-11 h-11 rounded-full bg-blue grid place-items-center shrink-0">
           <span className="text-white font-bold text-[15px]">{member.full_name[0]}</span>
         </div>
         <div className="min-w-0">
@@ -71,7 +69,6 @@ export default function Dashboard() {
 
       {penalties.length > 0 && (
         <div className="flex items-start gap-2.5 bg-red-50 border border-red/20 rounded-[12px] p-3.5 mb-4">
-          <AlertTriangle size={16} className="text-red mt-0.5 shrink-0" />
           <p className="text-[12.5px] text-red">
             <span className="font-bold">GHS {n2(summary.totalPenalties)} in penalties.</span> This will be deducted from your collection.
           </p>
@@ -91,10 +88,10 @@ export default function Dashboard() {
       {plan && group ? (
         <>
           {/* Collection card — the hero */}
-          <div className="panel p-5 bg-green border-green mb-3">
+          <div className="panel p-5 bg-blue border-blue mb-3">
             <p className="text-[12px] font-semibold text-white/60">You collect</p>
             <p className="text-[34px] font-extrabold tracking-[-.03em] text-white leading-none mt-1.5 tnum">
-              <span className="text-[16px] align-[.4em] mr-1 text-gold">GHS</span>{n0(cashout)}
+              <span className="text-[16px] align-[.4em] mr-1 text-white">GHS</span>{n0(cashout)}
             </p>
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/15">
               <div>
@@ -105,7 +102,7 @@ export default function Dashboard() {
               </div>
               <div className="text-right">
                 <p className="text-[11px] text-white/60 font-medium">Slot</p>
-                <p className="text-[14px] font-bold text-gold mt-0.5">{plan.payout_position} of {group.max_members}</p>
+                <p className="text-[14px] font-bold text-white mt-0.5">{plan.payout_position} of {group.max_members}</p>
               </div>
               {toTurn !== null && toTurn > 0 && (
                 <div className="text-right">
@@ -125,11 +122,11 @@ export default function Dashboard() {
                   <span className="text-[13px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(dueToday.amount)}
                 </p>
                 <p className={`text-[11.5px] font-medium mt-1 flex items-center gap-1 ${dl.urgent ? 'text-red' : 'text-ink-2'}`}>
-                  <Clock size={11} />{dl.label}
+                  {dl.label}
                 </p>
               </div>
               <button onClick={() => pay(dueToday)} disabled={paying === dueToday.id} className="act-gold shrink-0">
-                {paying === dueToday.id ? <Loader2 size={16} className="animate-spin" /> : 'Pay Now'}
+                {paying === dueToday.id ? '…' : 'Pay Now'}
               </button>
             </div>
           )}
@@ -152,7 +149,7 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <Link href="/member/payments" className="act-primary"><Zap size={15} />Pay ahead</Link>
+            <Link href="/member/payments" className="act-primary">Pay ahead</Link>
             <Link href="/member/payments" className="act-quiet">History</Link>
           </div>
 
@@ -175,9 +172,8 @@ export default function Dashboard() {
       <div className="panel p-5">
         <div className="flex items-center justify-between mb-3">
           <p className="t-h2">Recent payments</p>
-          <Link href="/member/payments" className="t-meta font-semibold flex items-center gap-0.5 hover:text-green transition-colors">
-            See all <ChevronRight size={13} />
-          </Link>
+          <Link href="/member/payments" className="t-meta font-semibold flex items-center gap-0.5 hover:text-blue transition-colors">
+            See all </Link>
         </div>
         {recentPayments.filter(p => p.status === 'paid').length === 0 ? (
           <p className="t-meta py-3">No payments yet.</p>
@@ -189,7 +185,7 @@ export default function Dashboard() {
                   <p className="text-[13.5px] font-semibold">{c.susu_groups?.name}</p>
                   <p className="t-meta">{c.paid_at ? format(new Date(c.paid_at), 'd MMM, HH:mm') : format(new Date(c.due_date), 'd MMM')}</p>
                 </div>
-                <p className="text-[14px] font-bold text-green tnum">GHS {n2(c.amount)}</p>
+                <p className="text-[14px] font-bold text-blue tnum">GHS {n2(c.amount)}</p>
               </div>
             ))}
           </div>

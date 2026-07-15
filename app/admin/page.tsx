@@ -4,8 +4,6 @@ import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { AdminDashboard } from '@/types'
 import { format } from 'date-fns'
-import { Loader2, Users, Layers, AlertTriangle, ShieldCheck, Flag, ChevronRight } from 'lucide-react'
-
 const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })
 
 export default function AdminHome() {
@@ -29,19 +27,19 @@ export default function AdminHome() {
     load()
   }
 
-  if (loading) return <div className="grid place-items-center h-[70vh]"><Loader2 className="animate-spin text-green" size={24} /></div>
+  if (loading) return <div className="grid place-items-center h-[70vh]">'…'</div>
   if (!d)      return <div className="p-10 text-center t-meta">Could not load. Check your Supabase setup.</div>
 
   const { stats, upcomingPayouts, groups } = d
   const cards = [
-    { v: n0(stats.totalMembers),         l: 'Members',     icon: Users,       href: '/admin/members' },
-    { v: n0(stats.activeGroups),         l: 'Groups',      icon: Layers,      href: '/admin/groups' },
-    { v: n0(stats.overdueContributions), l: 'Overdue',     icon: AlertTriangle, href: '/admin/contributions', alert: stats.overdueContributions > 0 },
-    { v: n0(stats.pendingKYC),           l: 'Pending KYC', icon: ShieldCheck, href: '/admin/kyc' },
+    { v: n0(stats.totalMembers),         l: 'Members',       href: '/admin/members' },
+    { v: n0(stats.activeGroups),         l: 'Groups',      href: '/admin/groups' },
+    { v: n0(stats.overdueContributions), l: 'Overdue', href: '/admin/contributions', alert: stats.overdueContributions > 0 },
+    { v: n0(stats.pendingKYC),           l: 'Pending KYC', href: '/admin/kyc' },
   ]
 
   return (
-    <div className="px-5 sm:px-8 py-7 max-w-[1100px] animate-fade-in">
+    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
       <header className="flex items-start justify-between gap-4 flex-wrap mb-6">
         <div>
           <h1 className="t-h1">Dashboard</h1>
@@ -50,27 +48,24 @@ export default function AdminHome() {
         <div className="flex items-center gap-2">
           {note && <span className="t-meta">{note}</span>}
           <button onClick={lateCheck} disabled={flagging} className="act-quiet act-sm">
-            {flagging ? <Loader2 size={13} className="animate-spin" /> : <><Flag size={13} /> Run late check</>}
+            {flagging ? '…' : <>Run late check</>}
           </button>
         </div>
       </header>
 
       {/* Collected — the hero figure */}
-      <div className="panel p-6 bg-green border-green mb-4">
+      <div className="panel p-6 bg-blue border-blue mb-4">
         <p className="text-[12px] font-semibold text-white/60">Total collected</p>
         <p className="text-[38px] font-extrabold tracking-[-.03em] text-white leading-none mt-1.5 tnum">
-          <span className="text-[17px] align-[.4em] mr-1 text-gold">GHS</span>{n0(stats.totalCollected)}
+          <span className="text-[17px] align-[.4em] mr-1 text-white">GHS</span>{n0(stats.totalCollected)}
         </p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-7">
-        {cards.map(({ v, l, icon: Icon, href, alert }) => (
-          <Link key={l} href={href} className="panel p-4 hover:border-green transition-colors group">
-            <div className={`w-9 h-9 rounded-[10px] grid place-items-center mb-3 ${alert ? 'bg-red-50' : 'bg-green-50'}`}>
-              <Icon size={16} className={alert ? 'text-red' : 'text-green'} />
-            </div>
+        {cards.map(({ v, l, href, alert }) => (
+          <Link key={l} href={href} className="panel p-4 hover:border-blue transition-colors group">
             <p className={`text-[22px] font-extrabold tnum ${alert ? 'text-red' : ''}`}>{v}</p>
-            <p className="t-meta mt-0.5 group-hover:text-green transition-colors">{l}</p>
+            <p className="t-meta mt-0.5 group-hover:text-blue transition-colors">{l}</p>
           </Link>
         ))}
       </div>
@@ -78,9 +73,8 @@ export default function AdminHome() {
       <div className="panel p-5 mb-4">
         <div className="flex items-center justify-between mb-3">
           <p className="t-h2">Upcoming payouts — next 7 days</p>
-          <Link href="/admin/payouts" className="t-meta font-semibold hover:text-green transition-colors flex items-center gap-0.5">
-            All <ChevronRight size={13} />
-          </Link>
+          <Link href="/admin/payouts" className="t-meta font-semibold hover:text-blue transition-colors flex items-center gap-0.5">
+            All </Link>
         </div>
         {!upcomingPayouts?.length ? (
           <p className="t-meta py-4">Nothing due in the next 7 days.</p>

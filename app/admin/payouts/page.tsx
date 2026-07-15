@@ -3,8 +3,6 @@ import { useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Payout } from '@/types'
 import { format } from 'date-fns'
-import { Loader2, CheckCircle, Send, AlertTriangle, ShieldCheck, ShieldAlert, Copy, Check } from 'lucide-react'
-
 type Eligibility = {
   eligible: boolean; reason: string
   gross_amount: number; outstanding_contrib: number; outstanding_penalty: number
@@ -77,8 +75,8 @@ export default function PayoutsPage() {
   const momo = (selected?.members as any)?.mobile_money_number
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto pb-12 animate-fade-in">
-      {toast && <div className="fixed top-4 right-4 z-50 bg-surface border border-line text-ink px-5 py-3 rounded-[10px]  text-sm max-w-sm">{toast}</div>}
+    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
+      {toast && <div className="fixed top-4 right-4 z-50 bg-paper border border-line text-ink px-5 py-3 rounded-[10px]  text-sm max-w-sm">{toast}</div>}
 
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-ink">Payouts</h1>
@@ -88,14 +86,14 @@ export default function PayoutsPage() {
       <div className="flex gap-2 mb-6">
         {(['upcoming', 'paid', 'all'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-gold text-ink' : 'bg-green-50/50 text-ink-2 hover:text-ink'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-blue text-ink' : 'bg-tint text-ink-2 hover:text-ink'}`}>
             {s}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-ink" size={32} /></div>
+        <div className="flex justify-center py-20">'…'</div>
       ) : payouts.length === 0 ? (
         <div className="text-center py-20 text-ink-2">No {filter} payouts</div>
       ) : (
@@ -114,7 +112,7 @@ export default function PayoutsPage() {
               </thead>
               <tbody className="divide-y divide-line">
                 {payouts.map(p => (
-                  <tr key={p.id} className="hover:bg-green-50/50 transition-colors">
+                  <tr key={p.id} className="hover:bg-tint transition-colors">
                     <td className="px-5 py-4">
                       <p className="text-ink font-medium">{p.members?.full_name}</p>
                       <p className="text-ink-2 text-xs font-mono">
@@ -136,9 +134,9 @@ export default function PayoutsPage() {
                       {p.status !== 'paid' ? (
                         <button onClick={() => openPayout(p)}
                           className="flex items-center gap-1.5 text-xs text-ink hover:text-ink transition-colors font-medium">
-                          <Send size={13} /> Review & Pay
+                          Review & Pay
                         </button>
-                      ) : <CheckCircle size={16} className="text-ink" />}
+                      ) : ''}
                     </td>
                   </tr>
                 ))}
@@ -161,17 +159,15 @@ export default function PayoutsPage() {
 
             {checking ? (
               <div className="flex flex-col items-center py-10 gap-3">
-                <Loader2 className="animate-spin text-ink" size={28} />
+                '…'
                 <p className="text-ink-2 text-sm">Checking eligibility…</p>
               </div>
             ) : elig ? (
               <>
                 {/* Eligibility banner */}
-                <div className={`p-4 rounded-[10px] border flex items-start gap-3 ${elig.eligible ? 'bg-green-50/50 border-line' : 'bg-green-50/50 border-red/40'}`}>
+                <div className={`p-4 rounded-[10px] border flex items-start gap-3 ${elig.eligible ? 'bg-tint border-line' : 'bg-tint border-red/40'}`}>
                   {elig.eligible
-                    ? <ShieldCheck size={20} className="text-ink mt-0.5 shrink-0" />
-                    : <ShieldAlert size={20} className="text-red mt-0.5 shrink-0" />
-                  }
+                    ? '' : ''}
                   <div>
                     <p className={`font-semibold text-sm ${elig.eligible ? 'text-ink' : 'text-red'}`}>
                       {elig.eligible ? 'Eligible for payout' : 'NOT eligible'}
@@ -184,7 +180,7 @@ export default function PayoutsPage() {
                 </div>
 
                 {/* Money breakdown */}
-                <div className="p-4 bg-green-50/50 rounded-[10px] space-y-2 text-sm">
+                <div className="p-4 bg-tint rounded-[10px] space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-ink-2">Cashout amount</span>
                     <span className="text-ink font-medium">{ghs(elig.gross_amount)}</span>
@@ -214,21 +210,21 @@ export default function PayoutsPage() {
                 </div>
 
                 {/* MoMo destination */}
-                <div className="p-3 bg-green-50/50 border border-line rounded-[10px] flex items-center justify-between">
+                <div className="p-3 bg-tint border border-line rounded-[10px] flex items-center justify-between">
                   <div>
                     <p className="text-xs text-ink-2">Send via {(selected.members as any)?.mobile_money_provider ?? 'MoMo'}</p>
                     <p className="text-ink font-mono font-bold">{momo ?? 'No MoMo number on file'}</p>
                   </div>
                   {momo && (
                     <button onClick={() => copyMomo(momo)} className="p-2 text-ink-2 hover:text-ink transition-colors">
-                      {copiedMomo ? <Check size={16} className="text-ink" /> : <Copy size={16} />}
+                      {copiedMomo ? '' : ''}
                     </button>
                   )}
                 </div>
 
                 {/* Override */}
                 {!elig.eligible && (
-                  <label className="flex items-start gap-2.5 p-3 bg-green-50/50 border border-line rounded-[10px] cursor-pointer">
+                  <label className="flex items-start gap-2.5 p-3 bg-tint border border-line rounded-[10px] cursor-pointer">
                     <input type="checkbox" checked={override} onChange={e => setOverride(e.target.checked)}
                       className="mt-0.5 w-4 h-4 accent-green shrink-0" />
                     <span className="text-xs text-ink-2">
@@ -240,19 +236,19 @@ export default function PayoutsPage() {
                 <div>
                   <label className="block text-sm text-ink-2 mb-1.5">MoMo Transaction Reference</label>
                   <input value={ref} onChange={e => setRef(e.target.value)}
-                    className="w-full px-3 py-2 bg-green-50/50 border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-green"
+                    className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue"
                     placeholder="Paste the MoMo transaction ID after sending" />
                 </div>
                 <div>
                   <label className="block text-sm text-ink-2 mb-1.5">Notes (optional)</label>
                   <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)}
-                    className="w-full px-3 py-2 bg-green-50/50 border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-green resize-none"
+                    className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue resize-none"
                     placeholder="e.g. Sent via MTN MoMo at 14:32" />
                 </div>
 
                 <button onClick={markPaid} disabled={processing || (!elig.eligible && !override)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-green text-white font-bold rounded-[10px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                  {processing ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue text-white font-bold rounded-[10px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  {processing ? '…' : ''}
                   {!elig.eligible && !override ? 'Blocked — tick override to proceed' : `Confirm ${ghs(elig.net_amount)} Sent`}
                 </button>
               </>

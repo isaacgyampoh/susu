@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import { format } from 'date-fns'
-import { Loader2, MessageCircle, Send, CheckCircle, Mail, MailOpen } from 'lucide-react'
-
 type Msg = {
   id: string; subject: string; message: string
   is_read: boolean; reply_text?: string; replied_at?: string; created_at: string
@@ -54,8 +52,8 @@ export default function MessagesPage() {
   const unreadCount = messages.filter(m => !m.reply_text).length
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-12 animate-fade-in">
-      {toast && <div className="fixed top-4 right-4 z-50 bg-surface text-ink px-5 py-3 rounded-[10px]  text-sm">{toast}</div>}
+    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
+      {toast && <div className="fixed top-4 right-4 z-50 bg-paper text-ink px-5 py-3 rounded-[10px]  text-sm">{toast}</div>}
 
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-ink">Member Messages</h1>
@@ -67,17 +65,16 @@ export default function MessagesPage() {
       <div className="flex gap-2 mb-6">
         {(['all', 'unread', 'replied'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-gold text-ink' : 'bg-green-50/50 text-ink-2 hover:text-ink'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-blue text-ink' : 'bg-tint text-ink-2 hover:text-ink'}`}>
             {s} {s === 'unread' && unreadCount > 0 && `(${unreadCount})`}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-ink" size={32} /></div>
+        <div className="flex justify-center py-20">'…'</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 text-ink-2">
-          <MessageCircle size={40} className="mx-auto mb-3 opacity-20" />
           No {filter === 'all' ? '' : filter} messages
         </div>
       ) : (
@@ -88,9 +85,7 @@ export default function MessagesPage() {
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2">
                   {msg.reply_text
-                    ? <MailOpen size={16} className="text-ink shrink-0" />
-                    : <Mail size={16} className="text-ink shrink-0" />
-                  }
+                    ? '' : ''}
                   <h3 className="font-bold text-ink text-sm">{msg.subject}</h3>
                 </div>
                 <span className="text-xs text-ink-2 shrink-0">{format(new Date(msg.created_at), 'MMM d, HH:mm')}</span>
@@ -123,12 +118,12 @@ export default function MessagesPage() {
               <p className="text-ink-2 text-xs">{format(new Date(selected.created_at), 'MMMM d, yyyy · HH:mm')}</p>
             </div>
 
-            <div className="p-4 bg-green-50/50 rounded-[10px]">
+            <div className="p-4 bg-tint rounded-[10px]">
               <p className="text-ink text-sm whitespace-pre-wrap">{selected.message}</p>
             </div>
 
             {selected.reply_text && (
-              <div className="p-4 bg-green-50/50 border border-line rounded-[10px]">
+              <div className="p-4 bg-tint border border-line rounded-[10px]">
                 <p className="text-xs font-semibold text-ink mb-1">Your reply</p>
                 <p className="text-ink text-sm whitespace-pre-wrap">{selected.reply_text}</p>
                 {selected.replied_at && <p className="text-xs text-ink-2 mt-2">{format(new Date(selected.replied_at), 'MMM d, yyyy · HH:mm')}</p>}
@@ -137,13 +132,13 @@ export default function MessagesPage() {
 
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">{selected.reply_text ? 'Update reply' : 'Your reply'}</label>
-              <textarea className="w-full px-3 py-2 bg-green-50/50 border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-green resize-none"
+              <textarea className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue resize-none"
                 rows={4} value={reply} onChange={e => setReply(e.target.value)} placeholder="Type your reply — the member will see it in their portal…" />
             </div>
 
             <button onClick={sendReply} disabled={sending || !reply.trim()}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gold text-ink font-bold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-50">
-              {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-blue text-ink font-bold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-50">
+              {sending ? '…' : ''}
               {selected.reply_text ? 'Update Reply' : 'Send Reply'}
             </button>
             <button onClick={() => setSelected(null)} className="w-full text-ink-2 text-sm hover:text-ink py-2">Close</button>

@@ -1,101 +1,105 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Blue, white, black. Nothing else.
+
+  No icons anywhere — words carry meaning better than pictograms in a money
+  product, and icon-in-a-tinted-well is the single loudest AI tell there is.
+  Colour appears only where it means something: blue for action, red for late.
+*/
 :root {
-  --bg-top:  #FFFFFF;
-  --bg-bot:  #EAF6ED;
-  --surface: #FFFFFF;
-  --green:   #0B4A2C;   /* brand — primary actions */
-  --green-2: #17703F;   /* hover */
-  --green-50:#E9F5EC;   /* soft fills */
-  --ink:     #14261C;
-  --ink-2:   #5F7268;
-  --ink-3:   #93A79A;
-  --line:    #DDEAE1;
-  --gold:    #F4A200;
-  --red:     #C4382F;
+  --paper:   #FFFFFF;
+  --tint:    #F4F7FA;   /* pale blue-grey wash */
+  --ink:     #0B0F14;   /* near-black, blue undertone */
+  --ink-2:   #59657450;
+  --line:    #E3E9EF;
+  --blue:    #0A56C4;   /* considered, institutional — not a Tailwind default */
+  --blue-lt: #EAF1FB;
+  --red:     #B4322A;
 }
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
   body {
-    @apply text-ink antialiased;
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-    background: linear-gradient(175deg, var(--bg-top) 0%, var(--bg-bot) 100%);
-    background-attachment: fixed;
-    min-height: 100vh;
+    @apply bg-paper text-ink antialiased;
+    font-family: Inter, system-ui, sans-serif;
   }
   .tnum { font-variant-numeric: tabular-nums; }
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
   }
-  :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  ::selection { background: var(--blue-lt); }
 }
 
 @layer components {
-  /* Surfaces */
-  .panel {
-    @apply bg-surface rounded-[20px] border border-line;
-    box-shadow: 0 1px 2px rgba(20,38,28,.03), 0 8px 24px -14px rgba(20,38,28,.10);
-  }
-  .panel-flat { @apply bg-surface rounded-[16px] border border-line; }
+  .t-display { @apply text-[32px] sm:text-[38px] font-extrabold tracking-[-.035em] leading-[1.04]; }
+  .t-h2      { @apply text-[15px] font-bold tracking-[-.01em]; }
+  .t-figure  { @apply text-[28px] font-extrabold tracking-[-.025em] leading-none tnum; }
+  .t-label   { @apply text-[11px] font-semibold tracking-[.09em] uppercase text-ink-3; }
+  .t-meta    { @apply text-[13px] text-ink-2; }
 
-  /* Type */
-  .t-h1     { @apply text-[26px] font-extrabold tracking-[-.02em] leading-tight; }
-  .t-h2     { @apply text-[16px] font-bold; }
-  .t-figure { @apply text-[26px] font-extrabold tracking-[-.02em] leading-none tnum; }
-  .t-label  { @apply text-[12px] font-semibold text-ink-2; }
-  .t-meta   { @apply text-[12.5px] text-ink-2; }
+  .panel { @apply bg-paper border border-line rounded-lg; }
+  .well  { @apply bg-tint rounded-lg; }
 
-  /* Actions */
-  .act {
-    @apply inline-flex items-center justify-center gap-2 h-12 px-6 rounded-[12px]
-           text-[14px] font-bold transition-all active:scale-[.98]
-           disabled:opacity-40 disabled:pointer-events-none disabled:active:scale-100;
-  }
-  .act-primary { @apply act bg-green text-white hover:bg-green-2; }
-  .act-gold    { @apply act bg-gold text-ink hover:brightness-[1.04]; }
-  .act-soft    { @apply act bg-green-50 text-green hover:bg-line; }
-  .act-quiet   { @apply act bg-surface border border-line text-ink hover:bg-green-50; }
-  .act-danger  { @apply act bg-red text-white hover:brightness-110; }
-  .act-sm      { @apply h-9 px-4 text-[12.5px] rounded-[9px]; }
+  /* Actions — words, never icons */
+  .btn      { @apply inline-flex items-center justify-center h-10 px-4 rounded-md text-[13px] font-semibold
+                     transition-colors disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap; }
+  .btn-blue { @apply btn bg-blue text-white hover:bg-blue/90; }
+  .btn-dark { @apply btn bg-ink text-white hover:bg-ink/85; }
+  .btn-line { @apply btn border border-line text-ink hover:bg-tint; }
+  .btn-red  { @apply btn bg-red text-white hover:bg-red/90; }
+  .btn-lg   { @apply h-12 px-6 text-[14px]; }
+  .btn-sm   { @apply h-8 px-3 text-[12px]; }
 
-  /* Inputs */
-  .in {
-    @apply w-full h-12 px-4 rounded-[12px] bg-surface border border-line text-ink text-[14px]
-           placeholder-ink-3 focus:outline-none focus:border-green transition-colors;
-  }
-  .in-area { @apply in h-auto py-3.5 resize-none; }
-  .in-lbl  { @apply block text-[12.5px] font-semibold text-ink mb-1.5; }
+  .in      { @apply w-full h-11 px-3.5 rounded-md bg-paper border border-line text-ink text-[14px]
+                    placeholder-ink-3 focus:outline-none focus:border-blue focus:ring-2 focus:ring-blue/15 transition-all; }
+  .in-area { @apply in h-auto py-3 resize-none; }
+  .in-lbl  { @apply block text-[13px] font-semibold mb-1.5; }
 
-  /* Segmented — the Person/Store control */
-  .seg      { @apply flex p-1 bg-green-50 rounded-[12px]; }
-  .seg-item { @apply flex-1 h-9 rounded-[9px] text-[13px] font-semibold text-ink-2 transition-all; }
-  .seg-on   { @apply bg-green text-white; }
+  /* Status — words, weighted. Never a coloured pill. */
+  .st      { @apply text-[11px] font-bold tracking-[.06em] uppercase; }
+  .st-on   { @apply st text-blue; }
+  .st-off  { @apply st text-ink-3; }
+  .st-late { @apply st text-red; }
 
-  /* Status */
-  .pill      { @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold; }
-  .pill-on   { @apply pill bg-green-50 text-green; }
-  .pill-wait { @apply pill bg-amber-50 text-amber-700; }
+  /* Susu card grid */
+  .box       { @apply aspect-square border border-line rounded grid place-items-center text-[9px] font-semibold text-ink-3 transition-colors; }
+  .box-paid  { @apply border-blue bg-blue text-white; }
+  .box-today { @apply border-blue border-dashed text-blue font-bold bg-blue-lt; }
+  .box-late  { @apply border-red text-red; }
+
+  /* Pills used by the member + console status columns */
+  .pill      { @apply inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold; }
+  .pill-on   { @apply pill bg-blue-lt text-blue; }
+  .pill-wait { @apply pill bg-tint text-ink-2; }
+  .pill-off  { @apply pill bg-tint text-ink-3; }
   .pill-late { @apply pill bg-red-50 text-red; }
-  .pill-off  { @apply pill bg-green-50/60 text-ink-3; }
 
-  /* Admin table badges */
-  .badge-green { @apply pill-on; }
-  .badge-blue  { @apply pill-on; }
-  .badge-gold  { @apply pill-wait; }
-  .badge-gray  { @apply pill-off; }
-  .badge-red   { @apply pill-late; }
+  /* Segmented control */
+  .seg      { @apply flex gap-1 p-1 bg-tint rounded-lg; }
+  .seg-item { @apply flex-1 py-2 px-3 rounded-md text-[13px] font-semibold text-ink-2 transition-colors hover:text-ink; }
+  .seg-on   { @apply bg-paper text-ink shadow-sm; }
 
-  /* Contribution day grid */
-  .box {
-    @apply aspect-square rounded-[7px] grid place-items-center text-[10px] font-semibold
-           border border-line text-ink-3 bg-surface transition-colors;
-  }
-  .box-paid  { @apply bg-green border-green text-white; }
-  .box-today { @apply bg-amber-50 border-gold text-ink font-bold; }
-  .box-late  { @apply bg-red-50 border-red/40 text-red; }
+  /* Legacy aliases kept so admin tables don't render unstyled */
+  .badge-green,.badge-blue { @apply st-on; }
+  .badge-gold,.badge-gray  { @apply st-off; }
+  .badge-red               { @apply st-late; }
+  .card  { @apply panel; }
+  .input { @apply in; }
+  .label { @apply in-lbl; }
+  .act,.act-primary { @apply btn-dark; }
+  .act-gold { @apply btn-blue; }
+  .act-soft { @apply btn-line; }
+  .t-h1 { @apply t-display; }
+  .act-accent { @apply btn-blue; }
+  .act-quiet  { @apply btn-line; }
+  .act-sm     { @apply btn-sm; }
+  .in-lbl2    { @apply in-lbl; }
+  .rule       { @apply border-t border-line; }
+  .rule-hd    { @apply border-b border-ink; }
 }
