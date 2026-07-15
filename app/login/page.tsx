@@ -57,7 +57,7 @@ export default function MemberLogin() {
         <div>
           <label className="in-lbl">Passcode</label>
           <div className="relative">
-            <input className="in tnum pr-12 tracking-[.3em] font-semibold" maxLength={6} required inputMode="numeric"
+            <input className={`in tnum pr-12 font-semibold ${pc ? 'tracking-[.3em]' : ''}`} maxLength={6} required inputMode="numeric"
               type={show ? 'text' : 'password'} value={pc}
               onChange={e => setPc(e.target.value.replace(/\D/g, ''))} placeholder="Enter passcode" />
             <button type="button" onClick={() => setShow(!show)} aria-label={show ? 'Hide passcode' : 'Show passcode'}
