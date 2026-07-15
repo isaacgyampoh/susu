@@ -42,33 +42,33 @@ export default function NewGroupPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-12 animate-fade-in">
-      <Link href="/admin/groups" className="flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-6 transition-colors">
+      <Link href="/admin/groups" className="flex items-center gap-2 text-ink-2 hover:text-ink text-sm mb-6 transition-colors">
         <ArrowLeft size={16} /> Back to Groups
       </Link>
-      <h1 className="text-2xl font-extrabold text-white mb-1">Create New Susu Group</h1>
-      <p className="text-gray-400 text-sm mb-8">You set everything — contribution, cashout, deadline, penalty. Members see the cashout amount only.</p>
+      <h1 className="text-2xl font-extrabold text-ink mb-1">Create New Susu Group</h1>
+      <p className="text-ink-2 text-sm mb-8">You set everything — contribution, cashout, deadline, penalty. Members see the cashout amount only.</p>
 
-      {error && <div className="p-3 bg-red-900/30 border border-red-500/30 rounded-xl text-red-400 text-sm mb-5">{error}</div>}
+      {error && <div className="p-3 bg-wash border border-alert/40 rounded-[3px] text-alert text-sm mb-5">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="border border-line rounded-[3px] p-6 space-y-5">
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-sm text-gray-400 mb-1.5">Group Name *</label>
-            <input className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold"
+            <label className="block text-sm text-ink-2 mb-1.5">Group Name *</label>
+            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
               required value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Gold Circle – Daily 55" />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Daily Contribution (GHS) *</label>
-            <input className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold"
+            <label className="block text-sm text-ink-2 mb-1.5">Daily Contribution (GHS) *</label>
+            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
               required type="number" min="1" step="0.01" value={form.contribution_amount}
               onChange={e => set('contribution_amount', e.target.value)} placeholder="55.00" />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Frequency</label>
-            <select className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold"
+            <label className="block text-sm text-ink-2 mb-1.5">Frequency</label>
+            <select className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
               value={form.contribution_frequency} onChange={e => set('contribution_frequency', e.target.value)}>
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
@@ -77,36 +77,36 @@ export default function NewGroupPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Number of Members *</label>
-            <input className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold"
+            <label className="block text-sm text-ink-2 mb-1.5">Number of Members *</label>
+            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
               required type="number" min="2" value={form.max_members}
               onChange={e => set('max_members', e.target.value)} placeholder="11" />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Cycle Days (per member) *</label>
-            <input className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold"
+            <label className="block text-sm text-ink-2 mb-1.5">Cycle Days (per member) *</label>
+            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
               required type="number" min="1" value={form.cycle_days}
               onChange={e => set('cycle_days', e.target.value)} placeholder="30" />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Registration Fee (GHS) *</label>
-            <input className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold"
+            <label className="block text-sm text-ink-2 mb-1.5">Registration Fee (GHS) *</label>
+            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
               required type="number" min="0" step="0.01" value={form.registration_fee}
               onChange={e => set('registration_fee', e.target.value)} placeholder="110.00" />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Payment Deadline</label>
-            <input type="time" className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold"
+            <label className="block text-sm text-ink-2 mb-1.5">Payment Deadline</label>
+            <input type="time" className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
               value={form.payment_deadline} onChange={e => set('payment_deadline', e.target.value)} />
-            <p className="text-xs text-gray-500 mt-1">Payments after this time are flagged as LATE</p>
+            <p className="text-xs text-ink-2 mt-1">Payments after this time are flagged as LATE</p>
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Late Penalty per Day (GHS)</label>
-            <input className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold"
+            <label className="block text-sm text-ink-2 mb-1.5">Late Penalty per Day (GHS)</label>
+            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
               type="number" min="0" step="0.01" value={form.penalty_per_late_day}
               onChange={e => set('penalty_per_late_day', e.target.value)} placeholder="0.00" />
           </div>
@@ -114,52 +114,52 @@ export default function NewGroupPage() {
 
         {/* Formula estimate */}
         {formulaEst !== null && (
-          <div className="p-4 bg-gray-800 border border-gray-700 rounded-xl">
-            <p className="text-xs text-gray-400 flex items-center gap-1.5 mb-2"><Calculator size={13} /> Formula estimate (for reference only)</p>
-            <p className="text-green-300 text-sm">
+          <div className="p-4 bg-wash border border-line rounded-[3px]">
+            <p className="text-xs text-ink-2 flex items-center gap-1.5 mb-2"><Calculator size={13} /> Formula estimate (for reference only)</p>
+            <p className="text-ink-2 text-sm">
               {form.contribution_amount} × {form.max_members} members × {form.cycle_days} days =
-              <span className="font-bold text-brand-gold ml-1">GHS {formulaEst.toLocaleString()}</span>
+              <span className="font-bold text-ink ml-1">GHS {formulaEst.toLocaleString()}</span>
             </p>
-            <p className="text-gray-500 text-xs mt-1">You can set any cashout amount below — the formula is just a reference.</p>
+            <p className="text-ink-2 text-xs mt-1">You can set any cashout amount below — the formula is just a reference.</p>
           </div>
         )}
 
         {/* CASHOUT AMOUNT — the key field */}
-        <div className="p-4 bg-brand-green/10 border border-brand-green/30 rounded-xl">
-          <label className="block text-sm font-semibold text-green-300 mb-1.5">
-            ★ Member Cashout Amount (GHS) * — this is what members will receive and see
+        <div className="p-4 bg-wash border border-line rounded-[3px]">
+          <label className="block text-sm font-semibold text-ink-2 mb-1.5">
+            Member Cashout Amount (GHS) * — this is what members will receive and see
           </label>
-          <input className="w-full px-4 py-3 bg-gray-800 border border-brand-gold/50 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold text-lg font-bold"
+          <input className="w-full px-4 py-3 bg-wash border border-ink text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink text-lg font-bold"
             required type="number" min="1" step="0.01" value={form.cashout_amount}
             onChange={e => set('cashout_amount', e.target.value)} placeholder="16430.00" />
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-ink-2 mt-2">
             The registration fee (GHS {form.registration_fee || '110'}) will be added to this on payout day.
-            Total cashout = <span className="text-brand-gold font-semibold">
+            Total cashout = <span className="text-ink font-semibold">
               GHS {((parseFloat(form.cashout_amount) || 0) + parseFloat(form.registration_fee || '0')).toLocaleString()}
             </span>
           </p>
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-sm text-gray-400 mb-1.5">Description (shown to public)</label>
-          <input className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold"
+          <label className="block text-sm text-ink-2 mb-1.5">Description (shown to public)</label>
+          <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
             value={form.description} onChange={e => set('description', e.target.value)} placeholder="Short description for the plans page" />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1.5">Additional Rules (optional)</label>
-          <textarea className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold resize-none"
+          <label className="block text-sm text-ink-2 mb-1.5">Additional Rules (optional)</label>
+          <textarea className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink resize-none"
             rows={2} value={form.rules} onChange={e => set('rules', e.target.value)} placeholder="Any group-specific rules…" />
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1.5">Admin Notes (private — not shown to members)</label>
-          <textarea className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold resize-none"
+          <label className="block text-sm text-ink-2 mb-1.5">Admin Notes (private — not shown to members)</label>
+          <textarea className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink resize-none"
             rows={2} value={form.admin_notes} onChange={e => set('admin_notes', e.target.value)} placeholder="Internal notes, cut calculations, etc." />
         </div>
 
         <button type="submit" disabled={loading}
-          className="w-full py-3.5 bg-brand-gold text-brand-green font-bold rounded-xl hover:bg-amber-400 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
+          className="w-full py-3.5 bg-accent text-ink font-bold rounded-[3px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
           {loading ? <Loader2 size={18} className="animate-spin" /> : 'Create Group'}
         </button>
       </form>

@@ -5,10 +5,10 @@ import type { SusuGroup } from '@/types'
 import { Download, FileText, Users, TrendingUp, UserX, Loader2 } from 'lucide-react'
 
 const REPORTS = [
-  { id: 'contributions', label: 'Contributions',   desc: 'Every contribution with status, dates, penalties and references', icon: FileText,   color: 'text-blue-400 bg-blue-900/40' },
-  { id: 'payouts',       label: 'Payouts',         desc: 'All payouts with gross, deductions, net and MoMo numbers',        icon: TrendingUp, color: 'text-emerald-400 bg-emerald-900/40' },
-  { id: 'members',       label: 'Members',         desc: 'Full member register with contact and KYC details',               icon: Users,      color: 'text-amber-400 bg-amber-900/40' },
-  { id: 'defaulters',    label: 'Defaulters',      desc: 'Forfeited members with reasons and dates',                        icon: UserX,      color: 'text-red-400 bg-red-900/40' },
+  { id: 'contributions', label: 'Contributions',   desc: 'Every contribution with status, dates, penalties and references', icon: FileText,   color: 'text-ink bg-wash' },
+  { id: 'payouts',       label: 'Payouts',         desc: 'All payouts with gross, deductions, net and MoMo numbers',        icon: TrendingUp, color: 'text-ink bg-wash' },
+  { id: 'members',       label: 'Members',         desc: 'Full member register with contact and KYC details',               icon: Users,      color: 'text-ink-2 bg-wash' },
+  { id: 'defaulters',    label: 'Defaulters',      desc: 'Forfeited members with reasons and dates',                        icon: UserX,      color: 'text-alert bg-wash' },
 ]
 
 export default function ReportsPage() {
@@ -57,15 +57,15 @@ export default function ReportsPage() {
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto pb-12 animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-white">Reports</h1>
-        <p className="text-gray-400 text-sm mt-1">Export your data as CSV — opens in Excel or Google Sheets</p>
+        <h1 className="text-2xl font-extrabold text-ink">Reports</h1>
+        <p className="text-ink-2 text-sm mt-1">Export your data as CSV — opens in Excel or Google Sheets</p>
       </div>
 
       {/* Group filter */}
       <div className="mb-6">
-        <label className="block text-sm text-gray-400 mb-1.5">Filter by group (optional)</label>
+        <label className="block text-sm text-ink-2 mb-1.5">Filter by group (optional)</label>
         <select value={groupId} onChange={e => setGroupId(e.target.value)}
-          className="w-full sm:w-96 px-4 py-3 bg-gray-800 border border-gray-700 text-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-gold">
+          className="w-full sm:w-96 px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink">
           <option value="">All groups</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
@@ -73,17 +73,17 @@ export default function ReportsPage() {
 
       <div className="grid sm:grid-cols-2 gap-4">
         {REPORTS.map(({ id, label, desc, icon: Icon, color }) => (
-          <div key={id} className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex flex-col">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
+          <div key={id} className="border border-line rounded-[3px] p-5 flex flex-col">
+            <div className={`w-10 h-10 rounded-[3px] flex items-center justify-center mb-3 ${color}`}>
               <Icon size={19} />
             </div>
-            <h3 className="font-bold text-white">{label}</h3>
-            <p className="text-gray-500 text-sm mt-1 flex-1">{desc}</p>
+            <h3 className="font-bold text-ink">{label}</h3>
+            <p className="text-ink-2 text-sm mt-1 flex-1">{desc}</p>
             {id === 'members' && groupId && (
-              <p className="text-xs text-gray-600 mt-2 italic">Group filter doesn't apply to this report</p>
+              <p className="text-xs text-ink-3 mt-2 italic">Group filter doesn't apply to this report</p>
             )}
             <button onClick={() => download(id)} disabled={downloading === id}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-gray-800 hover:bg-brand-gold hover:text-brand-green text-gray-300 font-semibold rounded-xl text-sm transition-colors disabled:opacity-50">
+              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-wash hover:bg-accent hover:text-ink text-ink font-semibold rounded-[3px] text-sm transition-colors disabled:opacity-50">
               {downloading === id ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
               Download CSV
             </button>

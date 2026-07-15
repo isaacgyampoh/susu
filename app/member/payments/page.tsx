@@ -3,224 +3,184 @@ import { useEffect, useState } from 'react'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { Contribution } from '@/types'
 import { format } from 'date-fns'
-import { Loader2, Zap, Check, Clock, AlertTriangle, X, ArrowUpRight, Calendar } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 
-const ghs = (n: any) => Number(n ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const PRESETS = [{ d: 7, l: '1 week' }, { d: 14, l: '2 weeks' }, { d: 30, l: '1 month' }]
+const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const PRESETS = [7, 14, 30]
 
-export default function PaymentsPage() {
-  const [rows, setRows]         = useState<Contribution[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [filter, setFilter]     = useState<'all' | 'pending' | 'paid'>('all')
-  const [payingId, setPayingId] = useState<string | null>(null)
+export default function Payments() {
+  const [rows, setRows]   = useState<Contribution[]>([])
+  const [loading, setL]   = useState(true)
+  const [filter, setF]    = useState<'all' | 'pending' | 'paid'>('all')
+  const [paying, setP]    = useState<string | null>(null)
 
-  const [sheet, setSheet]       = useState(false)
-  const [days, setDays]         = useState(7)
-  const [preview, setPreview]   = useState<any>(null)
-  const [loadingPreview, setLoadingPreview] = useState(false)
-  const [paying, setPaying]     = useState(false)
+  const [sheet, setSheet] = useState(false)
+  const [days, setDays]   = useState(7)
+  const [prev, setPrev]   = useState<any>(null)
+  const [loadingPrev, setLP] = useState(false)
+  const [bulkBusy, setBB] = useState(false)
 
   async function load() {
-    setLoading(true)
-    const token = getMemberToken()
+    setL(true)
     const q = filter === 'all' ? 'page=1' : `status=${filter}&page=1`
-    const { data } = await callFunction<{ contributions: Contribution[] }>(`contributions-list?${q}`, { token: token! })
-    setRows(data?.contributions ?? [])
-    setLoading(false)
+    const { data } = await callFunction<{ contributions: Contribution[] }>(`contributions-list?${q}`, { token: getMemberToken()! })
+    setRows(data?.contributions ?? []); setL(false)
   }
   useEffect(() => { load() }, [filter])
 
   useEffect(() => {
     if (!sheet) return
-    setLoadingPreview(true)
-    const token = getMemberToken()
-    callFunction<any>(`payments-bulk?days=${days}`, { token: token! })
-      .then(({ data }) => setPreview(data))
-      .finally(() => setLoadingPreview(false))
+    setLP(true)
+    callFunction<any>(`payments-bulk?days=${days}`, { token: getMemberToken()! })
+      .then(({ data }) => setPrev(data)).finally(() => setLP(false))
   }, [sheet, days])
 
   async function payOne(c: Contribution) {
-    const token = getMemberToken()
-    setPayingId(c.id)
+    setP(c.id)
     const { data, error } = await callFunction<any>('payments-initialize',
-      { method: 'POST', body: { contribution_id: c.id }, token: token! })
-    setPayingId(null)
-    if (error) { alert(error); return }
-    if (data?.dev_mode) { load(); return }
+      { method: 'POST', body: { contribution_id: c.id }, token: getMemberToken()! })
+    setP(null)
+    if (error) return alert(error)
+    if (data?.dev_mode) return load()
     if (data?.authorization_url) window.location.href = data.authorization_url
   }
 
   async function payBulk() {
-    setPaying(true)
-    const token = getMemberToken()
+    setBB(true)
     const { data, error } = await callFunction<any>('payments-bulk',
-      { method: 'POST', body: { days }, token: token! })
-    setPaying(false)
-    if (error) { alert(error); return }
-    if (data?.dev_mode) { setSheet(false); load(); return }
+      { method: 'POST', body: { days }, token: getMemberToken()! })
+    setBB(false)
+    if (error) return alert(error)
+    if (data?.dev_mode) { setSheet(false); return load() }
     if (data?.authorization_url) window.location.href = data.authorization_url
   }
 
   const unpaid = rows.filter(r => r.status !== 'paid').length
 
   return (
-    <div className="px-5 pt-6 pb-28 max-w-lg mx-auto animate-fade-in">
-      <h1 className="text-[36px] font-black tracking-[-.035em] mb-2">Payments</h1>
-      <p className="text-dim-field text-[15px] mb-7">Pay day by day, or clear a stretch in one go.</p>
+    <div className="max-w-[440px] mx-auto px-5 py-7 pb-16 animate-fade-in">
+      <h1 className="t-display">Payments</h1>
+      <p className="t-meta mt-2">Pay day by day, or clear a stretch in one MoMo payment.</p>
 
-      {/* Pay ahead — the MoMo-shaped action, so it leads */}
       {unpaid > 0 && (
         <button onClick={() => setSheet(true)}
-          className="w-full card-stock p-5 mb-6 flex items-center justify-between text-left transition-transform active:scale-[0.99] group">
-          <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-[3px] bg-gold grid place-items-center shrink-0">
-              <Zap size={19} className="text-ink" />
-            </div>
-            <div>
-              <p className="font-bold text-[15px]">Pay ahead</p>
-              <p className="text-dim-field text-[13px] mt-0.5">Cover several days in one MoMo payment</p>
-            </div>
+          className="w-full flex items-baseline justify-between py-5 mt-6 border-y border-line group">
+          <div className="text-left">
+            <p className="text-[15px] font-bold group-hover:underline underline-offset-4">Pay ahead</p>
+            <p className="t-meta mt-0.5">Cover several days at once</p>
           </div>
-          <ArrowUpRight size={18} className="text-dim-field group-hover:text-ink transition-colors shrink-0" />
+          <span className="t-label group-hover:text-ink transition-colors">Go</span>
         </button>
       )}
 
-      {/* Filter */}
-      <div className="flex gap-1 bg-field-2 rounded-[3px] p-1 mb-5">
+      <div className="flex gap-5 mt-7 border-b border-line">
         {(['all', 'pending', 'paid'] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`flex-1 py-2 rounded-[2px] stencil transition-colors ${filter === f ? 'bg-gold text-ink' : 'text-dim-field'}`}>
+          <button key={f} onClick={() => setF(f)}
+            className={`text-[13px] pb-2.5 border-b-2 -mb-px capitalize transition-colors ${
+              filter === f ? 'font-bold text-ink border-ink' : 'font-medium text-ink-2 border-transparent'
+            }`}>
             {f === 'pending' ? 'Due' : f}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="animate-spin text-forest" size={26} /></div>
+        <div className="flex justify-center py-14"><Loader2 className="animate-spin text-ink-3" size={20} /></div>
       ) : rows.length === 0 ? (
-        <div className="card-stock p-10 text-center">
-          <p className="text-dim-field text-sm">
-            {filter === 'paid' ? 'No payments recorded yet' : "You're all caught up"}
-          </p>
-        </div>
+        <p className="t-meta py-10">{filter === 'paid' ? 'Nothing paid yet.' : "You're all caught up."}</p>
       ) : (
-        <div className="bg-field-2 rounded-[4px] p-1">
-          {rows.map(c => {
-            const paid = c.status === 'paid'
-            const late = c.status === 'overdue' || c.is_flagged
-            return (
-              <div key={c.id} className="flex items-center gap-3.5 p-4">
-                <div className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${
-                  paid ? 'bg-stamp/20' : late ? 'bg-stamp/20' : 'bg-gold/20'
-                }`}>
-                  {paid ? <Check size={15} className="text-stamp" />
-                    : late ? <AlertTriangle size={14} className="text-stamp" />
-                    : <Clock size={14} className="text-gold" />}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[14px] truncate">{c.susu_groups?.name}</p>
-                  <p className="text-[12px] text-dim-field">
-                    {format(new Date(c.due_date), 'd MMM yyyy')}
-                    {late && <span className="text-stamp font-semibold"> · Late</span>}
-                    {Number(c.penalty_due ?? 0) > 0 && (
-                      <span className="text-stamp"> · +{ghs(c.penalty_due)} penalty</span>
-                    )}
-                  </p>
-                </div>
-
-                {paid ? (
-                  <p className="font-bold text-[14px] tnum text-card shrink-0">+{ghs(c.amount)}</p>
-                ) : (
-                  <button onClick={() => payOne(c)} disabled={payingId === c.id}
-                    className="btn-gold !px-3 !py-2 !text-[11px] shrink-0">
-                    {payingId === c.id ? <Loader2 size={13} className="animate-spin" /> : `Pay ${ghs(c.amount)}`}
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <table className="w-full mt-1">
+          <tbody className="divide-y divide-line">
+            {rows.map(c => {
+              const paid = c.status === 'paid'
+              const late = c.status === 'overdue' || c.is_flagged
+              return (
+                <tr key={c.id}>
+                  <td className="py-3.5 pr-3">
+                    <p className="text-[13.5px] font-medium">{c.susu_groups?.name}</p>
+                    <p className="t-meta">
+                      {format(new Date(c.due_date), 'd MMM yyyy')}
+                      {late && <span className="text-alert font-semibold"> — late</span>}
+                      {Number(c.penalty_due ?? 0) > 0 && <span className="text-alert"> +{n2(c.penalty_due)}</span>}
+                    </p>
+                  </td>
+                  <td className="py-3.5 text-right">
+                    {paid
+                      ? <span className="text-[13px] font-bold tnum">{n2(c.amount)}</span>
+                      : <button onClick={() => payOne(c)} disabled={paying === c.id} className="act-accent act-sm">
+                          {paying === c.id ? <Loader2 size={12} className="animate-spin" /> : `Pay ${n2(c.amount)}`}
+                        </button>}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       )}
 
-      {/* ── Pay-ahead sheet ── */}
+      {/* Pay-ahead sheet */}
       {sheet && (
-        <div className="fixed inset-0 z-50 bg-field/80 backdrop-blur-sm flex items-end sm:items-center justify-center"
-             onClick={() => setSheet(false)}>
-          <div className="bg-card text-ink w-full sm:max-w-md rounded-t-[16px] sm:rounded-[4px] p-6 pb-8 animate-slide-up max-h-[90vh] overflow-y-auto"
+        <div className="fixed inset-0 z-50 bg-ink/20 flex items-end sm:items-center justify-center" onClick={() => setSheet(false)}>
+          <div className="bg-paper w-full sm:max-w-[400px] sm:rounded-[4px] px-6 pt-6 pb-8 max-h-[88vh] overflow-y-auto"
                onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-card-edge rounded-full mx-auto mb-6 sm:hidden" />
-
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-[26px] font-black tracking-[-.03em]">Pay ahead</h2>
-                <p className="text-dim-field text-[13px] mt-1">One MoMo payment, several days covered</p>
+                <h2 className="text-[22px] font-extrabold tracking-[-.02em]">Pay ahead</h2>
+                <p className="t-meta mt-1">One MoMo payment, several days covered.</p>
               </div>
-              <button onClick={() => setSheet(false)} aria-label="Close"
-                className="w-8 h-8 rounded-[3px] bg-card-edge/60 grid place-items-center text-dim shrink-0">
-                <X size={16} />
+              <button onClick={() => setSheet(false)} aria-label="Close" className="text-ink-3 hover:text-ink transition-colors">
+                <X size={18} />
               </button>
             </div>
 
-            <div className="flex gap-1 bg-field-2 rounded-[3px] p-1 mb-5">
-              {PRESETS.map(({ d, l }) => (
+            <div className="flex gap-5 border-b border-line mb-5">
+              {PRESETS.map(d => (
                 <button key={d} onClick={() => setDays(d)}
-                  className={`flex-1 py-2 rounded-[2px] stencil transition-colors ${days === d ? 'bg-ink text-card' : 'text-dim'}`}>{l}</button>
+                  className={`text-[13px] pb-2.5 border-b-2 -mb-px transition-colors ${
+                    days === d ? 'font-bold text-ink border-ink' : 'font-medium text-ink-2 border-transparent'
+                  }`}>
+                  {d} days
+                </button>
               ))}
             </div>
 
             <div className="mb-6">
-              <div className="flex justify-between text-[13px] mb-2.5">
-                <span className="text-dim-field">Or pick exactly</span>
-                <span className="font-bold tnum">{days} day{days !== 1 && 's'}</span>
+              <div className="flex justify-between t-meta mb-2">
+                <span>Or choose exactly</span>
+                <span className="font-bold text-ink tnum">{days}</span>
               </div>
               <input type="range" min={1} max={60} value={days} aria-label="Days to pay ahead"
-                onChange={e => setDays(parseInt(e.target.value))}
-                className="w-full accent-gold" />
+                onChange={e => setDays(parseInt(e.target.value))} className="w-full accent-ink" />
             </div>
 
-            {loadingPreview ? (
-              <div className="flex justify-center py-10"><Loader2 className="animate-spin text-forest" size={24} /></div>
-            ) : preview?.count > 0 ? (
+            {loadingPrev ? (
+              <div className="flex justify-center py-10"><Loader2 className="animate-spin text-ink-3" size={20} /></div>
+            ) : prev?.count > 0 ? (
               <>
-                <div className="bg-card-edge/30 rounded-3xl p-5 mb-5">
-                  <div className="flex items-center gap-2 text-[12px] text-dim-field mb-3">
-                    <Calendar size={13} />
-                    {preview.from && format(new Date(preview.from), 'd MMM')} – {preview.to && format(new Date(preview.to), 'd MMM yyyy')}
+                <div className="border-y border-line py-5 mb-5 space-y-2.5">
+                  <div className="flex justify-between text-[13px]">
+                    <span className="text-ink-2">{prev.count} contribution{prev.count !== 1 && 's'}</span>
+                    <span className="tnum font-medium">{n2(prev.subtotal)}</span>
                   </div>
-                  <div className="space-y-2 text-[14px]">
-                    <div className="flex justify-between">
-                      <span className="text-dim-field">{preview.count} contribution{preview.count !== 1 && 's'}</span>
-                      <span className="tnum font-medium">GHS {ghs(preview.subtotal)}</span>
+                  {prev.penalties > 0 && (
+                    <div className="flex justify-between text-[13px] text-alert">
+                      <span>Penalties</span><span className="tnum font-medium">{n2(prev.penalties)}</span>
                     </div>
-                    {preview.penalties > 0 && (
-                      <div className="flex justify-between text-stamp">
-                        <span>Late penalties</span>
-                        <span className="tnum font-medium">GHS {ghs(preview.penalties)}</span>
-                      </div>
-                    )}
+                  )}
+                  <div className="t-meta">
+                    {prev.from && format(new Date(prev.from), 'd MMM')} – {prev.to && format(new Date(prev.to), 'd MMM yyyy')}
                   </div>
-                  <div className="flex items-end justify-between pt-4 mt-4 border-t border-white/10">
-                    <span className="font-semibold text-[14px]">Total</span>
-                    <span className="text-[28px] font-black tracking-[-.035em] tnum">
-                      <span className="text-[15px] font-bold align-top mr-0.5">GHS</span>
-                      {ghs(preview.total)}
-                    </span>
+                  <div className="flex items-end justify-between pt-3 border-t border-line">
+                    <span className="t-label !text-ink">Total</span>
+                    <span className="t-figure"><span className="text-[13px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(prev.total)}</span>
                   </div>
                 </div>
-
-                <button onClick={payBulk} disabled={paying} className="btn-gold w-full !py-4">
-                  {paying ? <Loader2 size={18} className="animate-spin" />
-                    : <>Pay GHS {ghs(preview.total)} <ArrowUpRight size={17} /></>}
+                <button onClick={payBulk} disabled={bulkBusy} className="act-accent w-full !h-12">
+                  {bulkBusy ? <Loader2 size={16} className="animate-spin" /> : `Pay GHS ${n2(prev.total)}`}
                 </button>
               </>
             ) : (
-              <div className="text-center py-10">
-                <div className="w-12 h-12 rounded-[3px] bg-stamp/20 grid place-items-center mx-auto mb-3">
-                  <Check size={20} className="text-stamp" />
-                </div>
-                <p className="text-dim-field text-sm">Nothing left to pay — you're ahead.</p>
-              </div>
+              <p className="t-meta py-10 text-center">Nothing left to pay.</p>
             )}
           </div>
         </div>

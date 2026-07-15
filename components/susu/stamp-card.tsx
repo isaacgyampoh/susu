@@ -3,20 +3,14 @@ import { format, isSameDay, isBefore, startOfDay } from 'date-fns'
 import type { Contribution } from '@/types'
 
 /**
- * StampCard — the susu collector's card.
+ * StampCard — the susu collector's card, stripped to structure.
  *
- * A grid of day-boxes, stamped in red when paid. It's the artifact this whole
- * practice already runs on, so it needs no explaining to anyone who has ever
- * paid susu in a Ghanaian market.
- *
- * It also solves a real problem: 11 members × 30 days = 330 payments, which is
- * unshowable as a list. But ONE CYCLE is exactly one card.
+ * A grid of day-boxes, filled when paid. It's the artifact this practice
+ * already runs on, and it solves a real problem: 11 members x 30 days = 330
+ * payments, unshowable as a list — but one cycle is exactly one card.
  */
 export default function StampCard({
-  contributions,
-  cycleDays,
-  onPayDay,
-  payingId,
+  contributions, cycleDays, onPayDay, payingId,
 }: {
   contributions: Contribution[]
   cycleDays: number
@@ -25,22 +19,23 @@ export default function StampCard({
 }) {
   const today = startOfDay(new Date())
 
-  // Show the cycle the member is actually living in, not cycle 1 forever
+  // Show the cycle the member is actually living in
   const firstUnpaid = contributions.find(c => c.status !== 'paid')
-  const anchor      = firstUnpaid ?? contributions[contributions.length - 1]
-  const anchorIdx   = anchor ? contributions.indexOf(anchor) : 0
+  const anchorIdx   = firstUnpaid ? contributions.indexOf(firstUnpaid) : Math.max(contributions.length - 1, 0)
   const cycleNo     = Math.floor(anchorIdx / cycleDays)
   const slice       = contributions.slice(cycleNo * cycleDays, (cycleNo + 1) * cycleDays)
-
-  if (slice.length === 0) return null
+  if (!slice.length) return null
 
   const cols = cycleDays > 24 ? 10 : cycleDays > 12 ? 8 : 7
 
   return (
     <div>
-      <p className="stencil text-dim mb-2.5">
-        Cycle {cycleNo + 1} — {format(new Date(slice[0].due_date), 'd MMM')} to {format(new Date(slice[slice.length - 1].due_date), 'd MMM')}
-      </p>
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="t-label">Cycle {cycleNo + 1}</p>
+        <p className="t-meta !text-[11px]">
+          {format(new Date(slice[0].due_date), 'd MMM')} – {format(new Date(slice[slice.length - 1].due_date), 'd MMM')}
+        </p>
+      </div>
 
       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
         {slice.map((c, i) => {
@@ -50,28 +45,23 @@ export default function StampCard({
           const late    = !paid && isBefore(due, today)
           const dayNo   = cycleNo * cycleDays + i + 1
 
-          const cls = paid ? 'box box-paid' : late ? 'box box-late' : isToday ? 'box box-today' : 'box'
-          const label = paid
-            ? `Day ${dayNo}, ${format(due, 'd MMM')} — paid`
-            : late ? `Day ${dayNo}, ${format(due, 'd MMM')} — missed`
-            : `Day ${dayNo}, ${format(due, 'd MMM')} — GHS ${c.amount}`
+          const cls   = paid ? 'box box-paid' : late ? 'box box-late' : isToday ? 'box box-today' : 'box'
+          const label = `Day ${dayNo}, ${format(due, 'd MMM')} — ${paid ? 'paid' : late ? 'missed' : `GHS ${c.amount} due`}`
 
-          // Only unpaid boxes are actionable — a stamped box is history
-          if (!paid && onPayDay) {
-            return (
-              <button key={c.id} onClick={() => onPayDay(c)} disabled={payingId === c.id}
-                className={`${cls} hover:border-ink disabled:opacity-50`} title={label} aria-label={label}>
-                {payingId === c.id ? <span className="animate-pulse">·</span> : late ? '✕' : dayNo}
-              </button>
-            )
-          }
-          return (
-            <div key={c.id} className={cls} title={label} aria-label={label}>
-              {paid ? <span className="text-[13px] font-black leading-none -rotate-[8deg]">✓</span>
-                : late ? '✕' : dayNo}
-            </div>
+          if (!paid && onPayDay) return (
+            <button key={c.id} onClick={() => onPayDay(c)} disabled={payingId === c.id}
+              className={`${cls} hover:border-ink disabled:opacity-40`} title={label} aria-label={label}>
+              {payingId === c.id ? '·' : dayNo}
+            </button>
           )
+          return <div key={c.id} className={cls} title={label} aria-label={label}>{paid ? '' : dayNo}</div>
         })}
+      </div>
+
+      <div className="flex gap-4 mt-3 t-meta !text-[11px]">
+        <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 bg-ink rounded-[1px]" />Paid</span>
+        <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 border border-line rounded-[1px]" />Due</span>
+        <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 border border-alert rounded-[1px]" />Missed</span>
       </div>
     </div>
   )

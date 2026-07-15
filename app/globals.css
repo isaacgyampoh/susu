@@ -1,31 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Courier+Prime:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /*
-  A susu isn't fintech — it's older than fintech, and it already has an artifact:
-  the collector's card. A printed grid of boxes, one per day, stamped in red ink
-  when you pay. Every market in Ghana has them. This interface is that card,
-  lying on the collector's table.
+  One system, one language.
+
+  Minimal here means removal, not decoration: no icon tiles, no gradients,
+  no shadows, no coloured chips. Type and whitespace carry hierarchy.
+  Hairlines separate. Colour appears only where it means something —
+  gold for the single action that matters on a screen, red only for late.
 */
 :root {
-  --field:     #0A2E1E;  /* the table — deep forest */
-  --field-2:   #0C3823;
-  --card:      #F5EDDC;  /* card stock — warmer and dirtier than paper */
-  --card-edge: #E3D5B8;
-  --ink:       #1C1917;  /* print black */
-  --rule:      #D6C9AE;  /* the printed grid lines */
-  --stamp:     #C1332B;  /* rubber-stamp ink. the one risk, and it's the true one */
-  --gold:      #F4A200;
-  --dim:       #8A7B5E;  /* faded print on card */
-  --dim-field: #7FA890;  /* faded print on the table */
+  --paper:  #FFFFFF;
+  --wash:   #FAFAF9;   /* zone fill, barely there */
+  --ink:    #0F0F0F;
+  --ink-2:  #6E6E6E;   /* secondary */
+  --ink-3:  #A8A8A5;   /* tertiary */
+  --line:   #E7E7E4;
+  --accent: #F4A200;   /* used once per view */
+  --alert:  #C1332B;   /* late only */
 }
 
 @layer base {
+  html { -webkit-text-size-adjust: 100%; }
   body {
-    @apply bg-field text-card antialiased;
+    @apply bg-paper text-ink antialiased;
     font-family: Archivo, system-ui, sans-serif;
   }
   .tnum { font-variant-numeric: tabular-nums; }
@@ -33,73 +34,58 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
-  :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  :focus-visible { outline: 1.5px solid var(--ink); outline-offset: 2px; }
 }
 
 @layer components {
-  /* ── The card ── */
-  .card-stock {
-    @apply bg-card text-ink relative overflow-hidden;
-    border-radius: 4px;
-    box-shadow: 0 1px 0 var(--card-edge), 0 18px 40px -12px rgba(0,0,0,.55);
-  }
-  /* Paper tooth — barely there, but card stock isn't flat */
-  .card-stock::before {
-    content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.012) 3px 4px);
-  }
+  /* Type scale — size and weight do the work */
+  .t-display { @apply text-[34px] font-extrabold tracking-[-.03em] leading-[1.05]; }
+  .t-figure  { @apply text-[26px] font-extrabold tracking-[-.02em] leading-none tnum; }
+  .t-label   { @apply text-[10px] font-bold tracking-[.13em] uppercase text-ink-3; }
+  .t-body    { @apply text-[14px] leading-relaxed; }
+  .t-meta    { @apply text-[12px] text-ink-2; }
 
-  /* ── Printed labels: small, letterspaced, the way a card is actually set ── */
-  .stencil     { @apply text-[9px] font-extrabold tracking-[.16em] uppercase; }
-  .stencil-sm  { @apply text-[8px] font-extrabold tracking-[.14em] uppercase; }
+  /* Rules separate. Boxes don't. */
+  .rule    { @apply border-t border-line; }
+  .rule-hd { @apply border-b border-ink; }
 
-  /* ── Stamp boxes ── */
+  /* Actions — one weight, hard edges, no fills competing for attention */
+  .act {
+    @apply inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[3px]
+           text-[13px] font-bold tracking-[.02em] transition-colors
+           disabled:opacity-30 disabled:pointer-events-none;
+  }
+  .act-primary { @apply act bg-ink text-paper hover:bg-ink/85; }
+  .act-accent  { @apply act bg-accent text-ink hover:brightness-105; }
+  .act-quiet   { @apply act border border-line text-ink hover:bg-wash; }
+  .act-sm      { @apply h-8 px-3 text-[12px]; }
+
+  .in {
+    @apply w-full h-11 px-3.5 rounded-[3px] bg-paper border border-line text-ink
+           placeholder-ink-3 text-[14px] focus:outline-none focus:border-ink transition-colors;
+  }
+  .in-area { @apply in h-auto py-3 resize-none; }
+  .in-lbl  { @apply t-label block mb-2; }
+
+  /* State — text weight, not coloured pills */
+  .st      { @apply text-[11px] font-bold tracking-[.08em] uppercase; }
+  .st-on   { @apply st text-ink; }
+  .st-off  { @apply st text-ink-3; }
+  .st-late { @apply st text-alert; }
+
+  /* Status badges — text weight, not coloured pills. Kept for admin tables. */
+  .badge-green { @apply st-on; }
+  .badge-blue  { @apply st-on; }
+  .badge-gold  { @apply st-off; }
+  .badge-gray  { @apply st-off; }
+  .badge-red   { @apply st-late; }
+
+  /* Stamp grid — the susu card, stripped to its structure */
   .box {
-    @apply aspect-square border-[1.5px] border-rule rounded-[2px] grid place-items-center
-           text-[8.5px] font-bold relative transition-colors;
-    color: #BCAB8A;
+    @apply aspect-square border border-line rounded-[2px] grid place-items-center
+           text-[9px] font-semibold text-ink-3 transition-colors;
   }
-  .box-paid  { @apply border-stamp bg-stamp text-card; }
-  .box-today { @apply border-2 border-dashed border-ink; background: rgba(244,162,0,.16); @apply text-ink; }
-  .box-late  { @apply border-stamp text-stamp; background: rgba(193,51,43,.09); }
-
-  /* ── Actions: hard edges. This is a ledger, not a bubble ── */
-  .btn-ink {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-ink text-card
-           rounded-[3px] text-[13px] font-extrabold tracking-[.04em] uppercase
-           transition-transform active:scale-[.97] disabled:opacity-40 disabled:pointer-events-none;
-  }
-  .btn-gold {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-gold text-ink
-           rounded-[3px] text-[13px] font-extrabold tracking-[.04em] uppercase
-           transition-transform active:scale-[.97] disabled:opacity-40 disabled:pointer-events-none;
-  }
-  .btn-line {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-transparent text-card
-           border border-white/20 rounded-[3px] text-[13px] font-extrabold tracking-[.04em] uppercase
-           transition-colors hover:bg-white/5 active:scale-[.97];
-  }
-
-  .field-in {
-    @apply w-full px-4 py-3.5 rounded-[3px] bg-card text-ink border-[1.5px] border-card-edge
-           placeholder-dim/60 focus:outline-none focus:border-ink transition-colors;
-  }
-  .field-lbl { @apply stencil text-dim-field mb-2 block; }
-
-  .tag      { @apply inline-flex px-1.5 py-0.5 rounded-[2px] stencil-sm; }
-  .tag-done { @apply tag bg-white/10 text-dim-field; }
-  .tag-late { @apply tag bg-stamp/20 text-stamp; }
-  .tag-me   { @apply tag bg-ink text-gold; }
-
-  /* ── Admin console (dark, separate tool — kept intact) ── */
-  .badge-green { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/15 text-emerald-400; }
-  .badge-gold  { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-400; }
-  .badge-red   { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-red-500/15 text-red-400; }
-  .badge-blue  { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-500/15 text-blue-400; }
-  .badge-gray  { @apply inline-flex px-2.5 py-1 text-xs font-semibold rounded-full bg-white/10 text-gray-400; }
-  .card        { @apply bg-white rounded-2xl border border-gray-100 shadow-sm; }
-  .btn-primary { @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gold text-ink font-bold rounded-[3px]
-                        text-[13px] uppercase tracking-[.04em] transition-transform active:scale-95 disabled:opacity-50; }
-  .input       { @apply w-full px-4 py-3 rounded-xl border border-gray-200 text-ink focus:outline-none focus:ring-2 focus:ring-gold; }
-  .label       { @apply block text-sm font-medium text-gray-600 mb-1.5; }
+  .box-paid  { @apply border-ink bg-ink text-paper; }
+  .box-today { @apply border-ink border-dashed text-ink font-bold; }
+  .box-late  { @apply border-alert text-alert; }
 }

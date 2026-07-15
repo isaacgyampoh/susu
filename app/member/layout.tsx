@@ -3,12 +3,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearMemberAuth } from '@/lib/supabase'
-import { LogOut } from 'lucide-react'
 
 const TABS = [
   { href: '/member/dashboard', label: 'Card' },
-  { href: '/member/payments',  label: 'Pay' },
-  { href: '/member/profile',   label: 'You' },
+  { href: '/member/payments',  label: 'Payments' },
+  { href: '/member/profile',   label: 'Profile' },
 ]
 
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
@@ -23,27 +22,24 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
   if (!ready) return null
 
   return (
-    <div className="min-h-screen">
-      <main>{children}</main>
-      <nav className="fixed bottom-0 inset-x-0 z-40 pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto max-w-[430px] px-[18px] pb-4">
-          <div className="flex items-center gap-1 p-1 bg-field-2/95 backdrop-blur-xl rounded-[4px] border border-white/10">
-            {TABS.map(({ href, label }) => {
-              const on = pathname === href
-              return (
-                <Link key={href} href={href}
-                  className={`flex-1 py-3 text-center rounded-[2px] stencil transition-colors ${on ? 'bg-gold text-ink' : 'text-dim-field hover:text-card'}`}>
-                  {label}
-                </Link>
-              )
-            })}
-            <button onClick={() => { clearMemberAuth(); router.push('/login') }} aria-label="Sign out"
-              className="w-11 h-10 grid place-items-center rounded-[2px] text-dim-field hover:text-card transition-colors">
-              <LogOut size={15} />
-            </button>
-          </div>
+    <div className="min-h-screen flex flex-col">
+      <header className="sticky top-0 z-40 bg-paper border-b border-line">
+        <div className="max-w-[440px] mx-auto px-5 h-14 flex items-center justify-between">
+          <nav className="flex gap-5">
+            {TABS.map(({ href, label }) => (
+              <Link key={href} href={href}
+                className={`text-[13px] py-4 transition-colors border-b-2 -mb-px ${
+                  pathname === href ? 'font-bold text-ink border-ink' : 'font-medium text-ink-2 border-transparent hover:text-ink'
+                }`}>
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <button onClick={() => { clearMemberAuth(); router.push('/login') }}
+            className="t-label hover:text-ink transition-colors">Exit</button>
         </div>
-      </nav>
+      </header>
+      <main className="flex-1">{children}</main>
     </div>
   )
 }

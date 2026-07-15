@@ -43,9 +43,9 @@ export default function ContributionsPage() {
   }
 
   function statusIcon(s: string) {
-    if (s === 'paid')    return <CheckCircle size={15} className="text-emerald-500" />
-    if (s === 'overdue') return <AlertCircle size={15} className="text-red-500" />
-    return <Clock size={15} className="text-amber-500" />
+    if (s === 'paid')    return <CheckCircle size={15} className="text-ink" />
+    if (s === 'overdue') return <AlertCircle size={15} className="text-alert" />
+    return <Clock size={15} className="text-ink-2" />
   }
 
   function statusBadge(s: string) {
@@ -57,8 +57,8 @@ export default function ContributionsPage() {
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-12 animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-white">Contributions</h1>
-        <p className="text-gray-400 text-sm mt-1">{total} total records</p>
+        <h1 className="text-2xl font-extrabold text-ink">Contributions</h1>
+        <p className="text-ink-2 text-sm mt-1">{total} total records</p>
       </div>
 
       {/* Filters */}
@@ -66,13 +66,13 @@ export default function ContributionsPage() {
         <div className="flex gap-2 flex-wrap">
           {(['pending','paid','overdue','all'] as StatusFilter[]).map(s => (
             <button key={s} onClick={() => { setStatusFilter(s); setPage(1) }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-brand-gold text-brand-green' : 'bg-gray-800 text-gray-400 hover:text-white'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-accent text-ink' : 'bg-wash text-ink-2 hover:text-ink'}`}>
               {s}
             </button>
           ))}
         </div>
         <select
-          className="px-3 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
+          className="px-3 py-1.5 bg-wash border border-line text-ink text-sm rounded-lg focus:outline-none focus:ring-0 focus:border-ink"
           value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setPage(1) }}>
           <option value="all">All Groups</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -80,14 +80,14 @@ export default function ContributionsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-brand-gold" size={32} /></div>
+        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-ink" size={32} /></div>
       ) : contributions.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">No contributions found</div>
+        <div className="text-center py-20 text-ink-2">No contributions found</div>
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+        <div className="border border-line rounded-[3px] overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-800">
-              <tr className="text-gray-500">
+            <thead className="border-b border-line">
+              <tr className="text-ink-2">
                 <th className="px-5 py-3 text-left font-medium">Member</th>
                 <th className="px-5 py-3 text-left font-medium hidden sm:table-cell">Group</th>
                 <th className="px-5 py-3 text-left font-medium">Due Date</th>
@@ -96,24 +96,24 @@ export default function ContributionsPage() {
                 <th className="px-5 py-3 text-left font-medium">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800">
+            <tbody className="divide-y divide-line">
               {contributions.map(c => (
-                <tr key={c.id} className="hover:bg-gray-800/50 transition-colors">
+                <tr key={c.id} className="hover:bg-wash transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
                       {statusIcon(c.status)}
                       <div>
-                        <p className="text-white font-medium text-xs">{(c as any).members?.full_name}</p>
-                        <p className="text-gray-500 text-xs font-mono">{(c as any).members?.member_id}</p>
+                        <p className="text-ink font-medium text-xs">{(c as any).members?.full_name}</p>
+                        <p className="text-ink-2 text-xs font-mono">{(c as any).members?.member_id}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 text-gray-400 hidden sm:table-cell text-xs">{c.susu_groups?.name}</td>
-                  <td className="px-5 py-3.5 text-gray-300 text-xs">{format(new Date(c.due_date), 'MMM d, yyyy')}</td>
-                  <td className="px-5 py-3.5 text-gray-400 text-xs hidden md:table-cell">
+                  <td className="px-5 py-3.5 text-ink-2 hidden sm:table-cell text-xs">{c.susu_groups?.name}</td>
+                  <td className="px-5 py-3.5 text-ink text-xs">{format(new Date(c.due_date), 'MMM d, yyyy')}</td>
+                  <td className="px-5 py-3.5 text-ink-2 text-xs hidden md:table-cell">
                     {c.paid_at ? format(new Date(c.paid_at), 'MMM d, HH:mm') : '—'}
                   </td>
-                  <td className="px-5 py-3.5 text-white font-semibold">GHS {Number(c.amount).toFixed(2)}</td>
+                  <td className="px-5 py-3.5 text-ink font-semibold">GHS {Number(c.amount).toFixed(2)}</td>
                   <td className="px-5 py-3.5">{statusBadge(c.status)}</td>
                 </tr>
               ))}
@@ -121,13 +121,13 @@ export default function ContributionsPage() {
           </table>
 
           {total > 30 && (
-            <div className="px-5 py-4 border-t border-gray-800 flex items-center justify-between">
-              <span className="text-sm text-gray-500">Page {page} · {total} records</span>
+            <div className="px-5 py-4 border-t border-line flex items-center justify-between">
+              <span className="text-sm text-ink-2">Page {page} · {total} records</span>
               <div className="flex gap-2">
                 <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
-                  className="px-3 py-1.5 text-sm bg-gray-800 text-gray-400 rounded-lg disabled:opacity-40 hover:text-white">Prev</button>
+                  className="px-3 py-1.5 text-sm bg-wash text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
                 <button onClick={() => setPage(p => p+1)} disabled={page*30>=total}
-                  className="px-3 py-1.5 text-sm bg-gray-800 text-gray-400 rounded-lg disabled:opacity-40 hover:text-white">Next</button>
+                  className="px-3 py-1.5 text-sm bg-wash text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
               </div>
             </div>
           )}
