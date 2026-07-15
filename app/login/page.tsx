@@ -3,104 +3,83 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { callFunction, setMemberToken } from '@/lib/supabase'
-import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Loader2, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
-export default function LoginPage() {
+export default function MemberLoginPage() {
   const router = useRouter()
-  const [phone, setPhone]         = useState('')
-  const [passcode, setPasscode]   = useState('')
-  const [showPass, setShowPass]   = useState(false)
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState('')
+  const [phone, setPhone]       = useState('')
+  const [passcode, setPasscode] = useState('')
+  const [show, setShow]         = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
 
-  async function handleLogin(e: React.FormEvent) {
+  async function signIn(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    const { data, error: err } = await callFunction<{ token: string; member: Record<string, unknown> }>(
-      'auth-member-login',
-      { method: 'POST', body: { phone, passcode } }
+    setLoading(true); setError('')
+    const { data, error: err } = await callFunction<{ token: string; member: any }>(
+      'auth-member-login', { method: 'POST', body: { phone, passcode } }
     )
-
     setLoading(false)
-
     if (err) { setError(err); return }
-
     setMemberToken(data!.token)
     localStorage.setItem('member_user', JSON.stringify(data!.member))
     router.push('/member/dashboard')
   }
 
   return (
-    <div className="min-h-screen bg-brand-green bg-kente-pattern flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-brand-gold flex items-center justify-center mx-auto mb-3">
-            <span className="text-brand-green font-extrabold text-2xl">S</span>
-          </div>
-          <h1 className="text-white text-2xl font-bold">Member Portal</h1>
-          <p className="text-green-200 text-sm mt-1">Sign in with your phone and passcode</p>
+    <div className="min-h-screen flex flex-col px-5 max-w-lg mx-auto">
+      <div className="flex-1 flex flex-col justify-center py-12 animate-slide-up">
+        <div className="w-12 h-12 rounded-2xl bg-forest grid place-items-center mb-8">
+          <span className="text-gold font-extrabold text-xl">S</span>
         </div>
 
-        <form onSubmit={handleLogin} className="card p-8 space-y-5 animate-slide-up">
+        <h1 className="display text-[40px] mb-3">
+          Welcome
+          <br />
+          <span className="text-forest">back</span>
+        </h1>
+        <p className="text-muted text-[15px] mb-9">Sign in with the phone number and passcode your admin gave you.</p>
+
+        <form onSubmit={signIn} className="space-y-4">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-              <AlertCircle size={16} /> {error}
+            <div className="flex items-start gap-2.5 p-4 bg-red-50 border border-red-200 rounded-2xl">
+              <AlertCircle size={16} className="text-red-600 mt-0.5 shrink-0" />
+              <p className="text-red-800 text-sm">{error}</p>
             </div>
           )}
 
           <div>
-            <label className="label">Phone Number</label>
-            <input
-              className="input"
-              type="tel"
-              required
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="0244XXXXXX"
-              autoComplete="tel"
-            />
+            <label className="field-label">Phone number</label>
+            <input className="field tnum" type="tel" required autoComplete="tel" inputMode="tel"
+              value={phone} onChange={e => setPhone(e.target.value)} placeholder="024 000 0000" />
           </div>
 
           <div>
-            <label className="label">Passcode</label>
+            <label className="field-label">Passcode</label>
             <div className="relative">
-              <input
-                className="input pr-12"
-                type={showPass ? 'text' : 'password'}
-                required
-                value={passcode}
-                onChange={e => setPasscode(e.target.value)}
-                placeholder="6-digit passcode"
-                maxLength={6}
-                inputMode="numeric"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              <input className="field tnum pr-14 tracking-[0.3em] font-semibold"
+                type={show ? 'text' : 'password'} required maxLength={6} inputMode="numeric"
+                value={passcode} onChange={e => setPasscode(e.target.value.replace(/\D/g, ''))}
+                placeholder="••••••" />
+              <button type="button" onClick={() => setShow(!show)}
+                aria-label={show ? 'Hide passcode' : 'Show passcode'}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors">
+                {show ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-1">Your passcode was sent to you via SMS on approval.</p>
           </div>
 
-          <button type="submit" disabled={loading} className="btn-secondary w-full py-3.5">
-            {loading ? <Loader2 className="animate-spin" size={18} /> : 'Sign In'}
+          <button type="submit" disabled={loading} className="pill-ink w-full !py-4 text-[15px] mt-2">
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <>Sign in <ArrowRight size={17} /></>}
           </button>
-
-          <p className="text-center text-sm text-gray-500">
-            Don't have an account?{' '}
-            <Link href="/" className="text-brand-green font-semibold hover:underline">Contact your admin to join</Link>
-          </p>
         </form>
+      </div>
 
-        <p className="text-center mt-6">
-          <Link href="/admin/login" className="text-green-300 text-sm hover:text-white">Admin login →</Link>
-        </p>
+      <div className="pb-8 text-center space-y-3">
+        <p className="text-[13px] text-muted">Lost your passcode? Ask your Susu admin to reset it.</p>
+        <Link href="/admin/login" className="text-[13px] text-muted/70 hover:text-ink transition-colors inline-block">
+          Admin sign in
+        </Link>
       </div>
     </div>
   )

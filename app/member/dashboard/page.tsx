@@ -1,309 +1,278 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { MemberDashboard, Contribution } from '@/types'
-import { format, differenceInCalendarDays, isPast, isToday } from 'date-fns'
-import { Loader2, Calendar, TrendingUp, AlertTriangle, CheckCircle, Clock, Coins, Bell, ChevronRight, AlertCircle } from 'lucide-react'
-import Link from 'next/link'
+import { format, differenceInCalendarDays, isToday } from 'date-fns'
+import RotationRing from '@/components/susu/rotation-ring'
+import { useDeadline } from '@/components/susu/deadline'
+import {
+  Loader2, Zap, ArrowUpRight, AlertTriangle, Check,
+  ChevronRight, Clock, Wallet, History
+} from 'lucide-react'
 
-function DeadlineCountdown({ deadline }: { deadline: string }) {
-  const [timeLeft, setTimeLeft] = useState('')
-  const [isUrgent, setIsUrgent] = useState(false)
+const ghs = (n: any) =>
+  Number(n ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-  useEffect(() => {
-    function calc() {
-      const now    = new Date()
-      const [h, m] = (deadline ?? '18:00').split(':')
-      const cutoff = new Date()
-      cutoff.setHours(parseInt(h), parseInt(m), 0, 0)
-      const diff = cutoff.getTime() - now.getTime()
-      if (diff <= 0) { setTimeLeft('DEADLINE PASSED'); setIsUrgent(true); return }
-      const hours   = Math.floor(diff / 3600000)
-      const minutes = Math.floor((diff % 3600000) / 60000)
-      setTimeLeft(`${hours}h ${minutes}m until 6PM deadline`)
-      setIsUrgent(diff < 3600000) // urgent if <1hr
-    }
-    calc()
-    const t = setInterval(calc, 60000)
-    return () => clearInterval(t)
-  }, [deadline])
-
-  return (
-    <span className={`text-xs font-medium ${isUrgent ? 'text-red-600' : 'text-amber-600'}`}>
-      ⏰ {timeLeft}
-    </span>
-  )
-}
-
-export default function MemberDashboard() {
-  const [data, setData]       = useState<MemberDashboard | null>(null)
-  const [loading, setLoading] = useState(true)
+export default function MemberDashboardPage() {
+  const [data, setData]         = useState<MemberDashboard | null>(null)
+  const [loading, setLoading]   = useState(true)
   const [payingId, setPayingId] = useState<string | null>(null)
+  const [activePlan, setActivePlan] = useState(0)
 
-  useEffect(() => {
+  async function load() {
     const token = getMemberToken()
-    callFunction<MemberDashboard>('member-profile', { token: token! })
-      .then(({ data }) => setData(data))
-      .finally(() => setLoading(false))
-  }, [])
+    const { data } = await callFunction<MemberDashboard>('member-profile', { token: token! })
+    setData(data)
+    setLoading(false)
+  }
+  useEffect(() => { load() }, [])
 
-  async function handlePay(contribution: Contribution) {
+  async function pay(c: Contribution) {
     const token = getMemberToken()
-    setPayingId(contribution.id)
-    const { data, error } = await callFunction<{ authorization_url?: string; reference?: string; dev_mode?: boolean; message?: string }>(
-      'payments-initialize', { method: 'POST', body: { contribution_id: contribution.id }, token: token! }
+    setPayingId(c.id)
+    const { data, error } = await callFunction<{ authorization_url?: string; dev_mode?: boolean }>(
+      'payments-initialize', { method: 'POST', body: { contribution_id: c.id }, token: token! }
     )
     setPayingId(null)
     if (error) { alert(error); return }
-    if (data?.dev_mode) {
-        setData(null)
-        const token = getMemberToken()
-        callFunction<MemberDashboard>("member-profile", { token: token! }).then(({ data }) => setData(data))
-      } else {
-        window.location.href = data!.authorization_url!
-      }
+    if (data?.dev_mode) { load(); return }
+    if (data?.authorization_url) window.location.href = data.authorization_url
   }
 
+  const plan     = data?.plans?.[activePlan]
+  const group    = plan?.susu_groups
+  const deadline = useDeadline(group?.payment_deadline?.slice(0, 5) ?? '18:00')
+
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="animate-spin text-brand-green" size={36} />
+    <div className="flex items-center justify-center min-h-[70vh]">
+      <Loader2 className="animate-spin text-forest" size={30} />
+    </div>
+  )
+  if (!data) return (
+    <div className="px-5 py-20 text-center">
+      <p className="text-muted">Couldn't load your account. Pull down to retry.</p>
     </div>
   )
 
-  if (!data) return <div className="p-8 text-center text-gray-500">Could not load dashboard. Please refresh.</div>
+  const { member, plans, summary, pendingContributions, recentPayments, penalties } = data
+  const firstName = member.full_name.split(' ')[0]
+  const dueToday  = pendingContributions.find(c => isToday(new Date(c.due_date)))
+  const daysToTurn = plan?.payout_date
+    ? differenceInCalendarDays(new Date(plan.payout_date), new Date())
+    : null
 
-  const { member, plans, summary, pendingContributions, recentPayments, payouts, penalties, announcements } = data
-  const todayContribs = pendingContributions.filter(c => isToday(new Date(c.due_date)))
-  const overdueContribs = pendingContributions.filter(c => isPast(new Date(c.due_date)) && !isToday(new Date(c.due_date)))
+  // How far the rotation has travelled — turns already collected in this group
+  const collected = plan?.payout_date && group?.start_date && group?.cycle_days
+    ? Math.max(0, Math.floor(
+        differenceInCalendarDays(new Date(), new Date(group.start_date)) / group.cycle_days
+      ))
+    : 0
+
+  const cashout = (plan?.payout_amount ?? group?.cashout_amount ?? 0)
+  const regBack = Number(group?.registration_fee ?? 0)
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6 pb-12 animate-fade-in">
+    <div className="px-5 pt-2 pb-28 max-w-lg mx-auto animate-fade-in">
 
-      {/* Welcome */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold text-brand-green">
-            {new Date().getHours() < 12 ? 'Good morning' : 'Good afternoon'}, {member.full_name.split(' ')[0]} 👋
+      {/* ── Header ── */}
+      <header className="flex items-center justify-between py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-forest grid place-items-center">
+            <span className="text-white font-bold text-sm">{firstName[0]}</span>
+          </div>
+          <div>
+            <p className="text-[13px] text-muted leading-none">Hello, {firstName}</p>
+            <p className="text-[11px] text-muted/70 font-mono mt-1">{member.member_id}</p>
+          </div>
+        </div>
+        <Link href="/member/payments" className="w-10 h-10 rounded-full bg-white border border-hairline grid place-items-center">
+          <History size={17} className="text-ink" />
+        </Link>
+      </header>
+
+      {/* ── Hero: your turn ── */}
+      {plan ? (
+        <section className="pt-4 pb-7">
+          <h1 className="display text-[42px]">
+            Your turn is
+            <br />
+            <span className="text-forest">
+              {daysToTurn === null ? 'not set yet'
+                : daysToTurn <= 0   ? 'today'
+                : `in ${daysToTurn} days`}
+            </span>
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Member ID: <span className="font-semibold text-brand-green">{member.member_id}</span></p>
-        </div>
-      </div>
+          <p className="text-muted text-[15px] mt-3">
+            {plan.payout_date
+              ? `You collect on ${format(new Date(plan.payout_date), 'EEEE, d MMMM')}`
+              : 'Your date is set when the group starts'}
+          </p>
+        </section>
+      ) : (
+        <section className="pt-4 pb-7">
+          <h1 className="display text-[38px]">No active plan</h1>
+          <p className="text-muted text-[15px] mt-3">Your admin will add you to a group shortly.</p>
+        </section>
+      )}
 
-      {/* Penalty warning */}
-      {penalties.length > 0 && (
-        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
-          <AlertTriangle size={20} className="text-red-500 mt-0.5 shrink-0" />
+      {/* ── Alerts ── */}
+      {(penalties.length > 0) && (
+        <div className="sheet-flat border-red-200 bg-red-50/60 p-4 mb-4 flex items-start gap-3">
+          <AlertTriangle size={17} className="text-red-600 mt-0.5 shrink-0" />
           <div>
-            <p className="font-semibold text-red-800">Outstanding Penalties</p>
-            <p className="text-red-700 text-sm mt-0.5">
-              You have GHS {summary.totalPenalties.toFixed(2)} in unpaid penalties from late payments. Contact admin to resolve.
-            </p>
+            <p className="font-semibold text-red-900 text-sm">GHS {ghs(summary.totalPenalties)} in penalties</p>
+            <p className="text-red-700/80 text-[13px] mt-0.5">These are taken off your cashout. Message your admin to settle them.</p>
           </div>
         </div>
       )}
 
-      {/* Overdue warning */}
-      {overdueContribs.length > 0 && (
-        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
-          <AlertCircle size={20} className="text-red-500 mt-0.5 shrink-0" />
-          <div>
-            <p className="font-semibold text-red-800">{overdueContribs.length} Overdue Payment{overdueContribs.length > 1 ? 's' : ''}</p>
-            <p className="text-red-700 text-sm">You have missed payments. Contact your admin immediately — defaulting forfeits your slot.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Summary stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Paid',    value: `GHS ${summary.totalPaidAll.toFixed(2)}`,   color: 'text-emerald-600', bg: 'bg-emerald-50',  icon: CheckCircle },
-          { label: 'Balance Due',   value: `GHS ${summary.totalPendingAll.toFixed(2)}`, color: 'text-amber-600',   bg: 'bg-amber-50',    icon: Clock       },
-          { label: 'Active Plans',  value: String(summary.activePlans),                 color: 'text-blue-600',    bg: 'bg-blue-50',     icon: Coins       },
-          { label: 'Next Payout',   value: summary.nextPayoutDate ? format(new Date(summary.nextPayoutDate), 'dd MMM') : '—', color: 'text-brand-green', bg: 'bg-brand-green-light', icon: Calendar },
-        ].map(({ label, value, color, bg, icon: Icon }) => (
-          <div key={label} className="card p-4">
-            <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-2`}>
-              <Icon size={18} className={color} />
-            </div>
-            <div className="font-bold text-gray-900 text-lg leading-tight">{value}</div>
-            <div className="text-xs text-gray-500 mt-0.5">{label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Next payout spotlight */}
-      {summary.nextPayoutDate && summary.nextPayoutAmount && (
-        <div className="card p-5 bg-gradient-to-r from-brand-green to-brand-green-mid text-white flex items-center justify-between">
-          <div>
-            <p className="text-green-200 text-sm font-medium">🎉 Your next cashout — {summary.nextPayoutGroup}</p>
-            <p className="text-3xl font-extrabold text-brand-gold mt-1">GHS {Number(summary.nextPayoutAmount).toLocaleString()}</p>
-            <p className="text-green-200 text-sm mt-1 flex items-center gap-1.5">
-              <Calendar size={14} /> {format(new Date(summary.nextPayoutDate), 'EEEE, MMMM d, yyyy')}
-            </p>
-            <p className="text-green-300 text-xs mt-1">
-              {differenceInCalendarDays(new Date(summary.nextPayoutDate), new Date())} days away
-            </p>
-          </div>
-          <TrendingUp size={48} className="text-white/20 hidden sm:block" />
-        </div>
-      )}
-
-      {/* Active Plans — one card per group */}
-      {plans.length > 0 && (
-        <div>
-          <h2 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Coins size={18} className="text-brand-green" /> My Active Plans</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {plans.map((plan) => {
-              const group    = plan.susu_groups!
-              const balance  = plan.balance
-              const pct      = balance ? Math.round((balance.contributions_paid / Math.max(balance.contributions_total, 1)) * 100) : 0
-              const cashout  = plan.payout_amount ?? group.cashout_amount
-
-              return (
-                <div key={plan.id} className="card p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-bold text-brand-green">{group.name}</h3>
-                      <p className="text-xs text-gray-500">Position #{plan.payout_position} · GHS {group.contribution_amount}/{group.contribution_frequency}</p>
-                    </div>
-                    <span className="badge-green">Active</span>
-                  </div>
-
-                  {/* Progress */}
-                  <div className="mb-3">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>Progress</span>
-                      <span>{balance?.contributions_paid ?? 0}/{balance?.contributions_total ?? 0} payments · {pct}%</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-brand-gold rounded-full transition-all" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between"><span className="text-gray-500">Total paid</span><span className="font-medium text-emerald-600">GHS {Number(balance?.total_paid ?? 0).toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-500">Remaining</span><span className="font-medium text-amber-600">GHS {Number(balance?.total_remaining ?? 0).toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-500">Your cashout</span><span className="font-bold text-brand-gold">GHS {cashout ? Number(cashout).toLocaleString() : '—'}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-500">Payout date</span><span className="font-medium text-brand-green">{plan.payout_date ? format(new Date(plan.payout_date), 'MMM d, yyyy') : 'Pending'}</span></div>
-                  </div>
-
-                  {/* Next contribution for this plan */}
-                  {plan.nextContribution && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-gray-500">Next payment due</p>
-                          <p className="text-sm font-semibold text-gray-800">{format(new Date(plan.nextContribution.due_date), 'MMM d, yyyy')}</p>
-                          {isToday(new Date(plan.nextContribution.due_date)) && (
-                            <DeadlineCountdown deadline={group.payment_deadline ?? '18:00'} />
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handlePay(plan.nextContribution!)}
-                          disabled={payingId === plan.nextContribution.id}
-                          className="btn-primary text-xs px-4 py-2"
-                        >
-                          {payingId === plan.nextContribution.id
-                            ? <Loader2 size={12} className="animate-spin" />
-                            : `Pay GHS ${plan.nextContribution.amount}`
-                          }
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Pending/overdue payments */}
-        <div className="card p-5">
-          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Clock size={18} className="text-amber-500" /> All Pending Payments
-          </h2>
-          {pendingContributions.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-6">No pending payments 🎉</p>
-          ) : (
-            <div className="space-y-2">
-              {pendingContributions.slice(0, 6).map((c) => (
-                <div key={c.id} className={`flex items-center justify-between p-3 rounded-xl ${c.status === 'overdue' ? 'bg-red-50 border border-red-100' : c.is_flagged ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50'}`}>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{c.susu_groups?.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {format(new Date(c.due_date), 'MMM d, yyyy')}
-                      {c.is_flagged && <span className="ml-1 text-red-600 font-semibold">· FLAGGED</span>}
-                      {c.penalty_due && c.penalty_due > 0
-                        ? <span className="ml-1 text-red-600"> + GHS {c.penalty_due} penalty</span>
-                        : null
-                      }
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-900 text-sm">GHS {Number(c.amount).toFixed(2)}</span>
-                    <button onClick={() => handlePay(c)} disabled={payingId === c.id} className="btn-primary text-xs px-3 py-1.5">
-                      {payingId === c.id ? <Loader2 size={12} className="animate-spin" /> : 'Pay'}
-                    </button>
-                  </div>
-                </div>
+      {/* ── SIGNATURE: the rotation ── */}
+      {plan && group && (
+        <>
+          {/* Plan switcher — only when it earns its place */}
+          {plans.length > 1 && (
+            <div className="seg mb-5">
+              {plans.map((p, i) => (
+                <button key={p.id} onClick={() => setActivePlan(i)}
+                  className={`seg-item ${i === activePlan ? 'seg-item-on' : ''}`}>
+                  {p.susu_groups?.name?.split(' ')[0] ?? `Plan ${i+1}`}
+                </button>
               ))}
-              {pendingContributions.length > 6 && (
-                <Link href="/member/payments" className="block text-center text-sm text-brand-green font-medium mt-2 hover:underline">
-                  View all {pendingContributions.length} pending payments <ChevronRight size={14} className="inline" />
-                </Link>
+            </div>
+          )}
+
+          <section className="sheet p-7 mb-4">
+            <div className="flex flex-col items-center">
+              <RotationRing
+                total={group.max_members}
+                position={plan.payout_position}
+                collected={collected}
+                size={216}
+              >
+                <p className="text-[11px] font-semibold text-muted tracking-[0.14em] uppercase">You collect</p>
+                <p className="display text-[30px] text-ink tnum mt-1.5">
+                  <span className="text-[17px] font-bold align-top mr-0.5">GHS</span>
+                  {ghs(Number(cashout) + regBack).split('.')[0]}
+                </p>
+                <p className="text-[12px] text-muted mt-1.5">
+                  Slot {plan.payout_position} of {group.max_members}
+                </p>
+              </RotationRing>
+
+              {/* Ring legend — decodes the signature */}
+              <div className="flex items-center gap-4 mt-5 text-[11px] text-muted">
+                <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-full bg-forest" />Collected</span>
+                <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-full bg-gold" />You</span>
+                <span className="flex items-center gap-1.5"><i className="w-2.5 h-2.5 rounded-full bg-hairline" />Waiting</span>
+              </div>
+
+              {regBack > 0 && (
+                <p className="text-[12px] text-muted mt-4 text-center">
+                  GHS {ghs(cashout)} pot + GHS {ghs(regBack)} registration fee returned
+                </p>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Recent payments */}
-        <div className="card p-5">
-          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <CheckCircle size={18} className="text-emerald-500" /> Recent Payments
-          </h2>
-          {recentPayments.filter(p => p.status === 'paid').length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-6">No payments yet</p>
-          ) : (
-            <div className="space-y-2">
-              {recentPayments.filter(p => p.status === 'paid').slice(0, 6).map((c) => (
-                <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div>
-                    <p className="text-sm text-gray-700">{c.susu_groups?.name}</p>
-                    <p className="text-xs text-gray-400">{c.paid_at ? format(new Date(c.paid_at), 'MMM d · HH:mm') : format(new Date(c.due_date), 'MMM d')}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">GHS {Number(c.amount).toFixed(2)}</span>
-                    <span className="badge-green">Paid</span>
-                  </div>
-                </div>
-              ))}
-              <Link href="/member/payments" className="block text-center text-sm text-brand-green font-medium mt-2 hover:underline">
-                View full history <ChevronRight size={14} className="inline" />
-              </Link>
+            {/* Progress through the cycle */}
+            <div className="mt-6 pt-6 border-t border-hairline">
+              <div className="flex justify-between text-[13px] mb-2">
+                <span className="text-muted">Contributions paid</span>
+                <span className="font-semibold tnum">
+                  {plan.balance?.contributions_paid ?? 0} of {plan.balance?.contributions_total ?? 0}
+                </span>
+              </div>
+              <div className="h-2 bg-canvas rounded-full overflow-hidden">
+                <div className="h-full bg-forest rounded-full transition-all duration-700"
+                     style={{ width: `${Math.round(((plan.balance?.contributions_paid ?? 0) / Math.max(plan.balance?.contributions_total ?? 1, 1)) * 100)}%` }} />
+              </div>
             </div>
-          )}
+          </section>
+        </>
+      )}
+
+      {/* ── Today's payment ── */}
+      {dueToday && (
+        <section className="sheet p-5 mb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[13px] text-muted">Due today</p>
+              <p className="display text-[28px] tnum mt-0.5">
+                <span className="text-[15px] font-bold align-top mr-0.5">GHS</span>
+                {ghs(dueToday.amount)}
+              </p>
+              <p className={`text-[12px] mt-1.5 font-medium ${deadline.urgent ? 'text-red-600' : 'text-muted'}`}>
+                <Clock size={11} className="inline mr-1 -mt-0.5" />{deadline.label}
+              </p>
+            </div>
+            <button onClick={() => pay(dueToday)} disabled={payingId === dueToday.id}
+              className="pill-gold shrink-0">
+              {payingId === dueToday.id ? <Loader2 size={16} className="animate-spin" /> : <>Pay now <ArrowUpRight size={16} /></>}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ── Actions ── */}
+      <div className="flex gap-3 mb-6">
+        <Link href="/member/payments" className="pill-ink flex-1">
+          <Zap size={16} /> Pay ahead
+        </Link>
+        <Link href="/member/payments" className="pill-quiet flex-1">
+          <Wallet size={16} /> History
+        </Link>
+      </div>
+
+      {/* ── Insight cards ── */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="sheet p-5">
+          <div className="w-8 h-8 rounded-full bg-emerald-50 grid place-items-center mb-3">
+            <Check size={15} className="text-emerald-600" />
+          </div>
+          <p className="display text-[22px] tnum">GHS {ghs(summary.totalPaidAll).split('.')[0]}</p>
+          <p className="text-[12px] text-muted mt-0.5">Paid so far</p>
+        </div>
+        <div className="sheet p-5">
+          <div className="w-8 h-8 rounded-full bg-amber-50 grid place-items-center mb-3">
+            <Clock size={15} className="text-amber-600" />
+          </div>
+          <p className="display text-[22px] tnum">GHS {ghs(summary.totalPendingAll).split('.')[0]}</p>
+          <p className="text-[12px] text-muted mt-0.5">Still to pay</p>
         </div>
       </div>
 
-      {/* Announcements */}
-      {announcements.length > 0 && (
-        <div className="card p-5">
-          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Bell size={18} className="text-blue-500" /> Announcements</h2>
-          <div className="space-y-3">
-            {announcements.map((a) => (
-              <div key={a.id} className="p-4 border border-blue-100 bg-blue-50 rounded-xl">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-blue-900 text-sm">{a.title}</h3>
-                  <span className="text-xs text-blue-400 shrink-0">{format(new Date(a.created_at), 'MMM d')}</span>
+      {/* ── Recent ── */}
+      <section>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h2 className="font-bold text-[15px]">Recent payments</h2>
+          <Link href="/member/payments" className="text-[13px] text-muted font-medium flex items-center gap-0.5">
+            See all <ChevronRight size={14} />
+          </Link>
+        </div>
+
+        {recentPayments.filter(p => p.status === 'paid').length === 0 ? (
+          <div className="sheet p-8 text-center">
+            <p className="text-muted text-sm">Your payments will show up here</p>
+          </div>
+        ) : (
+          <div className="sheet divide-y divide-hairline overflow-hidden">
+            {recentPayments.filter(p => p.status === 'paid').slice(0, 5).map(c => (
+              <div key={c.id} className="flex items-center gap-3.5 p-4">
+                <div className="w-9 h-9 rounded-full bg-emerald-50 grid place-items-center shrink-0">
+                  <Check size={15} className="text-emerald-600" />
                 </div>
-                <p className="text-sm text-blue-700 mt-1">{a.content}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[14px] truncate">{c.susu_groups?.name}</p>
+                  <p className="text-[12px] text-muted">
+                    {c.paid_at ? format(new Date(c.paid_at), 'd MMM · HH:mm') : format(new Date(c.due_date), 'd MMM')}
+                  </p>
+                </div>
+                <p className="font-bold text-[14px] tnum text-emerald-700 shrink-0">+{ghs(c.amount)}</p>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </section>
     </div>
   )
 }

@@ -1,37 +1,37 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
+  content: ['./components/**/*.{js,ts,jsx,tsx,mdx}', './app/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
       colors: {
+        canvas:   '#E9F1EC',
+        surface:  '#FFFFFF',
+        ink:      '#0A1F14',
+        forest:   '#0B4A2C',
+        gold:     '#F4A200',
+        muted:    '#6B7F73',
+        hairline: '#DCE8E1',
         brand: {
           green:        '#0B4A2C',
           'green-mid':  '#1A6940',
           'green-light':'#E8F5EE',
           gold:         '#F4A200',
-          'gold-light': '#FEF3C7',
           'gold-mid':   '#FBBF24',
         },
       },
       fontFamily: {
-        sans:    ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
-        display: ['Plus Jakarta Sans', 'sans-serif'],
-      },
-      backgroundImage: {
-        'kente-pattern': "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23F4A200' fill-opacity='0.06'%3E%3Cpath d='M0 0h20v20H0zM20 20h20v20H20z'/%3E%3C/g%3E%3C/svg%3E\")",
+        sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
       },
       animation: {
-        'fade-in':  'fadeIn 0.5s ease-in-out',
-        'slide-up': 'slideUp 0.4s ease-out',
+        'fade-in':  'fadeIn 0.4s ease-out',
+        'slide-up': 'slideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
+        'ring-in':  'ringIn 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards',
       },
       keyframes: {
-        fadeIn:  { '0%': { opacity: '0' },              '100%': { opacity: '1' } },
-        slideUp: { '0%': { opacity: '0', transform: 'translateY(16px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        fadeIn:  { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+        slideUp: { '0%': { opacity: '0', transform: 'translateY(14px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        ringIn:  { '0%': { strokeDashoffset: '999' }, '100%': { strokeDashoffset: '0' } },
       },
     },
   },
