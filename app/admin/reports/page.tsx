@@ -5,10 +5,10 @@ import type { SusuGroup } from '@/types'
 import { Download, FileText, Users, TrendingUp, UserX, Loader2 } from 'lucide-react'
 
 const REPORTS = [
-  { id: 'contributions', label: 'Contributions',   desc: 'Every contribution with status, dates, penalties and references', icon: FileText,   color: 'text-ink bg-wash' },
-  { id: 'payouts',       label: 'Payouts',         desc: 'All payouts with gross, deductions, net and MoMo numbers',        icon: TrendingUp, color: 'text-ink bg-wash' },
-  { id: 'members',       label: 'Members',         desc: 'Full member register with contact and KYC details',               icon: Users,      color: 'text-ink-2 bg-wash' },
-  { id: 'defaulters',    label: 'Defaulters',      desc: 'Forfeited members with reasons and dates',                        icon: UserX,      color: 'text-alert bg-wash' },
+  { id: 'contributions', label: 'Contributions',   desc: 'Every contribution with status, dates, penalties and references', icon: FileText,   color: 'text-ink bg-green-50/50' },
+  { id: 'payouts',       label: 'Payouts',         desc: 'All payouts with gross, deductions, net and MoMo numbers',        icon: TrendingUp, color: 'text-ink bg-green-50/50' },
+  { id: 'members',       label: 'Members',         desc: 'Full member register with contact and KYC details',               icon: Users,      color: 'text-ink-2 bg-green-50/50' },
+  { id: 'defaulters',    label: 'Defaulters',      desc: 'Forfeited members with reasons and dates',                        icon: UserX,      color: 'text-red bg-green-50/50' },
 ]
 
 export default function ReportsPage() {
@@ -65,7 +65,7 @@ export default function ReportsPage() {
       <div className="mb-6">
         <label className="block text-sm text-ink-2 mb-1.5">Filter by group (optional)</label>
         <select value={groupId} onChange={e => setGroupId(e.target.value)}
-          className="w-full sm:w-96 px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink">
+          className="w-full sm:w-96 px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green">
           <option value="">All groups</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
@@ -73,8 +73,8 @@ export default function ReportsPage() {
 
       <div className="grid sm:grid-cols-2 gap-4">
         {REPORTS.map(({ id, label, desc, icon: Icon, color }) => (
-          <div key={id} className="border border-line rounded-[3px] p-5 flex flex-col">
-            <div className={`w-10 h-10 rounded-[3px] flex items-center justify-center mb-3 ${color}`}>
+          <div key={id} className="border border-line rounded-[10px] p-5 flex flex-col">
+            <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center mb-3 ${color}`}>
               <Icon size={19} />
             </div>
             <h3 className="font-bold text-ink">{label}</h3>
@@ -83,7 +83,7 @@ export default function ReportsPage() {
               <p className="text-xs text-ink-3 mt-2 italic">Group filter doesn't apply to this report</p>
             )}
             <button onClick={() => download(id)} disabled={downloading === id}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-wash hover:bg-accent hover:text-ink text-ink font-semibold rounded-[3px] text-sm transition-colors disabled:opacity-50">
+              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-green-50/50 hover:bg-gold hover:text-ink text-ink font-semibold rounded-[10px] text-sm transition-colors disabled:opacity-50">
               {downloading === id ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
               Download CSV
             </button>

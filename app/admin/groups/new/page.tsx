@@ -17,7 +17,7 @@ export default function NewGroupPage() {
     cashout_amount: '',           // admin manually sets this
     payment_deadline: '18:00',
     penalty_per_late_day: '',
-    rules: '', admin_notes: '',
+    s: '', admin_notes: '',
   })
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
@@ -48,27 +48,27 @@ export default function NewGroupPage() {
       <h1 className="text-2xl font-extrabold text-ink mb-1">Create New Susu Group</h1>
       <p className="text-ink-2 text-sm mb-8">You set everything — contribution, cashout, deadline, penalty. Members see the cashout amount only.</p>
 
-      {error && <div className="p-3 bg-wash border border-alert/40 rounded-[3px] text-alert text-sm mb-5">{error}</div>}
+      {error && <div className="p-3 bg-green-50/50 border border-red/40 rounded-[10px] text-red text-sm mb-5">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="border border-line rounded-[3px] p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="border border-line rounded-[10px] p-6 space-y-5">
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <label className="block text-sm text-ink-2 mb-1.5">Group Name *</label>
-            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+            <input className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
               required value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Gold Circle – Daily 55" />
           </div>
 
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Daily Contribution (GHS) *</label>
-            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+            <input className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
               required type="number" min="1" step="0.01" value={form.contribution_amount}
               onChange={e => set('contribution_amount', e.target.value)} placeholder="55.00" />
           </div>
 
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Frequency</label>
-            <select className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+            <select className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
               value={form.contribution_frequency} onChange={e => set('contribution_frequency', e.target.value)}>
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
@@ -78,35 +78,35 @@ export default function NewGroupPage() {
 
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Number of Members *</label>
-            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+            <input className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
               required type="number" min="2" value={form.max_members}
               onChange={e => set('max_members', e.target.value)} placeholder="11" />
           </div>
 
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Cycle Days (per member) *</label>
-            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+            <input className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
               required type="number" min="1" value={form.cycle_days}
               onChange={e => set('cycle_days', e.target.value)} placeholder="30" />
           </div>
 
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Registration Fee (GHS) *</label>
-            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+            <input className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
               required type="number" min="0" step="0.01" value={form.registration_fee}
               onChange={e => set('registration_fee', e.target.value)} placeholder="110.00" />
           </div>
 
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Payment Deadline</label>
-            <input type="time" className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+            <input type="time" className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
               value={form.payment_deadline} onChange={e => set('payment_deadline', e.target.value)} />
             <p className="text-xs text-ink-2 mt-1">Payments after this time are flagged as LATE</p>
           </div>
 
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Late Penalty per Day (GHS)</label>
-            <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+            <input className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
               type="number" min="0" step="0.01" value={form.penalty_per_late_day}
               onChange={e => set('penalty_per_late_day', e.target.value)} placeholder="0.00" />
           </div>
@@ -114,7 +114,7 @@ export default function NewGroupPage() {
 
         {/* Formula estimate */}
         {formulaEst !== null && (
-          <div className="p-4 bg-wash border border-line rounded-[3px]">
+          <div className="p-4 bg-green-50/50 border border-line rounded-[10px]">
             <p className="text-xs text-ink-2 flex items-center gap-1.5 mb-2"><Calculator size={13} /> Formula estimate (for reference only)</p>
             <p className="text-ink-2 text-sm">
               {form.contribution_amount} × {form.max_members} members × {form.cycle_days} days =
@@ -125,11 +125,11 @@ export default function NewGroupPage() {
         )}
 
         {/* CASHOUT AMOUNT — the key field */}
-        <div className="p-4 bg-wash border border-line rounded-[3px]">
+        <div className="p-4 bg-green-50/50 border border-line rounded-[10px]">
           <label className="block text-sm font-semibold text-ink-2 mb-1.5">
             Member Cashout Amount (GHS) * — this is what members will receive and see
           </label>
-          <input className="w-full px-4 py-3 bg-wash border border-ink text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink text-lg font-bold"
+          <input className="w-full px-4 py-3 bg-green-50/50 border border-ink text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green text-lg font-bold"
             required type="number" min="1" step="0.01" value={form.cashout_amount}
             onChange={e => set('cashout_amount', e.target.value)} placeholder="16430.00" />
           <p className="text-xs text-ink-2 mt-2">
@@ -142,24 +142,24 @@ export default function NewGroupPage() {
 
         <div className="sm:col-span-2">
           <label className="block text-sm text-ink-2 mb-1.5">Description (shown to public)</label>
-          <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+          <input className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
             value={form.description} onChange={e => set('description', e.target.value)} placeholder="Short description for the plans page" />
         </div>
 
         <div>
           <label className="block text-sm text-ink-2 mb-1.5">Additional Rules (optional)</label>
-          <textarea className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink resize-none"
-            rows={2} value={form.rules} onChange={e => set('rules', e.target.value)} placeholder="Any group-specific rules…" />
+          <textarea className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green resize-none"
+            rows={2} value={form.s} onChange={e => set('s', e.target.value)} placeholder="Any group-specific s…" />
         </div>
 
         <div>
           <label className="block text-sm text-ink-2 mb-1.5">Admin Notes (private — not shown to members)</label>
-          <textarea className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink resize-none"
+          <textarea className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green resize-none"
             rows={2} value={form.admin_notes} onChange={e => set('admin_notes', e.target.value)} placeholder="Internal notes, cut calculations, etc." />
         </div>
 
         <button type="submit" disabled={loading}
-          className="w-full py-3.5 bg-accent text-ink font-bold rounded-[3px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
+          className="w-full py-3.5 bg-gold text-ink font-bold rounded-[10px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
           {loading ? <Loader2 size={18} className="animate-spin" /> : 'Create Group'}
         </button>
       </form>

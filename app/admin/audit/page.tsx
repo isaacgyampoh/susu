@@ -11,11 +11,11 @@ type Entry = {
 }
 
 function actionMeta(action: string) {
-  if (action.startsWith('payout'))     return { icon: Wallet, color: 'text-ink bg-wash', label: 'Payout' }
-  if (action.startsWith('membership')) return { icon: UserX,  color: 'text-alert bg-wash',         label: 'Forfeiture' }
-  if (action.startsWith('member'))     return { icon: User,   color: 'text-ink bg-wash',       label: 'Member' }
-  if (action.startsWith('group'))      return { icon: Layers, color: 'text-ink-2 bg-wash',     label: 'Group' }
-  return { icon: Shield, color: 'text-ink-2 bg-wash', label: 'System' }
+  if (action.startsWith('payout'))     return { icon: Wallet, color: 'text-ink bg-green-50/50', label: 'Payout' }
+  if (action.startsWith('membership')) return { icon: UserX,  color: 'text-red bg-green-50/50',         label: 'Forfeiture' }
+  if (action.startsWith('member'))     return { icon: User,   color: 'text-ink bg-green-50/50',       label: 'Member' }
+  if (action.startsWith('group'))      return { icon: Layers, color: 'text-ink-2 bg-green-50/50',     label: 'Group' }
+  return { icon: Shield, color: 'text-ink-2 bg-green-50/50', label: 'System' }
 }
 
 export default function AuditPage() {
@@ -53,7 +53,7 @@ export default function AuditPage() {
             {entries.map(e => {
               const { icon: Icon, color, label } = actionMeta(e.action)
               return (
-                <div key={e.id} className="bg-paper border border-line rounded-[3px] p-4 flex gap-3">
+                <div key={e.id} className="bg-surface border border-line rounded-[10px] p-4 flex gap-3">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
                     <Icon size={16} />
                   </div>
@@ -73,7 +73,7 @@ export default function AuditPage() {
                           <span className="text-ink-2">Net: <span className="text-ink font-medium">GHS {Number(e.details.net).toLocaleString()}</span></span>
                         )}
                         {e.details.deductions > 0 && (
-                          <span className="text-ink-2">Deducted: <span className="text-alert font-medium">GHS {Number(e.details.deductions).toFixed(2)}</span></span>
+                          <span className="text-ink-2">Deducted: <span className="text-red font-medium">GHS {Number(e.details.deductions).toFixed(2)}</span></span>
                         )}
                         {e.details.reason && <span className="text-ink-2">Reason: <span className="text-ink">{e.details.reason}</span></span>}
                         {e.details.ref && <span className="text-ink-3 font-mono">{e.details.ref}</span>}
@@ -90,9 +90,9 @@ export default function AuditPage() {
               <span className="text-sm text-ink-2">Page {page} · {total} entries</span>
               <div className="flex gap-2">
                 <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
-                  className="px-3 py-1.5 text-sm bg-wash text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
+                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
                 <button onClick={() => setPage(p => p+1)} disabled={page*50>=total}
-                  className="px-3 py-1.5 text-sm bg-wash text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
+                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
               </div>
             </div>
           )}

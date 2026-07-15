@@ -7,16 +7,16 @@ import { format, differenceInCalendarDays, isToday } from 'date-fns'
 import StampCard from '@/components/susu/stamp-card'
 import Rotation from '@/components/susu/rotation'
 import { useDeadline } from '@/components/susu/deadline'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertTriangle, ChevronRight, Zap, Clock } from 'lucide-react'
 
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })
 
 export default function Dashboard() {
-  const [d, setD]         = useState<MemberDashboard | null>(null)
-  const [loading, setL]   = useState(true)
-  const [paying, setP]    = useState<string | null>(null)
-  const [tab, setTab]     = useState(0)
+  const [d, setD]       = useState<MemberDashboard | null>(null)
+  const [loading, setL] = useState(true)
+  const [paying, setP]  = useState<string | null>(null)
+  const [tab, setTab]   = useState(0)
 
   async function load() {
     const { data } = await callFunction<MemberDashboard>('member-profile', { token: getMemberToken()! })
@@ -38,8 +38,8 @@ export default function Dashboard() {
   const group = plan?.susu_groups
   const dl    = useDeadline(group?.payment_deadline?.slice(0, 5) ?? '18:00')
 
-  if (loading) return <div className="grid place-items-center h-[60vh]"><Loader2 className="animate-spin text-ink-3" size={22} /></div>
-  if (!d)      return <div className="p-10 text-center t-meta">Could not load your card.</div>
+  if (loading) return <div className="grid place-items-center h-[70vh]"><Loader2 className="animate-spin text-green" size={24} /></div>
+  if (!d)      return <div className="p-10 text-center t-meta">Could not load your account.</div>
 
   const { member, plans, summary, pendingContributions, recentPayments, penalties } = d
   const dueToday = pendingContributions.find(c => isToday(new Date(c.due_date)))
@@ -57,24 +57,31 @@ export default function Dashboard() {
   const toTurn  = plan?.payout_date ? differenceInCalendarDays(new Date(plan.payout_date), new Date()) : null
 
   return (
-    <div className="max-w-[440px] mx-auto px-5 py-7 pb-16 animate-fade-in">
+    <div className="max-w-[420px] mx-auto px-5 pt-6 animate-fade-in">
 
-      <p className="t-label">{member.member_id}</p>
-      <h1 className="t-display mt-1.5">{member.full_name.split(' ')[0]}</h1>
+      <header className="flex items-center gap-3 mb-6">
+        <div className="w-11 h-11 rounded-full bg-green grid place-items-center shrink-0">
+          <span className="text-white font-bold text-[15px]">{member.full_name[0]}</span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold truncate">{member.full_name}</p>
+          <p className="t-meta">{member.member_id}</p>
+        </div>
+      </header>
 
       {penalties.length > 0 && (
-        <p className="text-[13px] text-alert font-medium mt-4">
-          GHS {n2(summary.totalPenalties)} in penalties will be deducted from your collection.
-        </p>
+        <div className="flex items-start gap-2.5 bg-red-50 border border-red/20 rounded-[12px] p-3.5 mb-4">
+          <AlertTriangle size={16} className="text-red mt-0.5 shrink-0" />
+          <p className="text-[12.5px] text-red">
+            <span className="font-bold">GHS {n2(summary.totalPenalties)} in penalties.</span> This will be deducted from your collection.
+          </p>
+        </div>
       )}
 
       {plans.length > 1 && (
-        <div className="flex gap-4 mt-6 border-b border-line">
+        <div className="seg mb-4">
           {plans.map((p, i) => (
-            <button key={p.id} onClick={() => setTab(i)}
-              className={`text-[13px] pb-2.5 border-b-2 -mb-px transition-colors ${
-                i === tab ? 'font-bold text-ink border-ink' : 'font-medium text-ink-2 border-transparent'
-              }`}>
+            <button key={p.id} onClick={() => setTab(i)} className={`seg-item ${i === tab ? 'seg-on' : ''}`}>
               {p.susu_groups?.name}
             </button>
           ))}
@@ -83,87 +90,111 @@ export default function Dashboard() {
 
       {plan && group ? (
         <>
-          {/* Turn + collection — the two numbers that matter */}
-          <section className="grid grid-cols-2 gap-5 py-8 border-b border-line mt-6">
-            <div>
-              <p className="t-label">Your turn</p>
-              <p className="text-[22px] font-extrabold tracking-[-.02em] mt-1.5">
-                {plan.payout_date ? format(new Date(plan.payout_date), 'd MMM') : '—'}
-              </p>
-              <p className="t-meta">{toTurn !== null && toTurn > 0 ? `in ${toTurn} days` : plan.payout_date ? 'today' : 'not set'}</p>
+          {/* Collection card — the hero */}
+          <div className="panel p-5 bg-green border-green mb-3">
+            <p className="text-[12px] font-semibold text-white/60">You collect</p>
+            <p className="text-[34px] font-extrabold tracking-[-.03em] text-white leading-none mt-1.5 tnum">
+              <span className="text-[16px] align-[.4em] mr-1 text-gold">GHS</span>{n0(cashout)}
+            </p>
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/15">
+              <div>
+                <p className="text-[11px] text-white/60 font-medium">Your date</p>
+                <p className="text-[14px] font-bold text-white mt-0.5">
+                  {plan.payout_date ? format(new Date(plan.payout_date), 'd MMM yyyy') : 'Not set'}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] text-white/60 font-medium">Slot</p>
+                <p className="text-[14px] font-bold text-gold mt-0.5">{plan.payout_position} of {group.max_members}</p>
+              </div>
+              {toTurn !== null && toTurn > 0 && (
+                <div className="text-right">
+                  <p className="text-[11px] text-white/60 font-medium">Countdown</p>
+                  <p className="text-[14px] font-bold text-white mt-0.5">{toTurn} days</p>
+                </div>
+              )}
             </div>
-            <div>
-              <p className="t-label">You collect</p>
-              <p className="text-[22px] font-extrabold tracking-[-.02em] tnum mt-1.5">
-                <span className="text-[12px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n0(cashout)}
-              </p>
-              <p className="t-meta">slot {plan.payout_position} of {group.max_members}</p>
-            </div>
-          </section>
+          </div>
 
           {/* Due today */}
           {dueToday && (
-            <section className="flex items-center justify-between gap-4 py-6 border-b border-line">
+            <div className="panel p-4 mb-3 flex items-center justify-between gap-3">
               <div>
                 <p className="t-label">Due today</p>
-                <p className="t-figure mt-1.5">
+                <p className="t-figure mt-1">
                   <span className="text-[13px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(dueToday.amount)}
                 </p>
-                <p className={`t-meta mt-1 ${dl.urgent ? '!text-alert font-semibold' : ''}`}>
-                  Before {group.payment_deadline?.slice(0, 5) ?? '18:00'} — {dl.label}
+                <p className={`text-[11.5px] font-medium mt-1 flex items-center gap-1 ${dl.urgent ? 'text-red' : 'text-ink-2'}`}>
+                  <Clock size={11} />{dl.label}
                 </p>
               </div>
-              <button onClick={() => pay(dueToday)} disabled={paying === dueToday.id} className="act-accent shrink-0">
-                {paying === dueToday.id ? <Loader2 size={15} className="animate-spin" /> : 'Pay now'}
+              <button onClick={() => pay(dueToday)} disabled={paying === dueToday.id} className="act-gold shrink-0">
+                {paying === dueToday.id ? <Loader2 size={16} className="animate-spin" /> : 'Pay Now'}
               </button>
-            </section>
+            </div>
           )}
 
-          {/* The card */}
-          <section className="py-8 border-b border-line">
-            <StampCard contributions={mine} cycleDays={group.cycle_days} onPayDay={pay} payingId={paying} />
-          </section>
+          {/* Progress */}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="panel p-4">
+              <p className="t-label">Paid so far</p>
+              <p className="text-[19px] font-extrabold tnum mt-1">GHS {n0(summary.totalPaidAll)}</p>
+            </div>
+            <div className="panel p-4">
+              <p className="t-label">Still to pay</p>
+              <p className="text-[19px] font-extrabold tnum mt-1">GHS {n0(summary.totalPendingAll)}</p>
+            </div>
+          </div>
 
-          <div className="flex gap-2 py-6 border-b border-line">
-            <Link href="/member/payments" className="act-primary flex-1">Pay ahead</Link>
-            <Link href="/member/payments" className="act-quiet flex-1">History</Link>
+          {/* Cycle grid */}
+          <div className="panel p-5 mb-3">
+            <StampCard contributions={mine} cycleDays={group.cycle_days} onPayDay={pay} payingId={paying} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <Link href="/member/payments" className="act-primary"><Zap size={15} />Pay ahead</Link>
+            <Link href="/member/payments" className="act-quiet">History</Link>
           </div>
 
           {/* Rotation */}
-          <section className="py-8 border-b border-line">
-            <h2 className="t-label !text-ink mb-4">The rotation</h2>
+          <div className="panel p-5 mb-3">
+            <p className="t-h2 mb-2">The rotation</p>
+            <p className="t-meta mb-3">Who collects, and when.</p>
             <Rotation total={group.max_members} position={plan.payout_position}
               cycleDays={group.cycle_days} startDate={group.start_date} collected={collected} />
-          </section>
+          </div>
         </>
       ) : (
-        <p className="t-meta py-10">Your collector will add you to a group.</p>
+        <div className="panel p-8 text-center">
+          <p className="t-h2">No plan yet</p>
+          <p className="t-meta mt-1.5">Your collector will add you to a group.</p>
+        </div>
       )}
 
-      {/* Ledger */}
-      <section className="py-8">
-        <div className="flex items-baseline justify-between mb-4">
-          <h2 className="t-label !text-ink">Recent</h2>
-          <Link href="/member/payments" className="t-meta hover:text-ink transition-colors">All</Link>
+      {/* Recent */}
+      <div className="panel p-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="t-h2">Recent payments</p>
+          <Link href="/member/payments" className="t-meta font-semibold flex items-center gap-0.5 hover:text-green transition-colors">
+            See all <ChevronRight size={13} />
+          </Link>
         </div>
         {recentPayments.filter(p => p.status === 'paid').length === 0 ? (
-          <p className="t-meta">Nothing paid yet.</p>
+          <p className="t-meta py-3">No payments yet.</p>
         ) : (
-          <table className="w-full">
-            <tbody className="divide-y divide-line border-y border-line">
-              {recentPayments.filter(p => p.status === 'paid').slice(0, 6).map(c => (
-                <tr key={c.id}>
-                  <td className="py-3 pr-3 text-[13px] font-medium">{c.susu_groups?.name}</td>
-                  <td className="py-3 pr-3 t-meta whitespace-nowrap">
-                    {c.paid_at ? format(new Date(c.paid_at), 'd MMM') : format(new Date(c.due_date), 'd MMM')}
-                  </td>
-                  <td className="py-3 text-right text-[13px] font-bold tnum">{n2(c.amount)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="divide-y divide-line">
+            {recentPayments.filter(p => p.status === 'paid').slice(0, 5).map(c => (
+              <div key={c.id} className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-[13.5px] font-semibold">{c.susu_groups?.name}</p>
+                  <p className="t-meta">{c.paid_at ? format(new Date(c.paid_at), 'd MMM, HH:mm') : format(new Date(c.due_date), 'd MMM')}</p>
+                </div>
+                <p className="text-[14px] font-bold text-green tnum">GHS {n2(c.amount)}</p>
+              </div>
+            ))}
+          </div>
         )}
-      </section>
+      </div>
     </div>
   )
 }

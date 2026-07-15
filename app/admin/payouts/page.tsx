@@ -78,7 +78,7 @@ export default function PayoutsPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto pb-12 animate-fade-in">
-      {toast && <div className="fixed top-4 right-4 z-50 bg-paper border border-line text-ink px-5 py-3 rounded-[3px]  text-sm max-w-sm">{toast}</div>}
+      {toast && <div className="fixed top-4 right-4 z-50 bg-surface border border-line text-ink px-5 py-3 rounded-[10px]  text-sm max-w-sm">{toast}</div>}
 
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-ink">Payouts</h1>
@@ -88,7 +88,7 @@ export default function PayoutsPage() {
       <div className="flex gap-2 mb-6">
         {(['upcoming', 'paid', 'all'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-accent text-ink' : 'bg-wash text-ink-2 hover:text-ink'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-gold text-ink' : 'bg-green-50/50 text-ink-2 hover:text-ink'}`}>
             {s}
           </button>
         ))}
@@ -99,7 +99,7 @@ export default function PayoutsPage() {
       ) : payouts.length === 0 ? (
         <div className="text-center py-20 text-ink-2">No {filter} payouts</div>
       ) : (
-        <div className="border border-line rounded-[3px] overflow-hidden">
+        <div className="border border-line rounded-[10px] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-line">
@@ -114,7 +114,7 @@ export default function PayoutsPage() {
               </thead>
               <tbody className="divide-y divide-line">
                 {payouts.map(p => (
-                  <tr key={p.id} className="hover:bg-wash transition-colors">
+                  <tr key={p.id} className="hover:bg-green-50/50 transition-colors">
                     <td className="px-5 py-4">
                       <p className="text-ink font-medium">{p.members?.full_name}</p>
                       <p className="text-ink-2 text-xs font-mono">
@@ -150,8 +150,8 @@ export default function PayoutsPage() {
 
       {/* ── PAYOUT MODAL WITH ELIGIBILITY ── */}
       {selected && (
-        <div className="fixed inset-0 z-50 bg-ink/20 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="border border-line rounded-[3px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[92vh] overflow-y-auto"
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+          <div className="border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[92vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
 
             <div>
@@ -167,13 +167,13 @@ export default function PayoutsPage() {
             ) : elig ? (
               <>
                 {/* Eligibility banner */}
-                <div className={`p-4 rounded-[3px] border flex items-start gap-3 ${elig.eligible ? 'bg-wash border-line' : 'bg-wash border-alert/40'}`}>
+                <div className={`p-4 rounded-[10px] border flex items-start gap-3 ${elig.eligible ? 'bg-green-50/50 border-line' : 'bg-green-50/50 border-red/40'}`}>
                   {elig.eligible
                     ? <ShieldCheck size={20} className="text-ink mt-0.5 shrink-0" />
-                    : <ShieldAlert size={20} className="text-alert mt-0.5 shrink-0" />
+                    : <ShieldAlert size={20} className="text-red mt-0.5 shrink-0" />
                   }
                   <div>
-                    <p className={`font-semibold text-sm ${elig.eligible ? 'text-ink' : 'text-alert'}`}>
+                    <p className={`font-semibold text-sm ${elig.eligible ? 'text-ink' : 'text-red'}`}>
                       {elig.eligible ? 'Eligible for payout' : 'NOT eligible'}
                     </p>
                     <p className="text-ink-2 text-xs mt-0.5">{elig.reason}</p>
@@ -184,7 +184,7 @@ export default function PayoutsPage() {
                 </div>
 
                 {/* Money breakdown */}
-                <div className="p-4 bg-wash rounded-[3px] space-y-2 text-sm">
+                <div className="p-4 bg-green-50/50 rounded-[10px] space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-ink-2">Cashout amount</span>
                     <span className="text-ink font-medium">{ghs(elig.gross_amount)}</span>
@@ -197,14 +197,14 @@ export default function PayoutsPage() {
                   )}
                   {Number(elig.outstanding_contrib) > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-alert">− Unpaid contributions</span>
-                      <span className="text-alert font-medium">−{ghs(elig.outstanding_contrib)}</span>
+                      <span className="text-red">− Unpaid contributions</span>
+                      <span className="text-red font-medium">−{ghs(elig.outstanding_contrib)}</span>
                     </div>
                   )}
                   {Number(elig.outstanding_penalty) > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-alert">− Unpaid penalties</span>
-                      <span className="text-alert font-medium">−{ghs(elig.outstanding_penalty)}</span>
+                      <span className="text-red">− Unpaid penalties</span>
+                      <span className="text-red font-medium">−{ghs(elig.outstanding_penalty)}</span>
                     </div>
                   )}
                   <div className="flex justify-between pt-2.5 border-t border-line">
@@ -214,7 +214,7 @@ export default function PayoutsPage() {
                 </div>
 
                 {/* MoMo destination */}
-                <div className="p-3 bg-wash border border-line rounded-[3px] flex items-center justify-between">
+                <div className="p-3 bg-green-50/50 border border-line rounded-[10px] flex items-center justify-between">
                   <div>
                     <p className="text-xs text-ink-2">Send via {(selected.members as any)?.mobile_money_provider ?? 'MoMo'}</p>
                     <p className="text-ink font-mono font-bold">{momo ?? 'No MoMo number on file'}</p>
@@ -228,9 +228,9 @@ export default function PayoutsPage() {
 
                 {/* Override */}
                 {!elig.eligible && (
-                  <label className="flex items-start gap-2.5 p-3 bg-wash border border-line rounded-[3px] cursor-pointer">
+                  <label className="flex items-start gap-2.5 p-3 bg-green-50/50 border border-line rounded-[10px] cursor-pointer">
                     <input type="checkbox" checked={override} onChange={e => setOverride(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 accent-ink shrink-0" />
+                      className="mt-0.5 w-4 h-4 accent-green shrink-0" />
                     <span className="text-xs text-ink-2">
                       <strong>Override the block and pay anyway.</strong> The unpaid amount will be deducted from what you send. This action is recorded in the audit log.
                     </span>
@@ -240,24 +240,24 @@ export default function PayoutsPage() {
                 <div>
                   <label className="block text-sm text-ink-2 mb-1.5">MoMo Transaction Reference</label>
                   <input value={ref} onChange={e => setRef(e.target.value)}
-                    className="w-full px-3 py-2 bg-wash border border-line text-ink rounded-[3px] text-sm focus:outline-none focus:ring-0 focus:border-ink"
+                    className="w-full px-3 py-2 bg-green-50/50 border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-green"
                     placeholder="Paste the MoMo transaction ID after sending" />
                 </div>
                 <div>
                   <label className="block text-sm text-ink-2 mb-1.5">Notes (optional)</label>
                   <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)}
-                    className="w-full px-3 py-2 bg-wash border border-line text-ink rounded-[3px] text-sm focus:outline-none focus:ring-0 focus:border-ink resize-none"
+                    className="w-full px-3 py-2 bg-green-50/50 border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-green resize-none"
                     placeholder="e.g. Sent via MTN MoMo at 14:32" />
                 </div>
 
                 <button onClick={markPaid} disabled={processing || (!elig.eligible && !override)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-ink text-paper font-bold rounded-[3px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-green text-white font-bold rounded-[10px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                   {processing ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
                   {!elig.eligible && !override ? 'Blocked — tick override to proceed' : `Confirm ${ghs(elig.net_amount)} Sent`}
                 </button>
               </>
             ) : (
-              <p className="text-alert text-sm text-center py-8">Could not run eligibility check.</p>
+              <p className="text-red text-sm text-center py-8">Could not run eligibility check.</p>
             )}
 
             <button onClick={() => setSelected(null)} className="w-full text-ink-2 text-sm hover:text-ink py-2">Cancel</button>

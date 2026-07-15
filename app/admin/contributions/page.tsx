@@ -44,7 +44,7 @@ export default function ContributionsPage() {
 
   function statusIcon(s: string) {
     if (s === 'paid')    return <CheckCircle size={15} className="text-ink" />
-    if (s === 'overdue') return <AlertCircle size={15} className="text-alert" />
+    if (s === 'overdue') return <AlertCircle size={15} className="text-red" />
     return <Clock size={15} className="text-ink-2" />
   }
 
@@ -66,13 +66,13 @@ export default function ContributionsPage() {
         <div className="flex gap-2 flex-wrap">
           {(['pending','paid','overdue','all'] as StatusFilter[]).map(s => (
             <button key={s} onClick={() => { setStatusFilter(s); setPage(1) }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-accent text-ink' : 'bg-wash text-ink-2 hover:text-ink'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-gold text-ink' : 'bg-green-50/50 text-ink-2 hover:text-ink'}`}>
               {s}
             </button>
           ))}
         </div>
         <select
-          className="px-3 py-1.5 bg-wash border border-line text-ink text-sm rounded-lg focus:outline-none focus:ring-0 focus:border-ink"
+          className="px-3 py-1.5 bg-green-50/50 border border-line text-ink text-sm rounded-lg focus:outline-none focus:ring-0 focus:border-green"
           value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setPage(1) }}>
           <option value="all">All Groups</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -84,7 +84,7 @@ export default function ContributionsPage() {
       ) : contributions.length === 0 ? (
         <div className="text-center py-20 text-ink-2">No contributions found</div>
       ) : (
-        <div className="border border-line rounded-[3px] overflow-hidden">
+        <div className="border border-line rounded-[10px] overflow-hidden">
           <table className="w-full text-sm">
             <thead className="border-b border-line">
               <tr className="text-ink-2">
@@ -98,7 +98,7 @@ export default function ContributionsPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {contributions.map(c => (
-                <tr key={c.id} className="hover:bg-wash transition-colors">
+                <tr key={c.id} className="hover:bg-green-50/50 transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
                       {statusIcon(c.status)}
@@ -125,9 +125,9 @@ export default function ContributionsPage() {
               <span className="text-sm text-ink-2">Page {page} · {total} records</span>
               <div className="flex gap-2">
                 <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
-                  className="px-3 py-1.5 text-sm bg-wash text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
+                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
                 <button onClick={() => setPage(p => p+1)} disabled={page*30>=total}
-                  className="px-3 py-1.5 text-sm bg-wash text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
+                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
               </div>
             </div>
           )}

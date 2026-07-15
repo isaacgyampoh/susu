@@ -4,15 +4,15 @@ import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { AdminDashboard } from '@/types'
 import { format } from 'date-fns'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Users, Layers, AlertTriangle, ShieldCheck, Flag, ChevronRight } from 'lucide-react'
 
 const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })
 
 export default function AdminHome() {
-  const [d, setD]         = useState<AdminDashboard | null>(null)
-  const [loading, setL]   = useState(true)
-  const [flagging, setF]  = useState(false)
-  const [note, setNote]   = useState('')
+  const [d, setD]        = useState<AdminDashboard | null>(null)
+  const [loading, setL]  = useState(true)
+  const [flagging, setF] = useState(false)
+  const [note, setNote]  = useState('')
 
   async function load() {
     const { data } = await callFunction<AdminDashboard>('admin-dashboard', { token: getAdminToken()! })
@@ -24,131 +24,113 @@ export default function AdminHome() {
     setF(true)
     const { data, error } = await callFunction<any>('flag-late-payments', { method: 'POST', token: getAdminToken()! })
     setF(false)
-    setNote(error ? error : `${data?.flagged_count ?? 0} payment${data?.flagged_count === 1 ? '' : 's'} flagged late`)
+    setNote(error ?? `${data?.flagged_count ?? 0} payment${data?.flagged_count === 1 ? '' : 's'} flagged`)
     setTimeout(() => setNote(''), 4000)
     load()
   }
 
-  if (loading) return <div className="grid place-items-center h-[60vh]"><Loader2 className="animate-spin text-ink-3" size={22} /></div>
+  if (loading) return <div className="grid place-items-center h-[70vh]"><Loader2 className="animate-spin text-green" size={24} /></div>
   if (!d)      return <div className="p-10 text-center t-meta">Could not load. Check your Supabase setup.</div>
 
   const { stats, upcomingPayouts, groups } = d
-
-  const figures = [
-    { v: n0(stats.totalMembers),         l: 'Members',   href: '/admin/members' },
-    { v: n0(stats.activeGroups),         l: 'Groups',    href: '/admin/groups' },
-    { v: n0(stats.overdueContributions), l: 'Overdue',   href: '/admin/contributions', alert: stats.overdueContributions > 0 },
-    { v: n0(stats.pendingKYC),           l: 'Pending KYC', href: '/admin/kyc' },
+  const cards = [
+    { v: n0(stats.totalMembers),         l: 'Members',     icon: Users,       href: '/admin/members' },
+    { v: n0(stats.activeGroups),         l: 'Groups',      icon: Layers,      href: '/admin/groups' },
+    { v: n0(stats.overdueContributions), l: 'Overdue',     icon: AlertTriangle, href: '/admin/contributions', alert: stats.overdueContributions > 0 },
+    { v: n0(stats.pendingKYC),           l: 'Pending KYC', icon: ShieldCheck, href: '/admin/kyc' },
   ]
 
   return (
-    <div className="px-6 sm:px-10 py-8 sm:py-10 max-w-[1080px] animate-fade-in">
-
-      <header className="flex items-start justify-between gap-6 flex-wrap mb-9">
-        <h1 className="t-display">Dashboard</h1>
+    <div className="px-5 sm:px-8 py-7 max-w-[1100px] animate-fade-in">
+      <header className="flex items-start justify-between gap-4 flex-wrap mb-6">
+        <div>
+          <h1 className="t-h1">Dashboard</h1>
+          <p className="t-meta mt-1">Overview of your susu platform</p>
+        </div>
         <div className="flex items-center gap-2">
-          {note && <span className="t-meta mr-1">{note}</span>}
+          {note && <span className="t-meta">{note}</span>}
           <button onClick={lateCheck} disabled={flagging} className="act-quiet act-sm">
-            {flagging ? <Loader2 size={13} className="animate-spin" /> : 'Run late check'}
+            {flagging ? <Loader2 size={13} className="animate-spin" /> : <><Flag size={13} /> Run late check</>}
           </button>
-          <Link href="/admin/members/new" className="act-primary act-sm">Add member</Link>
         </div>
       </header>
 
-      {/* Figures — no tiles, no icons, no chevrons. Just the numbers. */}
-      <section className="rule-hd" />
-      <section className="grid grid-cols-2 md:grid-cols-4 divide-x divide-line border-b border-line">
-        {figures.map(({ v, l, href, alert }) => (
-          <Link key={l} href={href} className="px-5 py-7 first:pl-0 hover:bg-wash transition-colors group">
-            <p className={`t-figure ${alert ? 'text-alert' : ''}`}>{v}</p>
-            <p className="t-label mt-2 group-hover:text-ink transition-colors">{l}</p>
+      {/* Collected — the hero figure */}
+      <div className="panel p-6 bg-green border-green mb-4">
+        <p className="text-[12px] font-semibold text-white/60">Total collected</p>
+        <p className="text-[38px] font-extrabold tracking-[-.03em] text-white leading-none mt-1.5 tnum">
+          <span className="text-[17px] align-[.4em] mr-1 text-gold">GHS</span>{n0(stats.totalCollected)}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-7">
+        {cards.map(({ v, l, icon: Icon, href, alert }) => (
+          <Link key={l} href={href} className="panel p-4 hover:border-green transition-colors group">
+            <div className={`w-9 h-9 rounded-[10px] grid place-items-center mb-3 ${alert ? 'bg-red-50' : 'bg-green-50'}`}>
+              <Icon size={16} className={alert ? 'text-red' : 'text-green'} />
+            </div>
+            <p className={`text-[22px] font-extrabold tnum ${alert ? 'text-red' : ''}`}>{v}</p>
+            <p className="t-meta mt-0.5 group-hover:text-green transition-colors">{l}</p>
           </Link>
         ))}
-      </section>
+      </div>
 
-      {/* The one number that matters most gets the accent */}
-      <section className="py-8 border-b border-line flex items-end justify-between gap-6 flex-wrap">
-        <div>
-          <p className="t-label">Total collected</p>
-          <p className="text-[40px] font-extrabold tracking-[-.03em] leading-none tnum mt-2">
-            <span className="text-[17px] align-[.4em] mr-1 font-bold text-ink-2">GHS</span>
-            {n0(stats.totalCollected)}
-          </p>
+      <div className="panel p-5 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="t-h2">Upcoming payouts — next 7 days</p>
+          <Link href="/admin/payouts" className="t-meta font-semibold hover:text-green transition-colors flex items-center gap-0.5">
+            All <ChevronRight size={13} />
+          </Link>
         </div>
-        <span className="w-16 h-1 bg-accent mb-2" />
-      </section>
-
-      {/* Upcoming payouts */}
-      <section className="py-9">
-        <div className="flex items-baseline justify-between mb-4">
-          <h2 className="t-label !text-ink">Upcoming payouts — next 7 days</h2>
-          <Link href="/admin/payouts" className="t-meta hover:text-ink transition-colors">All payouts</Link>
-        </div>
-
         {!upcomingPayouts?.length ? (
-          <p className="t-meta py-6">Nothing due in the next 7 days.</p>
+          <p className="t-meta py-4">Nothing due in the next 7 days.</p>
         ) : (
-          <table className="w-full">
-            <tbody className="divide-y divide-line border-y border-line">
-              {upcomingPayouts.map(p => (
-                <tr key={p.id} className="hover:bg-wash transition-colors">
-                  <td className="py-3.5 pr-4">
-                    <p className="text-[14px] font-semibold">{p.members?.full_name}</p>
-                    <p className="t-meta">{p.members?.member_id}</p>
-                  </td>
-                  <td className="py-3.5 px-4 t-meta hidden sm:table-cell">{p.susu_groups?.name}</td>
-                  <td className="py-3.5 px-4 t-meta whitespace-nowrap">{format(new Date(p.scheduled_date), 'd MMM')}</td>
-                  <td className="py-3.5 pl-4 text-right text-[15px] font-bold tnum whitespace-nowrap">
-                    {n0(p.total_amount)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="divide-y divide-line">
+            {upcomingPayouts.map(p => (
+              <div key={p.id} className="flex items-center justify-between py-3 gap-3">
+                <div className="min-w-0">
+                  <p className="text-[13.5px] font-semibold truncate">{p.members?.full_name}</p>
+                  <p className="t-meta">{p.members?.member_id} · {p.susu_groups?.name}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[14px] font-bold tnum">GHS {n0(p.total_amount)}</p>
+                  <p className="t-meta">{format(new Date(p.scheduled_date), 'd MMM')}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
-      </section>
+      </div>
 
-      {/* Groups */}
-      <section className="pb-12">
-        <div className="flex items-baseline justify-between mb-4">
-          <h2 className="t-label !text-ink">Groups</h2>
-          <Link href="/admin/groups/new" className="t-meta hover:text-ink transition-colors">New group</Link>
+      <div className="panel p-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="t-h2">Groups</p>
+          <Link href="/admin/groups/new" className="act-soft act-sm">New group</Link>
         </div>
-
         {!groups?.length ? (
-          <div className="py-10 border-y border-line text-center">
+          <div className="py-8 text-center">
             <p className="t-meta">No groups yet.</p>
-            <Link href="/admin/groups/new" className="act-accent act-sm mt-4">Create your first group</Link>
+            <Link href="/admin/groups/new" className="act-primary act-sm mt-3">Create your first group</Link>
           </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-ink">
-                <th className="t-label text-left pb-2.5">Group</th>
-                <th className="t-label text-left pb-2.5 hidden sm:table-cell">Daily</th>
-                <th className="t-label text-left pb-2.5 hidden md:table-cell">Cashout</th>
-                <th className="t-label text-left pb-2.5">Members</th>
-                <th className="t-label text-right pb-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line border-b border-line">
-              {groups.map(g => (
-                <tr key={g.id} className="hover:bg-wash transition-colors">
-                  <td className="py-3.5 pr-4 text-[14px] font-semibold">{g.name}</td>
-                  <td className="py-3.5 pr-4 t-meta tnum hidden sm:table-cell">{n0(g.contribution_amount)}</td>
-                  <td className="py-3.5 pr-4 text-[13px] font-semibold tnum hidden md:table-cell">
-                    {g.cashout_amount ? n0(g.cashout_amount) : '—'}
-                  </td>
-                  <td className="py-3.5 pr-4 t-meta tnum">{g.current_members}/{g.max_members}</td>
-                  <td className="py-3.5 text-right">
-                    <span className={g.status === 'active' ? 'st-on' : 'st-off'}>{g.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="divide-y divide-line">
+            {groups.map(g => (
+              <div key={g.id} className="flex items-center justify-between py-3 gap-3">
+                <div className="min-w-0">
+                  <p className="text-[13.5px] font-semibold truncate">{g.name}</p>
+                  <p className="t-meta">
+                    GHS {n0(g.contribution_amount)} {g.contribution_frequency} · {g.current_members}/{g.max_members} members
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  {g.cashout_amount ? <p className="text-[13.5px] font-bold tnum">GHS {n0(g.cashout_amount)}</p> : null}
+                  <span className={g.status === 'active' ? 'pill-on' : g.status === 'full' ? 'pill-wait' : 'pill-off'}>{g.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
-      </section>
+      </div>
     </div>
   )
 }

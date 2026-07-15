@@ -52,7 +52,7 @@ export default function MembersPage() {
           <p className="text-ink-2 text-sm mt-1">{total} total members</p>
         </div>
         <Link href="/admin/members/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-accent text-ink font-semibold rounded-[3px] text-sm hover:brightness-105 transition-colors">
+          className="flex items-center gap-2 px-4 py-2.5 bg-gold text-ink font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
           <UserPlus size={16} /> Add Member
         </Link>
       </div>
@@ -62,7 +62,7 @@ export default function MembersPage() {
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-2" />
           <input
-            className="w-full pl-9 pr-4 py-2.5 bg-wash border border-line text-ink rounded-[3px] text-sm focus:outline-none focus:ring-0 focus:border-ink placeholder-ink-3"
+            className="w-full pl-9 pr-4 py-2.5 bg-green-50/50 border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-green placeholder-ink-3"
             placeholder="Search by name, phone, or member ID…"
             value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
           />
@@ -70,7 +70,7 @@ export default function MembersPage() {
         <div className="flex gap-2">
           {(['active','pending','suspended','all'] as StatusFilter[]).map(s => (
             <button key={s} onClick={() => { setFilter(s); setPage(1) }}
-              className={`px-3 py-2 rounded-lg text-xs font-medium capitalize transition-colors ${filter === s ? 'bg-accent text-ink' : 'bg-wash text-ink-2 hover:text-ink'}`}>
+              className={`px-3 py-2 rounded-lg text-xs font-medium capitalize transition-colors ${filter === s ? 'bg-gold text-ink' : 'bg-green-50/50 text-ink-2 hover:text-ink'}`}>
               {s}
             </button>
           ))}
@@ -86,7 +86,7 @@ export default function MembersPage() {
           <Link href="/admin/members/new" className="text-ink text-sm hover:underline mt-2 inline-block">Add your first member →</Link>
         </div>
       ) : (
-        <div className="border border-line rounded-[3px] overflow-hidden">
+        <div className="border border-line rounded-[10px] overflow-hidden">
           <table className="w-full text-sm">
             <thead className="border-b border-line">
               <tr className="text-ink-2">
@@ -100,10 +100,10 @@ export default function MembersPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {members.map(m => (
-                <tr key={m.id} className="hover:bg-wash transition-colors">
+                <tr key={m.id} className="hover:bg-green-50/50 transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-[3px] bg-brand-green flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-[10px] bg-brand-green flex items-center justify-center shrink-0">
                         <span className="text-ink font-bold text-xs">{m.full_name[0]}</span>
                       </div>
                       <div>
@@ -131,9 +131,9 @@ export default function MembersPage() {
               <span className="text-sm text-ink-2">Showing {((page-1)*20)+1}–{Math.min(page*20, total)} of {total}</span>
               <div className="flex gap-2">
                 <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1}
-                  className="px-3 py-1.5 text-sm bg-wash text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
+                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Prev</button>
                 <button onClick={() => setPage(p => p+1)} disabled={page*20 >= total}
-                  className="px-3 py-1.5 text-sm bg-wash text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
+                  className="px-3 py-1.5 text-sm bg-green-50/50 text-ink-2 rounded-lg disabled:opacity-40 hover:text-ink">Next</button>
               </div>
             </div>
           )}

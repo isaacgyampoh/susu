@@ -66,7 +66,7 @@ export default function KYCPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto pb-12 animate-fade-in">
-      {toast && <div className="fixed top-4 right-4 z-50 bg-paper text-ink px-5 py-3 rounded-[3px]  text-sm">{toast}</div>}
+      {toast && <div className="fixed top-4 right-4 z-50 bg-surface text-ink px-5 py-3 rounded-[10px]  text-sm">{toast}</div>}
 
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-ink">KYC Applications</h1>
@@ -76,7 +76,7 @@ export default function KYCPage() {
       <div className="flex gap-2 mb-6">
         {(['pending', 'approved', 'rejected'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-accent text-ink' : 'bg-wash text-ink-2 hover:text-ink'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-gold text-ink' : 'bg-green-50/50 text-ink-2 hover:text-ink'}`}>
             {s}
           </button>
         ))}
@@ -87,7 +87,7 @@ export default function KYCPage() {
       ) : apps.length === 0 ? (
         <div className="text-center py-20 text-ink-2">No {filter} applications</div>
       ) : (
-        <div className="border border-line rounded-[3px] overflow-hidden">
+        <div className="border border-line rounded-[10px] overflow-hidden">
           <table className="w-full text-sm">
             <thead className="border-b border-line">
               <tr className="text-ink-2">
@@ -101,7 +101,7 @@ export default function KYCPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {apps.map(app => (
-                <tr key={app.id} className="hover:bg-wash transition-colors">
+                <tr key={app.id} className="hover:bg-green-50/50 transition-colors">
                   <td className="px-5 py-4 text-ink font-medium">{app.full_name}</td>
                   <td className="px-5 py-4 text-ink-2 hidden sm:table-cell">{app.phone}</td>
                   <td className="px-5 py-4 text-ink-2 hidden md:table-cell">{(app as any).susu_groups?.name}</td>
@@ -125,8 +125,8 @@ export default function KYCPage() {
 
       {/* Review Modal */}
       {selected && !createdCreds && (
-        <div className="fixed inset-0 z-50 bg-ink/20 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="border border-line rounded-[3px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+          <div className="border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="font-bold text-ink text-lg">Review Application</h2>
             <div className="space-y-2 text-sm">
               {[
@@ -155,16 +155,16 @@ export default function KYCPage() {
               <>
                 <div>
                   <label className="block text-sm text-ink-2 mb-1.5">Rejection Reason (required if rejecting)</label>
-                  <textarea className="w-full px-3 py-2 bg-wash border border-line text-ink rounded-[3px] text-sm focus:outline-none focus:ring-0 focus:border-ink resize-none"
+                  <textarea className="w-full px-3 py-2 bg-green-50/50 border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-green resize-none"
                     rows={2} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Could not verify Ghana Card number" />
                 </div>
                 <div className="flex gap-3">
                   <button onClick={() => handleAction('approve')} disabled={processing}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-ink text-paper font-semibold rounded-[3px] transition-colors disabled:opacity-50">
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-green text-white font-semibold rounded-[10px] transition-colors disabled:opacity-50">
                     {processing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />} Approve
                   </button>
                   <button onClick={() => handleAction('reject')} disabled={processing}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-alert text-paper font-semibold rounded-[3px] transition-colors disabled:opacity-50">
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-red text-white font-semibold rounded-[10px] transition-colors disabled:opacity-50">
                     {processing ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />} Reject
                   </button>
                 </div>
@@ -177,15 +177,15 @@ export default function KYCPage() {
 
       {/* Credentials Modal — shown after approval (when no SMS configured) */}
       {createdCreds && (
-        <div className="fixed inset-0 z-50 bg-ink/20 flex items-center justify-center p-4">
-          <div className="border border-line rounded-[3px] w-full max-w-md p-6 space-y-4 animate-slide-up">
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4">
+          <div className="border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up">
             <div className="flex items-center gap-3">
               <CheckCircle size={28} className="text-ink" />
               <h2 className="font-bold text-ink text-lg">Member Approved!</h2>
             </div>
             <p className="text-ink-2 text-sm">Share these credentials with the member manually (SMS will be added later):</p>
 
-            <div className="p-4 bg-wash rounded-[3px] space-y-3">
+            <div className="p-4 bg-green-50/50 rounded-[10px] space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-ink-2 text-sm">Member ID</span>
                 <span className="text-ink font-bold font-mono text-lg">{createdCreds.member_id}</span>
@@ -196,11 +196,11 @@ export default function KYCPage() {
               </div>
             </div>
 
-            <button onClick={copyCredsToClipboard} className="w-full flex items-center justify-center gap-2 py-3 bg-wash hover:bg-wash text-ink font-medium rounded-[3px] transition-colors">
+            <button onClick={copyCredsToClipboard} className="w-full flex items-center justify-center gap-2 py-3 bg-green-50/50 hover:bg-green-50/50 text-ink font-medium rounded-[10px] transition-colors">
               {copied ? <><Check size={16} className="text-ink" /> Copied!</> : <><Copy size={16} /> Copy to Clipboard</>}
             </button>
             <p className="text-xs text-ink-2 text-center">Member logs in at /login with their phone number and this passcode.</p>
-            <button onClick={dismissCreds} className="w-full py-3 bg-accent text-ink font-bold rounded-[3px] hover:brightness-105 transition-colors">Done</button>
+            <button onClick={dismissCreds} className="w-full py-3 bg-gold text-ink font-bold rounded-[10px] hover:brightness-105 transition-colors">Done</button>
           </div>
         </div>
       )}

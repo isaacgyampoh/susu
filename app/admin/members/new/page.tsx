@@ -77,14 +77,14 @@ export default function AddMemberPage() {
   if (created) {
     return (
       <div className="p-4 sm:p-6 max-w-lg mx-auto pb-12 animate-fade-in">
-        <div className="border border-line rounded-[3px] p-8 text-center space-y-5">
+        <div className="border border-line rounded-[10px] p-8 text-center space-y-5">
           <CheckCircle size={56} className="text-ink mx-auto" />
           <div>
             <h1 className="text-2xl font-bold text-ink">Member Created!</h1>
             <p className="text-ink-2 text-sm mt-1">Share these credentials with {created.full_name}</p>
           </div>
 
-          <div className="p-5 bg-wash rounded-[3px] space-y-3 text-left">
+          <div className="p-5 bg-green-50/50 rounded-[10px] space-y-3 text-left">
             <div className="flex justify-between items-center">
               <span className="text-ink-2 text-sm">Member ID</span>
               <span className="text-ink font-bold font-mono">{created.member_id}</span>
@@ -106,17 +106,17 @@ export default function AddMemberPage() {
           </div>
 
           <button onClick={copyCreds}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-wash hover:bg-wash text-ink font-medium rounded-[3px] transition-colors">
+            className="w-full flex items-center justify-center gap-2 py-3 bg-green-50/50 hover:bg-green-50/50 text-ink font-medium rounded-[10px] transition-colors">
             {copied ? <><Check size={16} className="text-ink" /> Copied!</> : <><Copy size={16} /> Copy Credentials</>}
           </button>
 
           <div className="flex gap-3">
             <button onClick={() => { setCreated(null); setForm({ ...form, full_name: '', phone: '', email: '', ghana_card_number: '', mobile_money_number: '' }); setFrontFile(null); setBackFile(null) }}
-              className="flex-1 py-3 bg-accent text-ink font-bold rounded-[3px] hover:brightness-105 transition-colors">
+              className="flex-1 py-3 bg-gold text-ink font-bold rounded-[10px] hover:brightness-105 transition-colors">
               Add Another
             </button>
             <button onClick={() => router.push('/admin/members')}
-              className="flex-1 py-3 bg-wash text-ink font-medium rounded-[3px] hover:bg-wash transition-colors">
+              className="flex-1 py-3 bg-green-50/50 text-ink font-medium rounded-[10px] hover:bg-green-50/50 transition-colors">
               View Members
             </button>
           </div>
@@ -132,16 +132,16 @@ export default function AddMemberPage() {
       </Link>
 
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-[3px] bg-accent/20 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-[10px] bg-gold/20 flex items-center justify-center">
           <UserPlus size={20} className="text-ink" />
         </div>
         <h1 className="text-2xl font-extrabold text-ink">Add New Member</h1>
       </div>
       <p className="text-ink-2 text-sm mb-8">Register a member directly. Their login credentials will be generated automatically.</p>
 
-      {error && <div className="p-3 bg-wash border border-alert/40 rounded-[3px] text-alert text-sm mb-5">{error}</div>}
+      {error && <div className="p-3 bg-green-50/50 border border-red/40 rounded-[10px] text-red text-sm mb-5">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="border border-line rounded-[3px] p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="border border-line rounded-[10px] p-6 space-y-6">
 
         {/* Personal */}
         <div>
@@ -149,37 +149,37 @@ export default function AddMemberPage() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Full Name *</label>
-              <input required className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+              <input required className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
                 value={form.full_name} onChange={e => set('full_name', e.target.value)} placeholder="As on Ghana Card" />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Phone Number * <span className="text-ink-3">(used to login)</span></label>
-              <input required type="tel" className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+              <input required type="tel" className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
                 value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="0244XXXXXX" />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Ghana Card Number *</label>
-              <input required className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+              <input required className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
                 value={form.ghana_card_number} onChange={e => set('ghana_card_number', e.target.value)} placeholder="GHA-XXXXXXXXX-X" />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Date of Birth</label>
-              <input type="date" className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+              <input type="date" className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
                 value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)} />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Email</label>
-              <input type="email" className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+              <input type="email" className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
                 value={form.email} onChange={e => set('email', e.target.value)} placeholder="Optional" />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Occupation</label>
-              <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+              <input className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
                 value={form.occupation} onChange={e => set('occupation', e.target.value)} placeholder="e.g. Trader" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm text-ink-2 mb-1.5">Residential Address</label>
-              <input className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+              <input className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
                 value={form.residential_address} onChange={e => set('residential_address', e.target.value)} placeholder="Area, City" />
             </div>
           </div>
@@ -193,12 +193,12 @@ export default function AddMemberPage() {
               { label: 'Front', file: frontFile, setter: setFrontFile },
               { label: 'Back',  file: backFile,  setter: setBackFile },
             ].map(({ label, file, setter }) => (
-              <label key={label} className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-line rounded-[3px] cursor-pointer hover:border-brand-gold transition-colors bg-wash">
+              <label key={label} className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-line rounded-[10px] cursor-pointer hover:border-brand-gold transition-colors bg-green-50/50">
                 {file ? (
                   <div className="flex items-center gap-2 px-3">
                     <CheckCircle size={14} className="text-ink shrink-0" />
                     <span className="text-xs text-ink truncate max-w-[120px]">{file.name}</span>
-                    <button type="button" onClick={e => { e.preventDefault(); setter(null) }} className="text-ink-2 hover:text-alert"><X size={12} /></button>
+                    <button type="button" onClick={e => { e.preventDefault(); setter(null) }} className="text-ink-2 hover:text-red"><X size={12} /></button>
                   </div>
                 ) : (
                   <><Upload size={18} className="text-ink-3 mb-1" /><span className="text-xs text-ink-2">{label} side</span></>
@@ -215,7 +215,7 @@ export default function AddMemberPage() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">MoMo Provider</label>
-              <select className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+              <select className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
                 value={form.mobile_money_provider} onChange={e => set('mobile_money_provider', e.target.value)}>
                 <option value="MTN">MTN Mobile Money</option>
                 <option value="Vodafone">Vodafone Cash</option>
@@ -224,7 +224,7 @@ export default function AddMemberPage() {
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">MoMo Number</label>
-              <input type="tel" className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+              <input type="tel" className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
                 value={form.mobile_money_number} onChange={e => set('mobile_money_number', e.target.value)} placeholder="0244XXXXXX" />
             </div>
           </div>
@@ -233,7 +233,7 @@ export default function AddMemberPage() {
         {/* Group assignment */}
         <div className="border-t border-line pt-5">
           <h2 className="font-semibold text-ink mb-3 text-sm">Assign to Group</h2>
-          <select className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink"
+          <select className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-green"
             value={form.group_id} onChange={e => set('group_id', e.target.value)}>
             <option value="">No group (assign later)</option>
             {groups.map(g => (
@@ -244,7 +244,7 @@ export default function AddMemberPage() {
           </select>
 
           {selectedGroup && (
-            <div className="mt-3 p-3 bg-wash border border-line rounded-[3px] text-sm space-y-1">
+            <div className="mt-3 p-3 bg-green-50/50 border border-line rounded-[10px] text-sm space-y-1">
               <div className="flex justify-between"><span className="text-ink-2">Contribution</span><span className="text-ink">GHS {selectedGroup.contribution_amount}/{selectedGroup.contribution_frequency}</span></div>
               <div className="flex justify-between"><span className="text-ink-2">Cashout</span><span className="text-ink font-bold">GHS {Number(selectedGroup.cashout_amount ?? 0).toLocaleString()}</span></div>
               <div className="flex justify-between"><span className="text-ink-2">Payout position</span><span className="text-ink">#{selectedGroup.current_members + 1}</span></div>
@@ -256,14 +256,14 @@ export default function AddMemberPage() {
             <label className="flex items-center gap-2 mt-3 cursor-pointer">
               <input type="checkbox" checked={form.registration_fee_paid === 'true'}
                 onChange={e => set('registration_fee_paid', e.target.checked ? 'true' : 'false')}
-                className="w-4 h-4 accent-ink" />
+                className="w-4 h-4 accent-green" />
               <span className="text-sm text-ink">Registration fee of GHS {selectedGroup.registration_fee} has been paid</span>
             </label>
           )}
         </div>
 
         <button type="submit" disabled={loading}
-          className="w-full py-3.5 bg-accent text-ink font-bold rounded-[3px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
+          className="w-full py-3.5 bg-gold text-ink font-bold rounded-[10px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
           {loading ? <Loader2 size={18} className="animate-spin" /> : <><UserPlus size={18} /> Create Member & Generate Passcode</>}
         </button>
       </form>

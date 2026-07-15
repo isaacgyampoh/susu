@@ -49,7 +49,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Today's collection */}
-      <div className="bg-wash border border-line rounded-[3px] p-6">
+      <div className="bg-green-50/50 border border-line rounded-[10px] p-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <p className="text-ink-2 text-sm font-medium">Collected today</p>
@@ -64,8 +64,8 @@ export default function AnalyticsPage() {
           </div>
         </div>
         {/* Progress bar */}
-        <div className="mt-4 h-2.5 bg-wash rounded-[3px] overflow-hidden">
-          <div className="h-full bg-accent rounded-[3px] transition-all"
+        <div className="mt-4 h-2.5 bg-green-50/50 rounded-[10px] overflow-hidden">
+          <div className="h-full bg-gold rounded-[10px] transition-all"
                style={{ width: `${Math.min(Number(a.collection_rate_today), 100)}%` }} />
         </div>
       </div>
@@ -73,13 +73,13 @@ export default function AnalyticsPage() {
       {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'This Week',        value: ghs(a.collected_this_week),  icon: TrendingUp,    color: 'text-ink', bg: 'bg-wash' },
-          { label: 'This Month',       value: ghs(a.collected_this_month), icon: Wallet,        color: 'text-ink',    bg: 'bg-wash' },
-          { label: 'Total Outstanding',value: ghs(a.total_outstanding),    icon: Target,        color: 'text-ink-2',   bg: 'bg-wash' },
-          { label: 'Total Overdue',    value: ghs(a.total_overdue),        icon: AlertTriangle, color: 'text-alert',     bg: 'bg-wash' },
+          { label: 'This Week',        value: ghs(a.collected_this_week),  icon: TrendingUp,    color: 'text-ink', bg: 'bg-green-50/50' },
+          { label: 'This Month',       value: ghs(a.collected_this_month), icon: Wallet,        color: 'text-ink',    bg: 'bg-green-50/50' },
+          { label: 'Total Outstanding',value: ghs(a.total_outstanding),    icon: Target,        color: 'text-ink-2',   bg: 'bg-green-50/50' },
+          { label: 'Total Overdue',    value: ghs(a.total_overdue),        icon: AlertTriangle, color: 'text-red',     bg: 'bg-green-50/50' },
         ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="border border-line rounded-[3px] p-5">
-            <div className={`w-9 h-9 rounded-[3px] ${bg} flex items-center justify-center mb-3`}>
+          <div key={label} className="border border-line rounded-[10px] p-5">
+            <div className={`w-9 h-9 rounded-[10px] ${bg} flex items-center justify-center mb-3`}>
               <Icon size={17} className={color} />
             </div>
             <div className="text-lg font-extrabold text-ink">{value}</div>
@@ -90,18 +90,18 @@ export default function AnalyticsPage() {
 
       {/* Upcoming payout liability */}
       <div className="grid sm:grid-cols-2 gap-4">
-        <div className="border border-line rounded-[3px] p-5">
+        <div className="border border-line rounded-[10px] p-5">
           <p className="text-ink-2 text-sm">Payouts due — next 7 days</p>
           <p className="text-2xl font-extrabold text-ink mt-1">{ghs(a.payouts_due_7d)}</p>
         </div>
-        <div className="border border-line rounded-[3px] p-5">
+        <div className="border border-line rounded-[10px] p-5">
           <p className="text-ink-2 text-sm">Payouts due — next 30 days</p>
           <p className="text-2xl font-extrabold text-ink mt-1">{ghs(a.payouts_due_30d)}</p>
         </div>
       </div>
 
       {/* Collection trend chart */}
-      <div className="border border-line rounded-[3px] p-5">
+      <div className="border border-line rounded-[10px] p-5">
         <h2 className="font-bold text-ink mb-1">Collection Trend</h2>
         <p className="text-ink-2 text-xs mb-5">Last 14 days · expected vs collected</p>
 
@@ -118,17 +118,17 @@ export default function AnalyticsPage() {
                   <div key={t.day} className="flex-1 flex flex-col items-center gap-1 group relative">
                     <div className="w-full relative flex-1 flex items-end">
                       {/* Expected (background) */}
-                      <div className="absolute bottom-0 w-full bg-wash rounded-t transition-all"
+                      <div className="absolute bottom-0 w-full bg-green-50/50 rounded-t transition-all"
                            style={{ height: `${expH}%` }} />
                       {/* Collected (foreground) */}
-                      <div className={`absolute bottom-0 w-full rounded-t transition-all ${Number(t.rate) >= 90 ? 'bg-ink' : Number(t.rate) >= 60 ? 'bg-accent' : 'bg-alert'}`}
+                      <div className={`absolute bottom-0 w-full rounded-t transition-all ${Number(t.rate) >= 90 ? 'bg-ink' : Number(t.rate) >= 60 ? 'bg-gold' : 'bg-red'}`}
                            style={{ height: `${colH}%` }} />
                     </div>
                     <span className={`text-[9px] ${isToday ? 'text-ink font-bold' : 'text-ink-3'}`}>
                       {format(new Date(t.day), 'd')}
                     </span>
                     {/* Tooltip */}
-                    <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 bg-wash border border-line rounded-lg px-2 py-1.5 text-xs whitespace-nowrap ">
+                    <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 bg-green-50/50 border border-line rounded-lg px-2 py-1.5 text-xs whitespace-nowrap ">
                       <p className="text-ink font-medium">{format(new Date(t.day), 'MMM d')}</p>
                       <p className="text-ink-2">Due: {ghs(t.expected)}</p>
                       <p className="text-ink">Paid: {ghs(t.collected)}</p>
@@ -140,16 +140,16 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex items-center gap-4 mt-4 text-xs">
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-ink" /><span className="text-ink-2">≥90%</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-accent" /><span className="text-ink-2">60–89%</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-alert" /><span className="text-ink-2">&lt;60%</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-wash" /><span className="text-ink-2">Expected</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-gold" /><span className="text-ink-2">60–89%</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red" /><span className="text-ink-2">&lt;60%</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-50/50" /><span className="text-ink-2">Expected</span></span>
             </div>
           </>
         )}
       </div>
 
       {/* Per-group financial health */}
-      <div className="border border-line rounded-[3px] p-5">
+      <div className="border border-line rounded-[10px] p-5">
         <h2 className="font-bold text-ink mb-1">Group Financial Health</h2>
         <p className="text-ink-2 text-xs mb-5">Balance = collected + registration fees − paid out</p>
 
@@ -158,17 +158,17 @@ export default function AnalyticsPage() {
         ) : (
           <div className="space-y-4">
             {data.groupFinancials.map(g => (
-              <div key={g.group_id} className="p-4 border border-line rounded-[3px]">
+              <div key={g.group_id} className="p-4 border border-line rounded-[10px]">
                 <div className="flex items-start justify-between mb-3 gap-3 flex-wrap">
                   <div>
                     <h3 className="font-bold text-ink">{g.group_name}</h3>
                     <p className="text-xs text-ink-2">
                       {g.active_members} active
-                      {g.defaulted_members > 0 && <span className="text-alert"> · {g.defaulted_members} defaulted</span>}
+                      {g.defaulted_members > 0 && <span className="text-red"> · {g.defaulted_members} defaulted</span>}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className={`text-xl font-extrabold ${Number(g.balance) >= 0 ? 'text-ink' : 'text-alert'}`}>
+                    <p className={`text-xl font-extrabold ${Number(g.balance) >= 0 ? 'text-ink' : 'text-red'}`}>
                       {ghs(g.balance)}
                     </p>
                     <p className="text-xs text-ink-2">current balance</p>
@@ -185,18 +185,18 @@ export default function AnalyticsPage() {
                 <div className="mt-3">
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-ink-2">Collection rate</span>
-                    <span className={Number(g.collection_rate) >= 90 ? 'text-ink' : Number(g.collection_rate) >= 60 ? 'text-ink' : 'text-alert'}>
+                    <span className={Number(g.collection_rate) >= 90 ? 'text-ink' : Number(g.collection_rate) >= 60 ? 'text-ink' : 'text-red'}>
                       {Number(g.collection_rate).toFixed(1)}%
                     </span>
                   </div>
-                  <div className="h-1.5 bg-wash rounded-[3px] overflow-hidden">
-                    <div className={`h-full rounded-[3px] ${Number(g.collection_rate) >= 90 ? 'bg-ink' : Number(g.collection_rate) >= 60 ? 'bg-accent' : 'bg-alert'}`}
+                  <div className="h-1.5 bg-green-50/50 rounded-[10px] overflow-hidden">
+                    <div className={`h-full rounded-[10px] ${Number(g.collection_rate) >= 90 ? 'bg-ink' : Number(g.collection_rate) >= 60 ? 'bg-gold' : 'bg-red'}`}
                          style={{ width: `${Math.min(Number(g.collection_rate), 100)}%` }} />
                   </div>
                 </div>
 
                 {Number(g.overdue_total) > 0 && (
-                  <p className="mt-3 text-xs text-alert flex items-center gap-1.5">
+                  <p className="mt-3 text-xs text-red flex items-center gap-1.5">
                     <AlertTriangle size={12} /> {ghs(g.overdue_total)} overdue
                     {Number(g.penalties_total) > 0 && ` · ${ghs(g.penalties_total)} in unpaid penalties`}
                   </p>

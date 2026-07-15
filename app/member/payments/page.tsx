@@ -59,7 +59,7 @@ export default function Payments() {
 
   return (
     <div className="max-w-[440px] mx-auto px-5 py-7 pb-16 animate-fade-in">
-      <h1 className="t-display">Payments</h1>
+      <h1 className="t-h1">Payments</h1>
       <p className="t-meta mt-2">Pay day by day, or clear a stretch in one MoMo payment.</p>
 
       {unpaid > 0 && (
@@ -77,7 +77,7 @@ export default function Payments() {
         {(['all', 'pending', 'paid'] as const).map(f => (
           <button key={f} onClick={() => setF(f)}
             className={`text-[13px] pb-2.5 border-b-2 -mb-px capitalize transition-colors ${
-              filter === f ? 'font-bold text-ink border-ink' : 'font-medium text-ink-2 border-transparent'
+              filter === f ? 'font-bold text-green border-green' : 'font-medium text-ink-2 border-transparent'
             }`}>
             {f === 'pending' ? 'Due' : f}
           </button>
@@ -100,14 +100,14 @@ export default function Payments() {
                     <p className="text-[13.5px] font-medium">{c.susu_groups?.name}</p>
                     <p className="t-meta">
                       {format(new Date(c.due_date), 'd MMM yyyy')}
-                      {late && <span className="text-alert font-semibold"> — late</span>}
-                      {Number(c.penalty_due ?? 0) > 0 && <span className="text-alert"> +{n2(c.penalty_due)}</span>}
+                      {late && <span className="text-red font-semibold"> — late</span>}
+                      {Number(c.penalty_due ?? 0) > 0 && <span className="text-red"> +{n2(c.penalty_due)}</span>}
                     </p>
                   </td>
                   <td className="py-3.5 text-right">
                     {paid
                       ? <span className="text-[13px] font-bold tnum">{n2(c.amount)}</span>
-                      : <button onClick={() => payOne(c)} disabled={paying === c.id} className="act-accent act-sm">
+                      : <button onClick={() => payOne(c)} disabled={paying === c.id} className="act-gold act-sm">
                           {paying === c.id ? <Loader2 size={12} className="animate-spin" /> : `Pay ${n2(c.amount)}`}
                         </button>}
                   </td>
@@ -120,8 +120,8 @@ export default function Payments() {
 
       {/* Pay-ahead sheet */}
       {sheet && (
-        <div className="fixed inset-0 z-50 bg-ink/20 flex items-end sm:items-center justify-center" onClick={() => setSheet(false)}>
-          <div className="bg-paper w-full sm:max-w-[400px] sm:rounded-[4px] px-6 pt-6 pb-8 max-h-[88vh] overflow-y-auto"
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-end sm:items-center justify-center" onClick={() => setSheet(false)}>
+          <div className="bg-surface w-full sm:max-w-[400px] sm:rounded-[4px] px-6 pt-6 pb-8 max-h-[88vh] overflow-y-auto"
                onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-6">
               <div>
@@ -137,7 +137,7 @@ export default function Payments() {
               {PRESETS.map(d => (
                 <button key={d} onClick={() => setDays(d)}
                   className={`text-[13px] pb-2.5 border-b-2 -mb-px transition-colors ${
-                    days === d ? 'font-bold text-ink border-ink' : 'font-medium text-ink-2 border-transparent'
+                    days === d ? 'font-bold text-green border-green' : 'font-medium text-ink-2 border-transparent'
                   }`}>
                   {d} days
                 </button>
@@ -150,7 +150,7 @@ export default function Payments() {
                 <span className="font-bold text-ink tnum">{days}</span>
               </div>
               <input type="range" min={1} max={60} value={days} aria-label="Days to pay ahead"
-                onChange={e => setDays(parseInt(e.target.value))} className="w-full accent-ink" />
+                onChange={e => setDays(parseInt(e.target.value))} className="w-full accent-green" />
             </div>
 
             {loadingPrev ? (
@@ -163,7 +163,7 @@ export default function Payments() {
                     <span className="tnum font-medium">{n2(prev.subtotal)}</span>
                   </div>
                   {prev.penalties > 0 && (
-                    <div className="flex justify-between text-[13px] text-alert">
+                    <div className="flex justify-between text-[13px] text-red">
                       <span>Penalties</span><span className="tnum font-medium">{n2(prev.penalties)}</span>
                     </div>
                   )}
@@ -175,7 +175,7 @@ export default function Payments() {
                     <span className="t-figure"><span className="text-[13px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(prev.total)}</span>
                   </div>
                 </div>
-                <button onClick={payBulk} disabled={bulkBusy} className="act-accent w-full !h-12">
+                <button onClick={payBulk} disabled={bulkBusy} className="act-gold w-full !h-12">
                   {bulkBusy ? <Loader2 size={16} className="animate-spin" /> : `Pay GHS ${n2(prev.total)}`}
                 </button>
               </>

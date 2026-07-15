@@ -50,8 +50,8 @@ export default function Profile() {
   return (
     <div className="max-w-[440px] mx-auto px-5 py-7 pb-16 animate-fade-in">
       <p className="t-label">{member.member_id}</p>
-      <h1 className="t-display mt-1.5">{member.full_name}</h1>
-      <p className="t-meta mt-2">{member.phone} — <span className="st-on">{member.status}</span></p>
+      <h1 className="t-h1 mt-1.5">{member.full_name}</h1>
+      <p className="t-meta mt-2">{member.phone} — <span className="pill-on">{member.status}</span></p>
 
       {plans.length > 0 && (
         <section className="py-8 border-t border-line mt-7">
@@ -139,7 +139,7 @@ export default function Profile() {
                     </div>
                     <p className="t-meta mt-1">{m.message}</p>
                     {m.reply_text && (
-                      <div className="mt-3 pl-3 border-l-2 border-ink">
+                      <div className="mt-3 pl-3 border-l-2 border-green">
                         <p className="t-label !text-ink">Reply</p>
                         <p className="text-[13px] mt-1">{m.reply_text}</p>
                       </div>

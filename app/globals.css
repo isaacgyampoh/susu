@@ -1,91 +1,101 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/*
-  One system, one language.
-
-  Minimal here means removal, not decoration: no icon tiles, no gradients,
-  no shadows, no coloured chips. Type and whitespace carry hierarchy.
-  Hairlines separate. Colour appears only where it means something —
-  gold for the single action that matters on a screen, red only for late.
-*/
 :root {
-  --paper:  #FFFFFF;
-  --wash:   #FAFAF9;   /* zone fill, barely there */
-  --ink:    #0F0F0F;
-  --ink-2:  #6E6E6E;   /* secondary */
-  --ink-3:  #A8A8A5;   /* tertiary */
-  --line:   #E7E7E4;
-  --accent: #F4A200;   /* used once per view */
-  --alert:  #C1332B;   /* late only */
+  --bg-top:  #FFFFFF;
+  --bg-bot:  #EAF6ED;
+  --surface: #FFFFFF;
+  --green:   #0B4A2C;   /* brand — primary actions */
+  --green-2: #17703F;   /* hover */
+  --green-50:#E9F5EC;   /* soft fills */
+  --ink:     #14261C;
+  --ink-2:   #5F7268;
+  --ink-3:   #93A79A;
+  --line:    #DDEAE1;
+  --gold:    #F4A200;
+  --red:     #C4382F;
 }
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
   body {
-    @apply bg-paper text-ink antialiased;
-    font-family: Archivo, system-ui, sans-serif;
+    @apply text-ink antialiased;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background: linear-gradient(175deg, var(--bg-top) 0%, var(--bg-bot) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
   .tnum { font-variant-numeric: tabular-nums; }
-
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
-  :focus-visible { outline: 1.5px solid var(--ink); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 }
 
 @layer components {
-  /* Type scale — size and weight do the work */
-  .t-display { @apply text-[34px] font-extrabold tracking-[-.03em] leading-[1.05]; }
-  .t-figure  { @apply text-[26px] font-extrabold tracking-[-.02em] leading-none tnum; }
-  .t-label   { @apply text-[10px] font-bold tracking-[.13em] uppercase text-ink-3; }
-  .t-body    { @apply text-[14px] leading-relaxed; }
-  .t-meta    { @apply text-[12px] text-ink-2; }
+  /* Surfaces */
+  .panel {
+    @apply bg-surface rounded-[20px] border border-line;
+    box-shadow: 0 1px 2px rgba(20,38,28,.03), 0 8px 24px -14px rgba(20,38,28,.10);
+  }
+  .panel-flat { @apply bg-surface rounded-[16px] border border-line; }
 
-  /* Rules separate. Boxes don't. */
-  .rule    { @apply border-t border-line; }
-  .rule-hd { @apply border-b border-ink; }
+  /* Type */
+  .t-h1     { @apply text-[26px] font-extrabold tracking-[-.02em] leading-tight; }
+  .t-h2     { @apply text-[16px] font-bold; }
+  .t-figure { @apply text-[26px] font-extrabold tracking-[-.02em] leading-none tnum; }
+  .t-label  { @apply text-[12px] font-semibold text-ink-2; }
+  .t-meta   { @apply text-[12.5px] text-ink-2; }
 
-  /* Actions — one weight, hard edges, no fills competing for attention */
+  /* Actions */
   .act {
-    @apply inline-flex items-center justify-center gap-2 h-11 px-5 rounded-[3px]
-           text-[13px] font-bold tracking-[.02em] transition-colors
-           disabled:opacity-30 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 h-12 px-6 rounded-[12px]
+           text-[14px] font-bold transition-all active:scale-[.98]
+           disabled:opacity-40 disabled:pointer-events-none disabled:active:scale-100;
   }
-  .act-primary { @apply act bg-ink text-paper hover:bg-ink/85; }
-  .act-accent  { @apply act bg-accent text-ink hover:brightness-105; }
-  .act-quiet   { @apply act border border-line text-ink hover:bg-wash; }
-  .act-sm      { @apply h-8 px-3 text-[12px]; }
+  .act-primary { @apply act bg-green text-white hover:bg-green-2; }
+  .act-gold    { @apply act bg-gold text-ink hover:brightness-[1.04]; }
+  .act-soft    { @apply act bg-green-50 text-green hover:bg-line; }
+  .act-quiet   { @apply act bg-surface border border-line text-ink hover:bg-green-50; }
+  .act-danger  { @apply act bg-red text-white hover:brightness-110; }
+  .act-sm      { @apply h-9 px-4 text-[12.5px] rounded-[9px]; }
 
+  /* Inputs */
   .in {
-    @apply w-full h-11 px-3.5 rounded-[3px] bg-paper border border-line text-ink
-           placeholder-ink-3 text-[14px] focus:outline-none focus:border-ink transition-colors;
+    @apply w-full h-12 px-4 rounded-[12px] bg-surface border border-line text-ink text-[14px]
+           placeholder-ink-3 focus:outline-none focus:border-green transition-colors;
   }
-  .in-area { @apply in h-auto py-3 resize-none; }
-  .in-lbl  { @apply t-label block mb-2; }
+  .in-area { @apply in h-auto py-3.5 resize-none; }
+  .in-lbl  { @apply block text-[12.5px] font-semibold text-ink mb-1.5; }
 
-  /* State — text weight, not coloured pills */
-  .st      { @apply text-[11px] font-bold tracking-[.08em] uppercase; }
-  .st-on   { @apply st text-ink; }
-  .st-off  { @apply st text-ink-3; }
-  .st-late { @apply st text-alert; }
+  /* Segmented — the Person/Store control */
+  .seg      { @apply flex p-1 bg-green-50 rounded-[12px]; }
+  .seg-item { @apply flex-1 h-9 rounded-[9px] text-[13px] font-semibold text-ink-2 transition-all; }
+  .seg-on   { @apply bg-green text-white; }
 
-  /* Status badges — text weight, not coloured pills. Kept for admin tables. */
-  .badge-green { @apply st-on; }
-  .badge-blue  { @apply st-on; }
-  .badge-gold  { @apply st-off; }
-  .badge-gray  { @apply st-off; }
-  .badge-red   { @apply st-late; }
+  /* Status */
+  .pill      { @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold; }
+  .pill-on   { @apply pill bg-green-50 text-green; }
+  .pill-wait { @apply pill bg-amber-50 text-amber-700; }
+  .pill-late { @apply pill bg-red-50 text-red; }
+  .pill-off  { @apply pill bg-green-50/60 text-ink-3; }
 
-  /* Stamp grid — the susu card, stripped to its structure */
+  /* Admin table badges */
+  .badge-green { @apply pill-on; }
+  .badge-blue  { @apply pill-on; }
+  .badge-gold  { @apply pill-wait; }
+  .badge-gray  { @apply pill-off; }
+  .badge-red   { @apply pill-late; }
+
+  /* Contribution day grid */
   .box {
-    @apply aspect-square border border-line rounded-[2px] grid place-items-center
-           text-[9px] font-semibold text-ink-3 transition-colors;
+    @apply aspect-square rounded-[7px] grid place-items-center text-[10px] font-semibold
+           border border-line text-ink-3 bg-surface transition-colors;
   }
-  .box-paid  { @apply border-ink bg-ink text-paper; }
-  .box-today { @apply border-ink border-dashed text-ink font-bold; }
-  .box-late  { @apply border-alert text-alert; }
+  .box-paid  { @apply bg-green border-green text-white; }
+  .box-today { @apply bg-amber-50 border-gold text-ink font-bold; }
+  .box-late  { @apply bg-red-50 border-red/40 text-red; }
 }

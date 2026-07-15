@@ -53,7 +53,7 @@ export default function AnnouncementsPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto pb-12 animate-fade-in">
-      {toast && <div className="fixed top-4 right-4 z-50 bg-paper text-ink px-5 py-3 rounded-[3px]  text-sm">{toast}</div>}
+      {toast && <div className="fixed top-4 right-4 z-50 bg-surface text-ink px-5 py-3 rounded-[10px]  text-sm">{toast}</div>}
 
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -61,25 +61,25 @@ export default function AnnouncementsPage() {
           <p className="text-ink-2 text-sm mt-1">Broadcast messages to members</p>
         </div>
         <button onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-accent text-ink font-semibold rounded-[3px] text-sm hover:brightness-105 transition-colors">
+          className="flex items-center gap-2 px-4 py-2.5 bg-gold text-ink font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
           <Plus size={16} /> New Announcement
         </button>
       </div>
 
       {/* Create form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="border border-line rounded-[3px] p-6 space-y-4 mb-6 animate-slide-up">
+        <form onSubmit={handleSubmit} className="border border-line rounded-[10px] p-6 space-y-4 mb-6 animate-slide-up">
           <h2 className="font-bold text-ink">New Announcement</h2>
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Title *</label>
             <input required value={form.title} onChange={e => setField('title', e.target.value)}
-              className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] text-sm focus:outline-none focus:ring-0 focus:border-ink"
+              className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-green"
               placeholder="e.g. Payment Reminder – Week 3" />
           </div>
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Message *</label>
             <textarea required value={form.content} onChange={e => setField('content', e.target.value)} rows={4}
-              className="w-full px-4 py-3 bg-wash border border-line text-ink rounded-[3px] text-sm focus:outline-none focus:ring-0 focus:border-ink resize-none"
+              className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-green resize-none"
               placeholder="Your announcement message…" />
           </div>
 
@@ -87,7 +87,7 @@ export default function AnnouncementsPage() {
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Target Group (leave blank for global)</label>
               <select value={form.group_id} onChange={e => setField('group_id', e.target.value)}
-                className="w-full px-4 py-3 bg-wash border border-line text-ink text-sm rounded-[3px] focus:outline-none focus:ring-0 focus:border-ink">
+                className="w-full px-4 py-3 bg-green-50/50 border border-line text-ink text-sm rounded-[10px] focus:outline-none focus:ring-0 focus:border-green">
                 <option value="">All Members (Global)</option>
                 {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
@@ -96,28 +96,28 @@ export default function AnnouncementsPage() {
 
           <div className="flex gap-5">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.is_global} onChange={e => setField('is_global', e.target.checked)} className="w-4 h-4 accent-ink" />
+              <input type="checkbox" checked={form.is_global} onChange={e => setField('is_global', e.target.checked)} className="w-4 h-4 accent-green" />
               <span className="text-sm text-ink flex items-center gap-1.5"><Globe size={14} /> Mark as global</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.send_sms} onChange={e => setField('send_sms', e.target.checked)} className="w-4 h-4 accent-ink" />
+              <input type="checkbox" checked={form.send_sms} onChange={e => setField('send_sms', e.target.checked)} className="w-4 h-4 accent-green" />
               <span className="text-sm text-ink flex items-center gap-1.5"><Send size={14} /> Also send via SMS</span>
             </label>
           </div>
 
           {form.send_sms && (
-            <div className="p-3 bg-wash border border-line rounded-[3px] text-ink-2 text-xs">
+            <div className="p-3 bg-green-50/50 border border-line rounded-[10px] text-ink-2 text-xs">
               SMS will be sent to {form.group_id ? 'all members in the selected group' : 'all active members'}. This will incur Africa's Talking charges.
             </div>
           )}
 
           <div className="flex gap-3">
             <button type="submit" disabled={submitting}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-accent text-ink font-bold rounded-[3px] text-sm transition-colors hover:brightness-105 disabled:opacity-50">
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gold text-ink font-bold rounded-[10px] text-sm transition-colors hover:brightness-105 disabled:opacity-50">
               {submitting ? <Loader2 size={16} className="animate-spin" /> : <Megaphone size={16} />}
               Post Announcement
             </button>
-            <button type="button" onClick={() => setShowForm(false)} className="px-5 bg-wash text-ink-2 hover:text-ink rounded-[3px] text-sm transition-colors">Cancel</button>
+            <button type="button" onClick={() => setShowForm(false)} className="px-5 bg-green-50/50 text-ink-2 hover:text-ink rounded-[10px] text-sm transition-colors">Cancel</button>
           </div>
         </form>
       )}
@@ -133,14 +133,14 @@ export default function AnnouncementsPage() {
       ) : (
         <div className="space-y-4">
           {announcements.map(a => (
-            <div key={a.id} className="border border-line rounded-[3px] p-5">
+            <div key={a.id} className="border border-line rounded-[10px] p-5">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <h3 className="font-bold text-ink">{a.title}</h3>
                 <div className="flex items-center gap-2 shrink-0">
                   {a.is_global ? (
-                    <span className="flex items-center gap-1 text-xs text-ink bg-wash px-2 py-1 rounded-[3px]"><Globe size={11} /> Global</span>
+                    <span className="flex items-center gap-1 text-xs text-ink bg-green-50/50 px-2 py-1 rounded-[10px]"><Globe size={11} /> Global</span>
                   ) : (
-                    <span className="flex items-center gap-1 text-xs text-ink bg-accent/10 px-2 py-1 rounded-[3px]"><Users size={11} /> {a.susu_groups?.name}</span>
+                    <span className="flex items-center gap-1 text-xs text-ink bg-gold/10 px-2 py-1 rounded-[10px]"><Users size={11} /> {a.susu_groups?.name}</span>
                   )}
                   <span className="text-ink-2 text-xs">{format(new Date(a.created_at), 'MMM d, yyyy')}</span>
                 </div>

@@ -1,41 +1,35 @@
 'use client'
 import { format, addDays } from 'date-fns'
 
-/**
- * Rotation — the queue.
- * Members don't think in percentages, they think "I'm number 4".
- * Dates derive from slot x cycle, which guarantees they're in order.
- */
+/** The rotation queue — members think "I'm number 4", not in percentages. */
 export default function Rotation({
   total, position, cycleDays, startDate, collected,
 }: {
   total: number; position: number; cycleDays: number
   startDate?: string | null; collected: number
 }) {
-  if (!startDate) return <p className="t-meta py-4">Turn dates are set when the group starts.</p>
+  if (!startDate) return <p className="t-meta py-3">Collection dates are set when the group starts.</p>
   const start = new Date(startDate)
 
   return (
-    <table className="w-full">
-      <tbody className="divide-y divide-line border-y border-line">
-        {Array.from({ length: total }).map((_, i) => {
-          const slot = i + 1
-          const me   = slot === position
-          const done = slot <= collected
-          return (
-            <tr key={slot} className={me ? 'bg-wash' : ''}>
-              <td className="py-3 pr-3 w-8 t-meta tnum">{String(slot).padStart(2, '0')}</td>
-              <td className={`py-3 pr-3 text-[14px] ${me ? 'font-bold' : 'font-medium text-ink-2'}`}>
-                {me ? 'You' : `Member ${slot}`}
-              </td>
-              <td className="py-3 pr-3 t-meta whitespace-nowrap">{format(addDays(start, slot * cycleDays), 'd MMM')}</td>
-              <td className="py-3 text-right">
-                {done ? <span className="st-off">Collected</span> : me ? <span className="st-on">Your turn</span> : null}
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+    <div className="divide-y divide-line">
+      {Array.from({ length: total }).map((_, i) => {
+        const slot = i + 1
+        const me   = slot === position
+        const done = slot <= collected
+        return (
+          <div key={slot} className={`flex items-center gap-3 py-3 px-3 -mx-3 ${me ? 'bg-green-50 rounded-[10px]' : ''}`}>
+            <span className={`w-7 h-7 rounded-full grid place-items-center text-[11px] font-bold shrink-0 ${
+              me ? 'bg-green text-white' : done ? 'bg-green-50 text-green' : 'bg-green-50/60 text-ink-3'
+            }`}>{slot}</span>
+            <span className={`text-[13.5px] flex-1 ${me ? 'font-bold' : 'font-medium text-ink-2'}`}>
+              {me ? 'You' : `Member ${slot}`}
+            </span>
+            <span className="t-meta whitespace-nowrap">{format(addDays(start, slot * cycleDays), 'd MMM')}</span>
+            {done ? <span className="pill-off">Collected</span> : me ? <span className="pill-on">Your turn</span> : null}
+          </div>
+        )
+      })}
+    </div>
   )
 }
