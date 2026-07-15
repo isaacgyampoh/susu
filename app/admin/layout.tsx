@@ -6,17 +6,21 @@ import { clearAdminAuth } from '@/lib/supabase'
 import clsx from 'clsx'
 import {
   LayoutDashboard, Users, Layers, ClipboardList, TrendingUp,
-  Megaphone, MessageCircle, ShieldCheck, LogOut, Menu, X, UserPlus
+  Megaphone, MessageCircle, ShieldCheck, LogOut, Menu, X, UserPlus,
+  BarChart3, FileDown, ScrollText
 } from 'lucide-react'
 
 const NAV = [
   { href: '/admin',               label: 'Dashboard',     icon: LayoutDashboard, exact: true },
+  { href: '/admin/analytics',     label: 'Analytics',     icon: BarChart3 },
   { href: '/admin/members',       label: 'Members',       icon: Users },
   { href: '/admin/groups',        label: 'Groups',        icon: Layers },
   { href: '/admin/contributions', label: 'Contributions', icon: ClipboardList },
   { href: '/admin/payouts',       label: 'Payouts',       icon: TrendingUp },
   { href: '/admin/messages',      label: 'Messages',      icon: MessageCircle },
   { href: '/admin/announcements', label: 'Announcements', icon: Megaphone },
+  { href: '/admin/reports',       label: 'Reports',       icon: FileDown },
+  { href: '/admin/audit',         label: 'Audit Log',     icon: ScrollText },
   { href: '/admin/kyc',           label: 'KYC Review',    icon: ShieldCheck },
 ]
 

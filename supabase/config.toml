@@ -91,3 +91,18 @@ verify_jwt = false
 
 [functions.admin-add-member]
 verify_jwt = false
+
+[functions.payments-bulk]
+verify_jwt = false
+
+[functions.admin-analytics]
+verify_jwt = false
+
+[functions.admin-audit]
+verify_jwt = false
+
+[functions.admin-forfeit]
+verify_jwt = false
+
+[functions.admin-reports]
+verify_jwt = false

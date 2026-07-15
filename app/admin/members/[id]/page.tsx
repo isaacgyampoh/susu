@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import { format } from 'date-fns'
-import { Loader2, ArrowLeft, UserCheck, UserX, CheckCircle, AlertCircle, Clock } from 'lucide-react'
+import { Loader2, ArrowLeft, UserCheck, UserX, CheckCircle, AlertCircle, Clock, Ban, AlertTriangle } from 'lucide-react'
 
 export default function MemberDetailPage() {
   const { id }            = useParams<{ id: string }>()
@@ -12,6 +12,9 @@ export default function MemberDetailPage() {
   const [member, setMember] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [action, setAction]   = useState<'suspend' | 'activate' | null>(null)
+  const [forfeitTarget, setForfeitTarget] = useState<any>(null)
+  const [forfeitReason, setForfeitReason] = useState('')
+  const [forfeiting, setForfeiting] = useState(false)
   const [message, setMessage] = useState('')
   const [processing, setProcessing] = useState(false)
   const [toast, setToast]     = useState('')
@@ -37,6 +40,22 @@ export default function MemberDetailPage() {
     setMember((prev: any) => ({ ...prev, status }))
     setAction(null)
     setMessage('')
+  }
+
+  async function handleForfeit() {
+    if (!forfeitTarget || !forfeitReason.trim()) { alert('Please enter a reason'); return }
+    setForfeiting(true)
+    const token = getAdminToken()
+    const { error } = await callFunction('admin-forfeit', {
+      method: 'POST',
+      body: { membership_id: forfeitTarget.id, reason: forfeitReason, notify: true },
+      token: token!,
+    })
+    setForfeiting(false)
+    if (error) { alert(error); return }
+    showToast('⚠️ Slot forfeited — member notified')
+    setForfeitTarget(null); setForfeitReason('')
+    window.location.reload()
   }
 
   if (loading) return (
@@ -155,15 +174,29 @@ export default function MemberDetailPage() {
               <h2 className="font-bold text-white mb-3">Susu Groups</h2>
               <div className="space-y-2">
                 {member.group_memberships.map((gm: any) => (
-                  <div key={gm.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-800">
-                    <div>
-                      <p className="text-white text-sm font-medium">{gm.susu_groups?.name}</p>
-                      <p className="text-gray-500 text-xs">Position #{gm.payout_position}</p>
+                  <div key={gm.id} className={`p-3 rounded-xl ${gm.status === 'defaulted' ? 'bg-red-900/20 border border-red-800/40' : 'bg-gray-800'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white text-sm font-medium">{gm.susu_groups?.name}</p>
+                        <p className="text-gray-500 text-xs">
+                          Position #{gm.payout_position}
+                          {gm.status === 'defaulted' && <span className="text-red-400 font-semibold"> · FORFEITED</span>}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        {gm.payout_date && <p className="text-gray-400 text-xs">{format(new Date(gm.payout_date), 'MMM d, yyyy')}</p>}
+                        {gm.payout_amount && <p className="text-brand-gold text-sm font-bold">GHS {Number(gm.payout_amount).toLocaleString()}</p>}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      {gm.payout_date && <p className="text-gray-400 text-xs">{format(new Date(gm.payout_date), 'MMM d, yyyy')}</p>}
-                      {gm.payout_amount && <p className="text-brand-gold text-sm font-bold">GHS {Number(gm.payout_amount).toLocaleString()}</p>}
-                    </div>
+                    {gm.status === 'defaulted' && gm.forfeit_reason && (
+                      <p className="text-xs text-red-400 mt-2 pt-2 border-t border-red-800/40">Reason: {gm.forfeit_reason}</p>
+                    )}
+                    {gm.status === 'active' && !gm.payout_received && (
+                      <button onClick={() => setForfeitTarget(gm)}
+                        className="mt-2 pt-2 border-t border-gray-700 w-full flex items-center justify-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors">
+                        <Ban size={12} /> Forfeit this slot
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -171,6 +204,49 @@ export default function MemberDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Forfeit modal */}
+      {forfeitTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setForfeitTarget(null)}>
+          <div className="bg-gray-900 border border-red-800 rounded-2xl w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-900/40 flex items-center justify-center">
+                <AlertTriangle size={20} className="text-red-400" />
+              </div>
+              <div>
+                <h2 className="font-bold text-white text-lg">Forfeit Slot</h2>
+                <p className="text-gray-500 text-xs">{forfeitTarget.susu_groups?.name} · Position #{forfeitTarget.payout_position}</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-red-900/20 border border-red-800/40 rounded-xl">
+              <p className="text-red-300 text-sm font-medium">This will permanently:</p>
+              <ul className="text-red-400/80 text-xs mt-2 space-y-1 list-disc list-inside">
+                <li>Cancel all remaining contributions</li>
+                <li>Cancel their upcoming payout</li>
+                <li>Suspend their member account</li>
+                <li>Free up the slot in this group</li>
+                <li>Notify the member by SMS</li>
+              </ul>
+              <p className="text-red-300 text-xs mt-2 font-medium">Per platform rules, no refund applies.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">Reason for forfeiture *</label>
+              <textarea rows={2} value={forfeitReason} onChange={e => setForfeitReason(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                placeholder="e.g. Defaulted on 12 consecutive contributions" />
+            </div>
+
+            <button onClick={handleForfeit} disabled={forfeiting || !forfeitReason.trim()}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors disabled:opacity-40">
+              {forfeiting ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />}
+              Confirm Forfeiture
+            </button>
+            <button onClick={() => setForfeitTarget(null)} className="w-full text-gray-500 text-sm hover:text-gray-300 py-2">Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* Recent transactions */}
       {member.transactions?.length > 0 && (

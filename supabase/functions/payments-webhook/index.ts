@@ -89,6 +89,40 @@ Deno.serve(async (req) => {
       return json({ received: true })
     }
 
+
+    // Handle BULK contribution payment
+    if (metadata?.type === 'bulk_contribution') {
+      const { batch_id, member_id, contribution_ids, count } = metadata
+
+      await supabaseAdmin
+        .from('contributions')
+        .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: reference })
+        .in('id', contribution_ids)
+
+      // Clear any penalties attached to those contributions
+      await supabaseAdmin
+        .from('payment_penalties')
+        .update({ is_paid: true, paid_at: new Date().toISOString() })
+        .in('contribution_id', contribution_ids)
+
+      await supabaseAdmin.from('transactions').upsert({
+        member_id, type: 'contribution', amount: amountGHS,
+        reference, batch_id, items_count: count,
+        description: `Bulk payment — ${count} contributions`,
+        status: 'success', paystack_data: data,
+      }, { onConflict: 'reference' })
+
+      const { data: member } = await supabaseAdmin
+        .from('members').select('full_name, phone').eq('id', member_id).single()
+
+      if (member) {
+        await sendSMS(member.phone,
+          `Hi ${member.full_name}, your bulk payment of GHS ${amountGHS.toFixed(2)} covering ${count} contributions is confirmed. Ref: ${reference}. Thank you!`)
+      }
+
+      return json({ received: true })
+    }
+
     return json({ received: true })
   } catch (e) {
     console.error('Webhook error:', e)
