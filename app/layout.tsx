@@ -1,7 +1,14 @@
 import type { Metadata, Viewport } from 'next'
+import { GeistSans } from 'geist/font/sans'
 import './globals.css'
 import RegisterSW from '@/components/register-sw'
 
+/*
+ * Geist is self-hosted via Vercel's package. A CSS @import to Google Fonts is a
+ * render-blocking third-party request — on a slow mobile connection that is a
+ * visible wait before any text appears, and it fails outright on networks that
+ * block Google. This ships the font with the app.
+ */
 export const metadata: Metadata = {
   title: { default: 'Susu — Save daily, collect on your day', template: '%s · Susu' },
   description: 'Track your contributions, see your slot in the rotation, and know exactly when you collect.',
@@ -23,7 +30,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={GeistSans.variable}>
       <body>
         {children}
         <RegisterSW />

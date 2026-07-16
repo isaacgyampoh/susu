@@ -14,7 +14,7 @@ const config: Config = {
         line:    '#E6E6E9',
         red:     { DEFAULT: '#C4302B', 50: '#FDF3F2', 200: '#F0C7C4', 700: '#9A2521' },
       },
-      fontFamily: { sans: ['Geist', '-apple-system', 'system-ui', 'sans-serif'] },
+      fontFamily: { sans: ['var(--font-geist-sans)', '-apple-system', 'system-ui', 'sans-serif'] },
       animation: { 'fade-in': 'fadeIn .2s ease-out' },
       keyframes: { fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } } },
     },

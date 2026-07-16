@@ -31,7 +31,11 @@ export default function MemberSignIn() {
   return (
     <div className="relative h-[100dvh] overflow-hidden flex flex-col justify-center px-6 py-10">
       <div className="absolute inset-0 overflow-hidden bg-ink" aria-hidden="true">
-        <img src="/cover.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <picture>
+          <source srcSet="/cover.webp" type="image/webp" />
+          <img src="/cover.jpg" alt="" fetchPriority="high" decoding="async"
+            className="absolute inset-0 w-full h-full object-cover" />
+        </picture>
         <div className="absolute inset-0 bg-gradient-to-b from-ink/25 via-ink/55 to-ink/80" />
       </div>
 

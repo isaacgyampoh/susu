@@ -37,8 +37,11 @@ export default function SignIn() {
           That was the scroll bug: h-full had no definite parent to resolve against,
           so the img rendered at its natural 1600x2200 aspect. */}
       <div className="absolute inset-0 lg:relative lg:col-start-1 lg:inset-auto overflow-hidden bg-ink" aria-hidden="true">
-        <img src="/cover.jpg" alt=""
-          className="absolute inset-0 w-full h-full object-cover" />
+        <picture>
+          <source srcSet="/cover.webp" type="image/webp" />
+          <img src="/cover.jpg" alt="" fetchPriority="high" decoding="async"
+            className="absolute inset-0 w-full h-full object-cover" />
+        </picture>
         <div className="absolute inset-0 bg-gradient-to-b from-ink/25 via-ink/55 to-ink/80
                         lg:bg-gradient-to-tr lg:from-ink/95 lg:via-ink/55 lg:to-ink/10" />
       </div>
