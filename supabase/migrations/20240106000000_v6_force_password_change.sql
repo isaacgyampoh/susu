@@ -43,7 +43,9 @@ BEGIN
 END;
 $$;
 
--- Surface the flag at sign-in so the console can force the change
+-- Surface the flag at sign-in so the console can force the change.
+-- Return type widens again, so drop first.
+DROP FUNCTION IF EXISTS verify_admin_password(TEXT, TEXT);
 CREATE OR REPLACE FUNCTION verify_admin_password(p_email TEXT, p_password TEXT)
 RETURNS TABLE (
   id UUID, email TEXT, full_name TEXT, role TEXT,

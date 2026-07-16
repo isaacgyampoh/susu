@@ -3,6 +3,11 @@
 -- ============================================================
 
 -- ── 1. Guard activate_group against re-runs on a live group ──
+-- p_force is a new parameter with a DEFAULT, which OVERLOADS the two-argument
+-- version rather than replacing it. Both would then match a two-argument call
+-- and Postgres would raise "function is not unique" — at runtime, when an admin
+-- clicks Activate, not here. Drop the old signature.
+DROP FUNCTION IF EXISTS activate_group(UUID, DATE);
 -- Previously a second Activate click deleted every pending contribution and
 -- upcoming payout, then rebuilt the schedule from a new start date — silently
 -- shifting everyone's collection day. Now it refuses unless explicitly forced.

@@ -69,7 +69,10 @@ CREATE TRIGGER trg_revoke_on_suspend
   BEFORE UPDATE OF status ON members
   FOR EACH ROW EXECUTE FUNCTION fn_revoke_on_suspend();
 
--- verify_member_passcode must return the version so the token can carry it
+-- verify_member_passcode must return the version so the token can carry it.
+-- The return type widens, and Postgres refuses that under CREATE OR REPLACE
+-- (42P13) — the old signature has to go first.
+DROP FUNCTION IF EXISTS verify_member_passcode(TEXT, TEXT);
 CREATE OR REPLACE FUNCTION verify_member_passcode(p_phone TEXT, p_passcode TEXT)
 RETURNS TABLE (
   id UUID, member_id TEXT, full_name TEXT,
@@ -87,6 +90,7 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS verify_admin_password(TEXT, TEXT);
 CREATE OR REPLACE FUNCTION verify_admin_password(p_email TEXT, p_password TEXT)
 RETURNS TABLE (id UUID, email TEXT, full_name TEXT, role TEXT, token_version INTEGER)
 LANGUAGE plpgsql SECURITY DEFINER AS $$
