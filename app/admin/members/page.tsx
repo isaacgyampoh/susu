@@ -83,7 +83,8 @@ export default function MembersPage() {
         </div>
       ) : (
         <div className="border border-line rounded-[10px] overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="scroll-x">
+            <table className="w-full text-sm min-w-[620px] lg:min-w-0">
             <thead className="border-b border-line">
               <tr className="text-ink-2">
                 <th className="px-5 py-3 text-left font-medium">Member</th>
@@ -119,7 +120,8 @@ export default function MembersPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
 
           {total > 20 && (
             <div className="px-5 py-4 border-t border-line flex items-center justify-between">

@@ -24,7 +24,8 @@ export function useSwipeDrawer(width = 264) {
     const EDGE = 24 // how close to the edge a drag must begin to count
 
     function down(e: PointerEvent) {
-      if (e.pointerType === 'mouse') return
+      // Do NOT filter by pointerType: tablets with a trackpad report 'mouse',
+      // and excluding them left the drawer unreachable.
       const fromEdge = e.clientX <= EDGE
       if (!fromEdge && !openRef.current) return
       start.current = { x: e.clientX, y: e.clientY, t: Date.now() }

@@ -29,13 +29,13 @@ export default function MemberSignIn() {
                  focus:outline-none focus:border-white/60 focus:bg-white/15`
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col justify-center px-6 py-12">
+    <div className="relative h-[100dvh] overflow-hidden flex flex-col justify-center px-6 py-10">
       <div className="absolute inset-0 overflow-hidden bg-ink" aria-hidden="true">
-        <img src="/cover.jpg" alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/75 via-ink/85 to-ink" />
+        <img src="/cover.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/25 via-ink/55 to-ink/80" />
       </div>
 
-      <div className="relative w-full max-w-[340px] mx-auto">
+      <div className="relative w-full max-w-[360px] mx-auto overflow-y-auto">
         <p className="text-[15px] font-semibold tracking-[-.02em] text-white mb-10">Susu</p>
         <h1 className="text-[26px] font-semibold tracking-[-.02em] text-white">Your account</h1>
         <p className="text-[13px] text-white/55 mt-1.5 mb-8">Sign in with your phone and passcode</p>

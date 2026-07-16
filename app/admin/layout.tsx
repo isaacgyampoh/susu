@@ -89,16 +89,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {nav}
       </aside>
 
-      {/* Mobile bar — the drawer answers to a swipe from the left edge,
-          so there is no word to press. The grip hints where. */}
-      <div className="lg:hidden sticky top-0 z-30 h-14 bg-surface border-b border-line flex items-center px-5">
+      {/* Mobile bar. Swipe from the left edge opens the drawer, but a gesture
+          alone is not discoverable and does not exist on every device — so
+          there is always a control. Three bars, drawn in CSS: a standard
+          affordance rather than a decorative icon. */}
+      <div className="lg:hidden sticky top-0 z-30 h-14 bg-surface border-b border-line flex items-center gap-3 px-4">
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Open navigation"
+          aria-expanded={open}
+          className="-ml-1 w-10 h-10 rounded-lg grid place-items-center active:bg-bg transition-colors"
+        >
+          <span className="flex flex-col gap-[4.5px] w-[18px]">
+            <span className="h-[1.5px] w-full bg-ink rounded-full" />
+            <span className="h-[1.5px] w-full bg-ink rounded-full" />
+            <span className="h-[1.5px] w-full bg-ink rounded-full" />
+          </span>
+        </button>
         <Link href="/admin" className="text-[14px] font-semibold tracking-[-.02em]">Susu</Link>
       </div>
-      <button
-        onClick={() => setOpen(true)}
-        aria-label="Open navigation"
-        className="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 z-30 h-16 w-[7px] rounded-r-full bg-ink/15 active:bg-ink/30 transition-colors"
-      />
 
       {/* Scrim fades in proportion to the drag, so the gesture feels attached */}
       {shown > 0 && (
@@ -125,8 +134,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Content: offset by the rail on desktop, full width on mobile.
           min-w-0 so wide tables scroll instead of blowing out the layout. */}
+      {/* min-w-0 lets children shrink; children scroll their own wide content.
+          overflow-x-hidden here would CLIP tables rather than let them scroll. */}
       <main className="lg:pl-[210px] min-w-0">
-        <div className="min-w-0 overflow-x-hidden">{children}</div>
+        <div className="min-w-0">{children}</div>
       </main>
     </div>
   )

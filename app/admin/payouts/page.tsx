@@ -98,7 +98,7 @@ export default function PayoutsPage() {
         <div className="text-center py-20 text-ink-2">No {filter} payouts</div>
       ) : (
         <div className="border border-line rounded-[10px] overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="scroll-x">
             <table className="w-full text-sm">
               <thead className="border-b border-line">
                 <tr className="text-ink-2">

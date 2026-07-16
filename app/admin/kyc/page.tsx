@@ -86,7 +86,8 @@ export default function KYCPage() {
         <div className="text-center py-20 text-ink-2">No {filter} applications</div>
       ) : (
         <div className="border border-line rounded-[10px] overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="scroll-x">
+            <table className="w-full text-sm min-w-[620px] lg:min-w-0">
             <thead className="border-b border-line">
               <tr className="text-ink-2">
                 <th className="px-5 py-3 text-left font-medium">Applicant</th>
@@ -116,7 +117,8 @@ export default function KYCPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
 
