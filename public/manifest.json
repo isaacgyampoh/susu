@@ -1,7 +1,7 @@
 {
   "name": "Abbie Wealth Susu",
   "short_name": "Abbie Wealth",
-  "description": "Abbie Wealth Susu \u2014 member portal and administrator console.",
+  "description": "Track your contributions, see your slot in the rotation, and know when you collect.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -35,11 +35,13 @@
   "shortcuts": [
     {
       "name": "Pay today",
-      "url": "/member/payments"
+      "short_name": "Pay",
+      "url": "/m/portal/payments"
     },
     {
       "name": "My card",
-      "url": "/member/dashboard"
+      "short_name": "Card",
+      "url": "/m/portal/dashboard"
     }
   ]
 }

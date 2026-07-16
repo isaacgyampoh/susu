@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { callFunction, setAdminToken } from '@/lib/supabase'
 
@@ -10,6 +10,10 @@ export default function SignIn() {
   const [show, setShow]   = useState(false)
   const [busy, setBusy]   = useState(false)
   const [err, setErr]     = useState('')
+
+  useEffect(() => {
+    if (localStorage.getItem('admin_token')) router.replace('/admin')
+  }, [router])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setErr('')

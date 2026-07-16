@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { callFunction, setMemberToken } from '@/lib/supabase'
 
@@ -11,6 +11,13 @@ export default function MemberSignIn() {
   const [show, setShow]   = useState(false)
   const [busy, setBusy]   = useState(false)
   const [err, setErr]     = useState('')
+
+  // The installed app launches at "/", which lands here. A member with a live
+  // session should go straight to their card — being asked to sign in on every
+  // launch is what makes an installed PWA feel like a bookmark.
+  useEffect(() => {
+    if (localStorage.getItem('member_token')) router.replace('/m/portal/dashboard')
+  }, [router])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setErr('')

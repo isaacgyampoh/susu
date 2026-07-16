@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearMemberAuth } from '@/lib/supabase'
+import InstallApp from '@/components/install-app'
 const TABS = [
   { href: '/m/portal/dashboard', label: 'Home' },
   { href: '/m/portal/payments',  label: 'Payments' },

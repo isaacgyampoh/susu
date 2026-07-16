@@ -26,7 +26,9 @@ export function credentialsMessage(m: {
     `Passcode: ${m.passcode}\n` +
     `Member ID: ${m.member_id}\n` +
     (m.group ? `Group: ${m.group}\n` : '') +
-    `\nPay before 6:00 PM every day. Keep your passcode private — it is yours alone.`
+    `\nPay before 6:00 PM every day. Keep your passcode private — it is yours alone.\n\n` +
+    `Tip: open the link in Chrome or Safari (not inside WhatsApp) and you can ` +
+    `install it to your home screen like an app.`
   )
 }
 
