@@ -30,15 +30,15 @@ export async function sendSMS(to: string | string[], message: string): Promise<b
 
 export const smsTemplates = {
   welcome: (name: string, memberId: string, passcode: string, portalUrl: string) =>
-    `Welcome to SusuPlatform, ${name}! ID: ${memberId} | Passcode: ${passcode} | Login: ${portalUrl}`,
+    `Hello ${name}, your Abbie Wealth Susu account is ready. ID: ${memberId} | Passcode: ${passcode} | Sign in: ${portalUrl} | Pay before 6:00 PM daily. Keep your passcode private.`,
   paymentReminder: (name: string, amount: string, dueDate: string, portalUrl: string) =>
-    `Hi ${name}, your GHS ${amount} Susu contribution is due ${dueDate}. Pay before 6PM: ${portalUrl}`,
+    `Hi ${name}, your GHS ${amount} Abbie Wealth Susu contribution is due ${dueDate}. Pay before 6:00 PM: ${portalUrl}`,
   paymentConfirmed: (name: string, amount: string, ref: string) =>
     `Hi ${name}, your GHS ${amount} payment is confirmed. Ref: ${ref}. Thank you!`,
   payoutAlert: (name: string, amount: string, date: string) =>
     `Congratulations ${name}! Your Susu payout of GHS ${amount} is scheduled for ${date}.`,
   applicationApproved: (name: string, memberId: string, passcode: string, portalUrl: string) =>
-    `Great news ${name}! Your application is approved. ID: ${memberId} | Passcode: ${passcode} | Login: ${portalUrl}`,
+    `Hello ${name}, your Abbie Wealth Susu application is approved. ID: ${memberId} | Passcode: ${passcode} | Sign in: ${portalUrl} | Keep your passcode private.`,
   applicationRejected: (name: string, reason: string) =>
-    `Hi ${name}, your Susu application was not approved. Reason: ${reason}. Contact us for help.`,
+    `Hi ${name}, your Abbie Wealth Susu application was not approved. Reason: ${reason}. Contact us on 0550302322.`,
 }

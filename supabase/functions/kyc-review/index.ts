@@ -3,7 +3,11 @@ import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
 
-const PORTAL_URL = Deno.env.get('FRONTEND_URL') ?? 'https://susuplatform.vercel.app'
+// The member portal is a different hostname from the console. Deriving it from
+// FRONTEND_URL produced admin.abbiewealthsusu.com/m/login — a 404 in the
+// member's hand, because middleware blocks /m/* on the admin host.
+const MEMBER_URL = Deno.env.get('MEMBER_URL') ?? 'https://my.abbiewealthsusu.com'
+const SIGNIN_URL = `${MEMBER_URL}/m/login`
 
 function generatePasscode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -112,13 +116,13 @@ Deno.serve(async (req) => {
       .eq('id', kycId)
 
     // Send welcome SMS (skipped silently if no AT key)
-    await sendSMS(kyc.phone, smsTemplates.applicationApproved(kyc.full_name, member.member_id, passcode, `${PORTAL_URL}/login`))
+    await sendSMS(kyc.phone, smsTemplates.applicationApproved(kyc.full_name, member.member_id, passcode, SIGNIN_URL))
 
     return json({
       message:    'Member approved and credentials sent via SMS',
       member_id:  member.member_id,
       passcode,   // also returned in response so admin can share manually if no SMS
-      portal_url: `${PORTAL_URL}/login`,
+      portal_url: SIGNIN_URL,
     })
   } catch (e) {
     console.error(e)

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
+import { memberSignInUrl, credentialsMessage, whatsappLink } from '@/lib/member-link'
 import type { KYCApplication } from '@/types'
 import { format } from 'date-fns'
 export default function KYCPage() {
@@ -11,7 +12,7 @@ export default function KYCPage() {
   const [reason, setReason]     = useState('')
   const [processing, setProcessing] = useState(false)
   const [toast, setToast]       = useState('')
-  const [createdCreds, setCreatedCreds] = useState<{ member_id: string; passcode: string } | null>(null)
+  const [createdCreds, setCreatedCreds] = useState<{ member_id: string; passcode: string; full_name: string; phone: string; group?: string } | null>(null)
   const [copied, setCopied]     = useState(false)
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 4000) }
@@ -39,7 +40,13 @@ export default function KYCPage() {
     if (error) { alert(error); return }
 
     if (action === 'approve' && data?.passcode) {
-      setCreatedCreds({ member_id: data.member_id!, passcode: data.passcode })
+      setCreatedCreds({
+        member_id: data.member_id!,
+        passcode:  data.passcode,
+        full_name: selected.full_name,
+        phone:     selected.phone,
+        group:     (selected as any).susu_groups?.name,
+      })
     } else {
       showToast(action === 'approve' ? 'Member approved' : 'Application rejected')
       setSelected(null)
@@ -48,11 +55,18 @@ export default function KYCPage() {
     }
   }
 
+  const shareText = createdCreds ? credentialsMessage(createdCreds) : ''
+
   function copyCredsToClipboard() {
     if (!createdCreds) return
-    navigator.clipboard.writeText(`Member ID: ${createdCreds.member_id}\nPasscode: ${createdCreds.passcode}`)
+    navigator.clipboard.writeText(shareText)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function shareWhatsApp() {
+    if (!createdCreds) return
+    window.open(whatsappLink(createdCreds.phone, shareText), '_blank')
   }
 
   function dismissCreds() {
@@ -174,31 +188,47 @@ export default function KYCPage() {
         </div>
       )}
 
-      {/* Credentials Modal — shown after approval (when no SMS configured) */}
+      {/* Approved: the only job left is getting the link to the member. */}
       {createdCreds && (
         <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4">
-          <div className="border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up">
-            <div className="flex items-center gap-3">
-              <h2 className="font-bold text-ink text-lg">Member Approved!</h2>
-            </div>
-            <p className="text-ink-2 text-sm">Share these credentials with the member manually (SMS will be added later):</p>
+          <div className="bg-surface border border-line rounded-xl w-full max-w-[420px] p-6 animate-fade-in">
+            <p className="t-label">Approved</p>
+            <h2 className="text-[20px] font-semibold tracking-[-.02em] mt-1">{createdCreds.full_name}</h2>
+            <p className="text-[12.5px] text-ink-2 mt-1">
+              Send them the link below. They cannot sign in until you do.
+            </p>
 
-            <div className="p-4 bg-tint rounded-[10px] space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-ink-2 text-sm">Member ID</span>
-                <span className="text-ink font-bold font-mono text-lg">{createdCreds.member_id}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-ink-2 text-sm">Passcode</span>
-                <span className="text-ink font-bold font-mono text-2xl tracking-widest">{createdCreds.passcode}</span>
-              </div>
+            <table className="w-full mt-5">
+              <tbody className="divide-y divide-line border-y border-line">
+                <tr>
+                  <td className="py-2.5 text-[12.5px] text-ink-2">Portal link</td>
+                  <td className="py-2.5 text-right text-[12px] font-medium break-all">{memberSignInUrl()}</td>
+                </tr>
+                <tr>
+                  <td className="py-2.5 text-[12.5px] text-ink-2">Phone</td>
+                  <td className="py-2.5 text-right text-[13px] font-medium tnum">{createdCreds.phone}</td>
+                </tr>
+                <tr>
+                  <td className="py-2.5 text-[12.5px] text-ink-2">Passcode</td>
+                  <td className="py-2.5 text-right text-[20px] font-semibold tnum tracking-[.12em]">{createdCreds.passcode}</td>
+                </tr>
+                <tr>
+                  <td className="py-2.5 text-[12.5px] text-ink-2">Member ID</td>
+                  <td className="py-2.5 text-right text-[13px] font-medium">{createdCreds.member_id}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p className="text-[11.5px] text-ink-3 mt-3">
+              The passcode is shown once. If it is lost, reset it from the member&apos;s page.
+            </p>
+
+            <div className="flex gap-2 mt-5">
+              <button onClick={shareWhatsApp} className="btn-dark flex-1">Send on WhatsApp</button>
+              <button onClick={copyCredsToClipboard} className="btn-line">{copied ? 'Copied' : 'Copy'}</button>
             </div>
 
-            <button onClick={copyCredsToClipboard} className="w-full flex items-center justify-center gap-2 py-3 bg-tint hover:bg-tint text-ink font-medium rounded-[10px] transition-colors">
-              {copied ? <>Copied!</> : <>Copy to Clipboard</>}
-            </button>
-            <p className="text-xs text-ink-2 text-center">Member logs in at /login with their phone number and this passcode.</p>
-            <button onClick={dismissCreds} className="w-full py-3 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-colors">Done</button>
+            <button onClick={dismissCreds} className="btn-ghost w-full mt-2">Done</button>
           </div>
         </div>
       )}

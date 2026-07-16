@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
+import { memberSignInUrl, credentialsMessage, whatsappLink } from '@/lib/member-link'
 import type { SusuGroup } from '@/types'
 export default function AddMemberPage() {
   const router = useRouter()
@@ -63,15 +64,15 @@ export default function AddMemberPage() {
   const selectedGroup = groups.find(g => g.id === form.group_id)
 
   // Success screen
-  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/m/login` : '/m/login'
+  const portalUrl = memberSignInUrl()
 
   const shareText = created
-    ? `Susu — your account is ready.\n\n` +
-      `Sign in: ${portalUrl}\n` +
-      `Phone: ${created.phone}\n` +
-      `Passcode: ${created.passcode}\n` +
-      `Member ID: ${created.member_id}\n\n` +
-      `Pay before 6:00 PM each day. Keep your passcode private.`
+    ? credentialsMessage({
+        full_name: created.full_name,
+        member_id: created.member_id,
+        phone:     created.phone,
+        passcode:  created.passcode,
+      })
     : ''
 
   function copyAll() {
@@ -80,8 +81,8 @@ export default function AddMemberPage() {
   }
 
   function shareWhatsApp() {
-    const to = created?.phone?.replace(/[^0-9]/g, '') ?? ''
-    window.open(`https://wa.me/${to}?text=${encodeURIComponent(shareText)}`, '_blank')
+    if (!created) return
+    window.open(whatsappLink(created.phone, shareText), '_blank')
   }
 
   // Success: the admin's job here is to send the member their link.

@@ -3,7 +3,9 @@ import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
 
-const PORTAL_URL = Deno.env.get('FRONTEND_URL') ?? ''
+// Member portal, not the console — see kyc-review for why.
+const MEMBER_URL = Deno.env.get('MEMBER_URL') ?? 'https://my.abbiewealthsusu.com'
+const SIGNIN_URL = `${MEMBER_URL}/m/login`
 
 function generatePasscode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -139,7 +141,7 @@ Deno.serve(async (req) => {
     }
 
     // Send welcome SMS (silently skipped if no AT key)
-    await sendSMS(normPhone, smsTemplates.welcome(full_name, member.member_id, passcode, `${PORTAL_URL}/login`))
+    await sendSMS(normPhone, smsTemplates.welcome(full_name, member.member_id, passcode, SIGNIN_URL))
 
     return json({
       message:   'Member created successfully',
@@ -151,7 +153,7 @@ Deno.serve(async (req) => {
       },
       passcode,
       payout_position: assignedPosition,
-      portal_url: `${PORTAL_URL}/login`,
+      portal_url: SIGNIN_URL,
     }, 201)
   } catch (e) {
     console.error(e)
