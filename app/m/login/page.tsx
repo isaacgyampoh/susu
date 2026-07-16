@@ -40,7 +40,7 @@ export default function MemberSignIn() {
       </div>
 
       <div className="relative w-full max-w-[360px] mx-auto overflow-y-auto">
-        <p className="text-[15px] font-semibold tracking-[-.02em] text-white mb-10">Susu</p>
+        <p className="text-[15px] font-semibold tracking-[-.02em] text-white mb-10">Abbie Wealth</p>
         <h1 className="text-[26px] font-semibold tracking-[-.02em] text-white">Your account</h1>
         <p className="text-[13px] text-white/55 mt-1.5 mb-8">Sign in with your phone and passcode</p>
 

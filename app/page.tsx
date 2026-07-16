@@ -48,7 +48,7 @@ export default function SignIn() {
 
       {/* Desktop wordmark + line */}
       <div className="hidden lg:flex absolute inset-y-0 left-0 w-[calc(100%-460px)] flex-col justify-between p-12 pointer-events-none z-10">
-        <span className="text-[15px] font-semibold tracking-[-.02em] text-white">Susu</span>
+        <span className="text-[15px] font-semibold tracking-[-.02em] text-white">Abbie Wealth</span>
         <h1 className="text-[38px] font-semibold tracking-[-.03em] leading-[1.06] text-white max-w-[440px]">
           Run your susu with a proper ledger.
         </h1>
@@ -60,7 +60,7 @@ export default function SignIn() {
                       px-6 py-10 lg:bg-surface lg:border-l lg:border-line">
         <div className="w-full max-w-[360px] mx-auto">
 
-          <p className="lg:hidden text-[16px] font-semibold tracking-[-.02em] text-white mb-8">Susu</p>
+          <p className="lg:hidden text-[16px] font-semibold tracking-[-.02em] text-white mb-8">Abbie Wealth</p>
 
           <h2 className="text-[28px] lg:text-[26px] font-semibold tracking-[-.02em] text-white lg:text-ink">Sign in</h2>
           <p className="text-[13px] text-white/50 lg:text-ink-2 mt-1.5 mb-7">Administrator access</p>

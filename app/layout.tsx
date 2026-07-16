@@ -10,15 +10,17 @@ import RegisterSW from '@/components/register-sw'
  * block Google. This ships the font with the app.
  */
 export const metadata: Metadata = {
-  title: { default: 'Susu — Save daily, collect on your day', template: '%s · Susu' },
+  title: { default: 'Abbie Wealth Susu — Administrator console', template: '%s · Abbie Wealth' },
   description: 'Track your contributions, see your slot in the rotation, and know exactly when you collect.',
   manifest: '/manifest.json',
-  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Susu' },
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Abbie Wealth' },
   icons: {
     icon: [{ url: '/icon-192.png', sizes: '192x192' }, { url: '/icon-512.png', sizes: '512x512' }],
     apple: '/apple-touch-icon.png',
   },
   formatDetection: { telephone: false },
+  // A private console has no business in a search index
+  robots: { index: false, follow: false, nocache: true },
 }
 
 export const viewport: Viewport = {

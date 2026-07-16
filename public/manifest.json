@@ -1,21 +1,45 @@
 {
-  "name": "Susu",
-  "short_name": "Susu",
-  "description": "Save daily, collect on your day. Track contributions, slots and collection dates.",
+  "name": "Abbie Wealth Susu",
+  "short_name": "Abbie Wealth",
+  "description": "Abbie Wealth Susu \u2014 member portal and administrator console.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#FFFFFF",
-  "theme_color": "#0A56C4",
-  "categories": ["finance", "productivity"],
+  "theme_color": "#101012",
+  "categories": [
+    "finance",
+    "productivity"
+  ],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Pay today", "url": "/member/payments" },
-    { "name": "My card", "url": "/member/dashboard" }
+    {
+      "name": "Pay today",
+      "url": "/member/payments"
+    },
+    {
+      "name": "My card",
+      "url": "/member/dashboard"
+    }
   ]
 }

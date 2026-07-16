@@ -84,7 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Desktop rail */}
       <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-[210px] bg-surface border-r border-line z-30">
         <div className="px-5 h-14 flex items-center border-b border-line shrink-0">
-          <Link href="/admin" className="text-[14px] font-semibold tracking-[-.02em]">Susu</Link>
+          <Link href="/admin" className="text-[14px] font-semibold tracking-[-.02em]">Abbie Wealth</Link>
         </div>
         {nav}
       </aside>
@@ -106,7 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="h-[1.5px] w-full bg-ink rounded-full" />
           </span>
         </button>
-        <Link href="/admin" className="text-[14px] font-semibold tracking-[-.02em]">Susu</Link>
+        <Link href="/admin" className="text-[14px] font-semibold tracking-[-.02em]">Abbie Wealth</Link>
       </div>
 
       {/* Scrim fades in proportion to the drag, so the gesture feels attached */}
@@ -127,7 +127,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }}
       >
         <div className="px-5 h-14 flex items-center border-b border-line shrink-0">
-          <span className="text-[14px] font-semibold tracking-[-.02em]">Susu</span>
+          <span className="text-[14px] font-semibold tracking-[-.02em]">Abbie Wealth</span>
         </div>
         {nav}
       </aside>
