@@ -65,14 +65,14 @@ export default function MessagesPage() {
       <div className="flex gap-2 mb-6">
         {(['all', 'unread', 'replied'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-blue text-ink' : 'bg-tint text-ink-2 hover:text-ink'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>
             {s} {s === 'unread' && unreadCount > 0 && `(${unreadCount})`}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">'…'</div>
+        <div className="flex justify-center py-20">Loading…</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 text-ink-2">
           No {filter === 'all' ? '' : filter} messages
@@ -132,13 +132,13 @@ export default function MessagesPage() {
 
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">{selected.reply_text ? 'Update reply' : 'Your reply'}</label>
-              <textarea className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue resize-none"
+              <textarea className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-ink resize-none"
                 rows={4} value={reply} onChange={e => setReply(e.target.value)} placeholder="Type your reply — the member will see it in their portal…" />
             </div>
 
             <button onClick={sendReply} disabled={sending || !reply.trim()}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-blue text-ink font-bold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-50">
-              {sending ? '…' : ''}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-50">
+              {sending ? 'Sending…' : 'Send reply'}
               {selected.reply_text ? 'Update Reply' : 'Send Reply'}
             </button>
             <button onClick={() => setSelected(null)} className="w-full text-ink-2 text-sm hover:text-ink py-2">Close</button>

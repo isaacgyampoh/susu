@@ -75,7 +75,7 @@ export default function Payments() {
         {(['all', 'pending', 'paid'] as const).map(f => (
           <button key={f} onClick={() => setF(f)}
             className={`text-[13px] pb-2.5 border-b-2 -mb-px capitalize transition-colors ${
-              filter === f ? 'font-bold text-blue border-blue' : 'font-medium text-ink-2 border-transparent'
+              filter === f ? 'font-bold text-ink border-ink' : 'font-medium text-ink-2 border-transparent'
             }`}>
             {f === 'pending' ? 'Due' : f}
           </button>
@@ -83,7 +83,7 @@ export default function Payments() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-14">'…'</div>
+        <div className="flex justify-center py-14">Loading…</div>
       ) : rows.length === 0 ? (
         <p className="t-meta py-10">{filter === 'paid' ? 'Nothing paid yet.' : "You're all caught up."}</p>
       ) : (
@@ -134,7 +134,7 @@ export default function Payments() {
               {PRESETS.map(d => (
                 <button key={d} onClick={() => setDays(d)}
                   className={`text-[13px] pb-2.5 border-b-2 -mb-px transition-colors ${
-                    days === d ? 'font-bold text-blue border-blue' : 'font-medium text-ink-2 border-transparent'
+                    days === d ? 'font-bold text-ink border-ink' : 'font-medium text-ink-2 border-transparent'
                   }`}>
                   {d} days
                 </button>
@@ -151,7 +151,7 @@ export default function Payments() {
             </div>
 
             {loadingPrev ? (
-              <div className="flex justify-center py-10">'…'</div>
+              <div className="flex justify-center py-10">Loading…</div>
             ) : prev?.count > 0 ? (
               <>
                 <div className="border-y border-line py-5 mb-5 space-y-2.5">

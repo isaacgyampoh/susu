@@ -50,7 +50,7 @@ export default function MembersPage() {
           <p className="text-ink-2 text-sm mt-1">{total} total members</p>
         </div>
         <Link href="/admin/members/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue text-ink font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
+          className="flex items-center gap-2 px-4 py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
           Add Member
         </Link>
       </div>
@@ -59,7 +59,7 @@ export default function MembersPage() {
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <input
-            className="w-full pl-9 pr-4 py-2.5 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue placeholder-ink-3"
+            className="w-full pl-9 pr-4 py-2.5 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-ink placeholder-ink-3"
             placeholder="Search by name, phone, or member ID…"
             value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
           />
@@ -67,7 +67,7 @@ export default function MembersPage() {
         <div className="flex gap-2">
           {(['active','pending','suspended','all'] as StatusFilter[]).map(s => (
             <button key={s} onClick={() => { setFilter(s); setPage(1) }}
-              className={`px-3 py-2 rounded-lg text-xs font-medium capitalize transition-colors ${filter === s ? 'bg-blue text-ink' : 'bg-tint text-ink-2 hover:text-ink'}`}>
+              className={`px-3 py-2 rounded-lg text-xs font-medium capitalize transition-colors ${filter === s ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>
               {s}
             </button>
           ))}
@@ -75,7 +75,7 @@ export default function MembersPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">'…'</div>
+        <div className="flex justify-center py-20">Loading…</div>
       ) : members.length === 0 ? (
         <div className="text-center py-20 text-ink-2">
           <p>No {filter} members found</p>

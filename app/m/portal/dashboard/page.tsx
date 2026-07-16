@@ -36,7 +36,7 @@ export default function Dashboard() {
   const group = plan?.susu_groups
   const dl    = useDeadline(group?.payment_deadline?.slice(0, 5) ?? '18:00')
 
-  if (loading) return <div className="grid place-items-center h-[70vh]">'…'</div>
+  if (loading) return <div className="grid place-items-center h-[70vh]">Loading…</div>
   if (!d)      return <div className="p-10 text-center t-meta">Could not load your account.</div>
 
   const { member, plans, summary, pendingContributions, recentPayments, penalties } = d
@@ -58,7 +58,7 @@ export default function Dashboard() {
     <div className="max-w-[420px] mx-auto px-5 pt-6 animate-fade-in">
 
       <header className="flex items-center gap-3 mb-6">
-        <div className="w-11 h-11 rounded-full bg-blue grid place-items-center shrink-0">
+        <div className="w-11 h-11 rounded-full bg-ink grid place-items-center shrink-0">
           <span className="text-white font-bold text-[15px]">{member.full_name[0]}</span>
         </div>
         <div className="min-w-0">
@@ -88,7 +88,7 @@ export default function Dashboard() {
       {plan && group ? (
         <>
           {/* Collection card — the hero */}
-          <div className="panel p-5 bg-blue border-blue mb-3">
+          <div className="panel p-5 bg-ink border-ink mb-3">
             <p className="text-[12px] font-semibold text-white/60">You collect</p>
             <p className="text-[34px] font-extrabold tracking-[-.03em] text-white leading-none mt-1.5 tnum">
               <span className="text-[16px] align-[.4em] mr-1 text-white">GHS</span>{n0(cashout)}
@@ -172,7 +172,7 @@ export default function Dashboard() {
       <div className="panel p-5">
         <div className="flex items-center justify-between mb-3">
           <p className="t-h2">Recent payments</p>
-          <Link href="/m/portal/payments" className="t-meta font-semibold flex items-center gap-0.5 hover:text-blue transition-colors">
+          <Link href="/m/portal/payments" className="t-meta font-semibold flex items-center gap-0.5 hover:text-ink transition-colors">
             See all </Link>
         </div>
         {recentPayments.filter(p => p.status === 'paid').length === 0 ? (
@@ -185,7 +185,7 @@ export default function Dashboard() {
                   <p className="text-[13.5px] font-semibold">{c.susu_groups?.name}</p>
                   <p className="t-meta">{c.paid_at ? format(new Date(c.paid_at), 'd MMM, HH:mm') : format(new Date(c.due_date), 'd MMM')}</p>
                 </div>
-                <p className="text-[14px] font-bold text-blue tnum">GHS {n2(c.amount)}</p>
+                <p className="text-[14px] font-bold text-ink tnum">GHS {n2(c.amount)}</p>
               </div>
             ))}
           </div>

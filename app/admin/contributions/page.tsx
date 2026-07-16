@@ -58,13 +58,13 @@ export default function ContributionsPage() {
         <div className="flex gap-2 flex-wrap">
           {(['pending','paid','overdue','all'] as StatusFilter[]).map(s => (
             <button key={s} onClick={() => { setStatusFilter(s); setPage(1) }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-blue text-ink' : 'bg-tint text-ink-2 hover:text-ink'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${statusFilter === s ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>
               {s}
             </button>
           ))}
         </div>
         <select
-          className="px-3 py-1.5 bg-tint border border-line text-ink text-sm rounded-lg focus:outline-none focus:ring-0 focus:border-blue"
+          className="px-3 py-1.5 bg-tint border border-line text-ink text-sm rounded-lg focus:outline-none focus:ring-0 focus:border-ink"
           value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setPage(1) }}>
           <option value="all">All Groups</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -72,7 +72,7 @@ export default function ContributionsPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">'…'</div>
+        <div className="flex justify-center py-20">Loading…</div>
       ) : contributions.length === 0 ? (
         <div className="text-center py-20 text-ink-2">No contributions found</div>
       ) : (

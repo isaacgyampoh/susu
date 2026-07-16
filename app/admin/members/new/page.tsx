@@ -60,69 +60,83 @@ export default function AddMemberPage() {
     })
   }
 
-  function copyCreds() {
-    if (!created) return
-    navigator.clipboard.writeText(
-      `Susu — your account\n\nSign in: ${window.location.origin}/m/login\nPhone: ${created.phone}\nPasscode: ${created.passcode}\nMember ID: ${created.member_id}\n\nContributions close 6:00 PM daily.`
-    )
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   const selectedGroup = groups.find(g => g.id === form.group_id)
 
   // Success screen
+  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/m/login` : '/m/login'
+
+  const shareText = created
+    ? `Susu — your account is ready.\n\n` +
+      `Sign in: ${portalUrl}\n` +
+      `Phone: ${created.phone}\n` +
+      `Passcode: ${created.passcode}\n` +
+      `Member ID: ${created.member_id}\n\n` +
+      `Pay before 6:00 PM each day. Keep your passcode private.`
+    : ''
+
+  function copyAll() {
+    navigator.clipboard.writeText(shareText)
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
+
+  function shareWhatsApp() {
+    const to = created?.phone?.replace(/[^0-9]/g, '') ?? ''
+    window.open(`https://wa.me/${to}?text=${encodeURIComponent(shareText)}`, '_blank')
+  }
+
+  // Success: the admin's job here is to send the member their link.
   if (created) {
     return (
-      <div className="p-4 sm:p-6 max-w-lg mx-auto pb-12 animate-fade-in">
-        <div className="border border-line rounded-[10px] p-8 text-center space-y-5">
-          <div>
-            <h1 className="text-2xl font-bold text-ink">Member Created!</h1>
-            <p className="text-ink-2 text-sm mt-1">Share these credentials with {created.full_name}</p>
-          </div>
+      <div className="px-5 sm:px-8 py-7 pb-16 max-w-[560px] animate-fade-in">
+        <p className="t-label">Member created</p>
+        <h1 className="t-title mt-1.5">{created.full_name}</h1>
+        <p className="t-meta mt-1">Send them the link and credentials below. They cannot sign in until you do.</p>
 
-          <div className="p-5 bg-tint rounded-[10px] space-y-3 text-left">
-            <div className="flex justify-between items-center">
-              <span className="text-ink-2 text-sm">Member ID</span>
-              <span className="text-ink font-bold font-mono">{created.member_id}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-ink-2 text-sm">Phone (login)</span>
-              <span className="text-ink font-mono text-sm">{created.phone}</span>
-            </div>
-            <div className="flex justify-between items-center border-t border-line pt-3">
-              <span className="text-ink-2 text-sm">Passcode</span>
-              <span className="text-ink font-bold font-mono text-3xl tracking-widest">{created.passcode}</span>
-            </div>
-            {created.payout_position && (
-              <div className="flex justify-between items-center border-t border-line pt-3">
-                <span className="text-ink-2 text-sm">Payout Position</span>
-                <span className="text-ink font-bold">#{created.payout_position}</span>
-              </div>
-            )}
-          </div>
+        <div className="card p-5 mt-6">
+          <p className="t-h2 mb-4">Their sign-in details</p>
 
-          <div className="p-4 bg-bg border border-line rounded-lg text-left">
-            <p className="text-[12px] font-medium text-ink-2 mb-1.5">Their portal link</p>
-            <p className="text-[12.5px] font-mono break-all">{typeof window !== 'undefined' ? `${window.location.origin}/m/login` : '/m/login'}</p>
-            <p className="text-[11.5px] text-ink-3 mt-2">Send this link with the credentials above. Members sign in here, not on the console.</p>
-          </div>
+          <table className="w-full">
+            <tbody className="divide-y divide-line">
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">Portal link</td>
+                <td className="py-2.5 text-right text-[12.5px] font-medium break-all">{portalUrl}</td>
+              </tr>
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">Phone</td>
+                <td className="py-2.5 text-right text-[13px] font-medium tnum">{created.phone}</td>
+              </tr>
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">Passcode</td>
+                <td className="py-2.5 text-right text-[20px] font-semibold tnum tracking-[.12em]">{created.passcode}</td>
+              </tr>
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">Member ID</td>
+                <td className="py-2.5 text-right text-[13px] font-medium">{created.member_id}</td>
+              </tr>
+              {created.payout_position && (
+                <tr>
+                  <td className="py-2.5 text-[12.5px] text-ink-2">Payout position</td>
+                  <td className="py-2.5 text-right text-[13px] font-medium">#{created.payout_position}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
 
-          <button onClick={copyCreds}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-tint hover:bg-tint text-ink font-medium rounded-[10px] transition-colors">
-            {copied ? <>Copied!</> : <>Copy Credentials</>}
-          </button>
+          <p className="text-[11.5px] text-ink-3 mt-4">
+            This passcode is shown once. If it is lost, reset it from the member&apos;s page.
+          </p>
+        </div>
 
-          <div className="flex gap-3">
-            <button onClick={() => { setCreated(null); setForm({ ...form, full_name: '', phone: '', email: '', ghana_card_number: '', mobile_money_number: '' }); setFrontFile(null); setBackFile(null) }}
-              className="flex-1 py-3 bg-blue text-ink font-bold rounded-[10px] hover:brightness-105 transition-colors">
-              Add Another
-            </button>
-            <button onClick={() => router.push('/admin/members')}
-              className="flex-1 py-3 bg-tint text-ink font-medium rounded-[10px] hover:bg-tint transition-colors">
-              View Members
-            </button>
-          </div>
+        <div className="flex flex-wrap gap-2 mt-4">
+          <button onClick={shareWhatsApp} className="btn-dark">Send on WhatsApp</button>
+          <button onClick={copyAll} className="btn-line">{copied ? 'Copied' : 'Copy message'}</button>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-line">
+          <button onClick={() => { setCreated(null); setFrontFile(null); setBackFile(null)
+            setForm({ ...form, full_name: '', phone: '', email: '', ghana_card_number: '', mobile_money_number: '' }) }}
+            className="btn-line btn-sm">Add another member</button>
+          <button onClick={() => router.push('/admin/members')} className="btn-ghost btn-sm">Back to members</button>
         </div>
       </div>
     )
@@ -135,7 +149,7 @@ export default function AddMemberPage() {
       </Link>
 
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-[10px] bg-blue/20 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-[10px] bg-ink/20 flex items-center justify-center">
           </div>
         <h1 className="text-2xl font-extrabold text-ink">Add New Member</h1>
       </div>
@@ -151,37 +165,37 @@ export default function AddMemberPage() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Full Name *</label>
-              <input required className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+              <input required className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 value={form.full_name} onChange={e => set('full_name', e.target.value)} placeholder="As on Ghana Card" />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Phone Number * <span className="text-ink-3">(used to login)</span></label>
-              <input required type="tel" className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+              <input required type="tel" className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="0244XXXXXX" />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Ghana Card Number *</label>
-              <input required className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+              <input required className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 value={form.ghana_card_number} onChange={e => set('ghana_card_number', e.target.value)} placeholder="GHA-XXXXXXXXX-X" />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Date of Birth</label>
-              <input type="date" className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+              <input type="date" className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 value={form.date_of_birth} onChange={e => set('date_of_birth', e.target.value)} />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Email</label>
-              <input type="email" className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+              <input type="email" className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 value={form.email} onChange={e => set('email', e.target.value)} placeholder="Optional" />
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Occupation</label>
-              <input className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+              <input className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 value={form.occupation} onChange={e => set('occupation', e.target.value)} placeholder="e.g. Trader" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm text-ink-2 mb-1.5">Residential Address</label>
-              <input className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+              <input className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 value={form.residential_address} onChange={e => set('residential_address', e.target.value)} placeholder="Area, City" />
             </div>
           </div>
@@ -216,7 +230,7 @@ export default function AddMemberPage() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">MoMo Provider</label>
-              <select className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+              <select className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 value={form.mobile_money_provider} onChange={e => set('mobile_money_provider', e.target.value)}>
                 <option value="MTN">MTN Mobile Money</option>
                 <option value="Vodafone">Vodafone Cash</option>
@@ -225,7 +239,7 @@ export default function AddMemberPage() {
             </div>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">MoMo Number</label>
-              <input type="tel" className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+              <input type="tel" className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 value={form.mobile_money_number} onChange={e => set('mobile_money_number', e.target.value)} placeholder="0244XXXXXX" />
             </div>
           </div>
@@ -234,7 +248,7 @@ export default function AddMemberPage() {
         {/* Group assignment */}
         <div className="border-t border-line pt-5">
           <h2 className="font-semibold text-ink mb-3 text-sm">Assign to Group</h2>
-          <select className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+          <select className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
             value={form.group_id} onChange={e => set('group_id', e.target.value)}>
             <option value="">No group (assign later)</option>
             {groups.map(g => (
@@ -264,7 +278,7 @@ export default function AddMemberPage() {
         </div>
 
         <button type="submit" disabled={loading}
-          className="w-full py-3.5 bg-blue text-ink font-bold rounded-[10px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
+          className="w-full py-3.5 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
           {loading ? '…' : <>Create Member & Generate Passcode</>}
         </button>
       </form>

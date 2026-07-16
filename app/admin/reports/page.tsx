@@ -63,7 +63,7 @@ export default function ReportsPage() {
       <div className="mb-6">
         <label className="block text-sm text-ink-2 mb-1.5">Filter by group (optional)</label>
         <select value={groupId} onChange={e => setGroupId(e.target.value)}
-          className="w-full sm:w-96 px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue">
+          className="w-full sm:w-96 px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink">
           <option value="">All groups</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
@@ -78,8 +78,8 @@ export default function ReportsPage() {
               <p className="text-xs text-ink-3 mt-2 italic">Group filter doesn't apply to this report</p>
             )}
             <button onClick={() => download(id)} disabled={downloading === id}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-tint hover:bg-blue hover:text-ink text-ink font-semibold rounded-[10px] text-sm transition-colors disabled:opacity-50">
-              {downloading === id ? '…' : ''}
+              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-tint hover:bg-ink hover:text-white text-ink font-medium rounded-lg text-[13px] transition-colors disabled:opacity-50">
+              {downloading === id ? 'Preparing…' : 'Download CSV'}
               Download CSV
             </button>
           </div>

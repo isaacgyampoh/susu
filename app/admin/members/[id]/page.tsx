@@ -57,7 +57,7 @@ export default function MemberDetailPage() {
   }
 
   if (loading) return (
-    <div className="flex justify-center py-32">'…'</div>
+    <div className="flex justify-center py-32">Loading…</div>
   )
 
   if (!member) return (
@@ -110,13 +110,13 @@ export default function MemberDetailPage() {
         <div className="border border-line rounded-[10px] p-5 mb-6 animate-slide-up">
           <h3 className="font-semibold text-ink mb-3">{action === 'suspend' ? 'Suspend member' : 'Re-activate member'}</h3>
           <textarea
-            className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue mb-3"
+            className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-ink mb-3"
             rows={2} placeholder="Optional message to send the member via SMS…"
             value={message} onChange={e => setMessage(e.target.value)}
           />
           <div className="flex gap-2">
             <button onClick={() => handleStatusChange(action === 'suspend' ? 'suspended' : 'active')} disabled={processing}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 font-semibold rounded-[10px] text-sm transition-colors ${action === 'suspend' ? 'bg-red text-white' : 'bg-blue text-white'}`}>
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 font-semibold rounded-[10px] text-sm transition-colors ${action === 'suspend' ? 'bg-red text-white' : 'bg-ink text-white'}`}>
               {processing ? '…' : 'Confirm'}
             </button>
             <button onClick={() => setAction(null)} className="px-4 py-2.5 bg-tint text-ink-2 hover:text-ink rounded-[10px] text-sm transition-colors">Cancel</button>
@@ -236,7 +236,7 @@ export default function MemberDetailPage() {
 
             <button onClick={handleForfeit} disabled={forfeiting || !forfeitReason.trim()}
               className="w-full flex items-center justify-center gap-2 py-3 bg-red text-white font-bold rounded-[10px] transition-colors disabled:opacity-40">
-              {forfeiting ? '…' : ''}
+              {forfeiting ? 'Forfeiting…' : 'Confirm forfeiture'}
               Confirm Forfeiture
             </button>
             <button onClick={() => setForfeitTarget(null)} className="w-full text-ink-2 text-sm hover:text-ink py-2">Cancel</button>

@@ -38,7 +38,7 @@ export default function AuditPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">'…'</div>
+        <div className="flex justify-center py-20">Loading…</div>
       ) : entries.length === 0 ? (
         <div className="text-center py-20 text-ink-2">
           <p>No activity recorded yet</p>

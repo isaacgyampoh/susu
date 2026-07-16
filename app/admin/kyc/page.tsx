@@ -74,14 +74,14 @@ export default function KYCPage() {
       <div className="flex gap-2 mb-6">
         {(['pending', 'approved', 'rejected'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-blue text-ink' : 'bg-tint text-ink-2 hover:text-ink'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>
             {s}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">'…'</div>
+        <div className="flex justify-center py-20">Loading…</div>
       ) : apps.length === 0 ? (
         <div className="text-center py-20 text-ink-2">No {filter} applications</div>
       ) : (
@@ -152,12 +152,12 @@ export default function KYCPage() {
               <>
                 <div>
                   <label className="block text-sm text-ink-2 mb-1.5">Rejection Reason (required if rejecting)</label>
-                  <textarea className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue resize-none"
+                  <textarea className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-ink resize-none"
                     rows={2} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Could not verify Ghana Card number" />
                 </div>
                 <div className="flex gap-3">
                   <button onClick={() => handleAction('approve')} disabled={processing}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue text-white font-semibold rounded-[10px] transition-colors disabled:opacity-50">
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-ink text-white font-semibold rounded-[10px] transition-colors disabled:opacity-50">
                     {processing ? '…' : ''} Approve
                   </button>
                   <button onClick={() => handleAction('reject')} disabled={processing}
@@ -196,7 +196,7 @@ export default function KYCPage() {
               {copied ? <>Copied!</> : <>Copy to Clipboard</>}
             </button>
             <p className="text-xs text-ink-2 text-center">Member logs in at /login with their phone number and this passcode.</p>
-            <button onClick={dismissCreds} className="w-full py-3 bg-blue text-ink font-bold rounded-[10px] hover:brightness-105 transition-colors">Done</button>
+            <button onClick={dismissCreds} className="w-full py-3 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-colors">Done</button>
           </div>
         </div>
       )}

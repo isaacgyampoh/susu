@@ -85,7 +85,6 @@
   .act,.act-primary,.act-accent,.act-gold { @apply btn-dark; }
   .act-quiet,.act-soft { @apply btn-line; }
   .act-sm  { @apply btn-sm; }
-  .btn-blue { @apply btn-dark; }
   .badge-green,.badge-blue { @apply pill-on; }
   .badge-gold,.badge-gray  { @apply pill-off; }
   .badge-red { @apply pill-late; }

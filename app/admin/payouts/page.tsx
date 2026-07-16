@@ -86,14 +86,14 @@ export default function PayoutsPage() {
       <div className="flex gap-2 mb-6">
         {(['upcoming', 'paid', 'all'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-blue text-ink' : 'bg-tint text-ink-2 hover:text-ink'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === s ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>
             {s}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">'…'</div>
+        <div className="flex justify-center py-20">Loading…</div>
       ) : payouts.length === 0 ? (
         <div className="text-center py-20 text-ink-2">No {filter} payouts</div>
       ) : (
@@ -158,9 +158,7 @@ export default function PayoutsPage() {
             </div>
 
             {checking ? (
-              <div className="flex flex-col items-center py-10 gap-3">
-                '…'
-                <p className="text-ink-2 text-sm">Checking eligibility…</p>
+              <div className="flex flex-col items-center py-10 gap-3">Loading…<p className="text-ink-2 text-sm">Checking eligibility…</p>
               </div>
             ) : elig ? (
               <>
@@ -236,19 +234,19 @@ export default function PayoutsPage() {
                 <div>
                   <label className="block text-sm text-ink-2 mb-1.5">MoMo Transaction Reference</label>
                   <input value={ref} onChange={e => setRef(e.target.value)}
-                    className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue"
+                    className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-ink"
                     placeholder="Paste the MoMo transaction ID after sending" />
                 </div>
                 <div>
                   <label className="block text-sm text-ink-2 mb-1.5">Notes (optional)</label>
                   <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)}
-                    className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue resize-none"
+                    className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-ink resize-none"
                     placeholder="e.g. Sent via MTN MoMo at 14:32" />
                 </div>
 
                 <button onClick={markPaid} disabled={processing || (!elig.eligible && !override)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue text-white font-bold rounded-[10px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                  {processing ? '…' : ''}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-ink text-white font-bold rounded-[10px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  {processing ? 'Recording…' : 'Confirm payout sent'}
                   {!elig.eligible && !override ? 'Blocked — tick override to proceed' : `Confirm ${ghs(elig.net_amount)} Sent`}
                 </button>
               </>

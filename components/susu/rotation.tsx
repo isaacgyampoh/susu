@@ -18,9 +18,9 @@ export default function Rotation({
         const me   = slot === position
         const done = slot <= collected
         return (
-          <div key={slot} className={`flex items-center gap-3 py-3 px-3 -mx-3 ${me ? 'bg-blue-lt rounded-[10px]' : ''}`}>
+          <div key={slot} className={`flex items-center gap-3 py-3 px-3 -mx-3 ${me ? 'bg-bg rounded-[10px]' : ''}`}>
             <span className={`w-7 h-7 rounded-full grid place-items-center text-[11px] font-bold shrink-0 ${
-              me ? 'bg-blue text-white' : done ? 'bg-blue-lt text-blue' : 'bg-blue-lt/60 text-ink-3'
+              me ? 'bg-ink text-white' : done ? 'bg-bg text-ink' : 'bg-bg/60 text-ink-3'
             }`}>{slot}</span>
             <span className={`text-[13.5px] flex-1 ${me ? 'font-bold' : 'font-medium text-ink-2'}`}>
               {me ? 'You' : `Member ${slot}`}

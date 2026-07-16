@@ -59,7 +59,7 @@ export default function AnnouncementsPage() {
           <p className="text-ink-2 text-sm mt-1">Broadcast messages to members</p>
         </div>
         <button onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue text-ink font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
+          className="flex items-center gap-2 px-4 py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
           New Announcement
         </button>
       </div>
@@ -71,13 +71,13 @@ export default function AnnouncementsPage() {
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Title *</label>
             <input required value={form.title} onChange={e => setField('title', e.target.value)}
-              className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue"
+              className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-ink"
               placeholder="e.g. Payment Reminder – Week 3" />
           </div>
           <div>
             <label className="block text-sm text-ink-2 mb-1.5">Message *</label>
             <textarea required value={form.content} onChange={e => setField('content', e.target.value)} rows={4}
-              className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-blue resize-none"
+              className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-ink resize-none"
               placeholder="Your announcement message…" />
           </div>
 
@@ -85,7 +85,7 @@ export default function AnnouncementsPage() {
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Target Group (leave blank for global)</label>
               <select value={form.group_id} onChange={e => setField('group_id', e.target.value)}
-                className="w-full px-4 py-3 bg-tint border border-line text-ink text-sm rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue">
+                className="w-full px-4 py-3 bg-tint border border-line text-ink text-sm rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink">
                 <option value="">All Members (Global)</option>
                 {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
@@ -111,8 +111,8 @@ export default function AnnouncementsPage() {
 
           <div className="flex gap-3">
             <button type="submit" disabled={submitting}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue text-ink font-bold rounded-[10px] text-sm transition-colors hover:brightness-105 disabled:opacity-50">
-              {submitting ? '…' : ''}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-ink text-white font-bold rounded-[10px] text-sm transition-colors hover:brightness-105 disabled:opacity-50">
+              {submitting ? 'Posting…' : 'Post announcement'}
               Post Announcement
             </button>
             <button type="button" onClick={() => setShowForm(false)} className="px-5 bg-tint text-ink-2 hover:text-ink rounded-[10px] text-sm transition-colors">Cancel</button>
@@ -122,7 +122,7 @@ export default function AnnouncementsPage() {
 
       {/* Announcements list */}
       {loading ? (
-        <div className="flex justify-center py-16">'…'</div>
+        <div className="flex justify-center py-16">Loading…</div>
       ) : announcements.length === 0 ? (
         <div className="text-center py-20 text-ink-2">
           No announcements yet
@@ -137,7 +137,7 @@ export default function AnnouncementsPage() {
                   {a.is_global ? (
                     <span className="flex items-center gap-1 text-xs text-ink bg-tint px-2 py-1 rounded-[10px]">Global</span>
                   ) : (
-                    <span className="flex items-center gap-1 text-xs text-ink bg-blue/10 px-2 py-1 rounded-[10px]">{a.susu_groups?.name}</span>
+                    <span className="flex items-center gap-1 text-xs text-ink bg-ink/10 px-2 py-1 rounded-[10px]">{a.susu_groups?.name}</span>
                   )}
                   <span className="text-ink-2 text-xs">{format(new Date(a.created_at), 'MMM d, yyyy')}</span>
                 </div>

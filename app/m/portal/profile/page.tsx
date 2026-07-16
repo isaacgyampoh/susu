@@ -40,7 +40,7 @@ export default function Profile() {
     setTimeout(() => setSent(false), 5000)
   }
 
-  if (loading) return <div className="grid place-items-center h-[60vh]">'…'</div>
+  if (loading) return <div className="grid place-items-center h-[60vh]">Loading…</div>
   if (!d)      return <div className="p-10 text-center t-meta">Could not load your profile.</div>
 
   const { member, plans, payouts, myMessages } = d
@@ -137,7 +137,7 @@ export default function Profile() {
                     </div>
                     <p className="t-meta mt-1">{m.message}</p>
                     {m.reply_text && (
-                      <div className="mt-3 pl-3 border-l-2 border-blue">
+                      <div className="mt-3 pl-3 border-l-2 border-ink">
                         <p className="t-label !text-ink">Reply</p>
                         <p className="text-[13px] mt-1">{m.reply_text}</p>
                       </div>

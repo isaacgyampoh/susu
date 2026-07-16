@@ -33,20 +33,31 @@ export default function AdminSignIn() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-[1fr_460px]">
-      {/* Left: identity, quiet */}
-      <div className="hidden lg:flex flex-col justify-between p-12 border-r border-line bg-surface">
-        <span className="text-[15px] font-semibold tracking-[-.02em]">Susu</span>
-        <div>
-          <h1 className="text-[34px] font-semibold tracking-[-.03em] leading-[1.1] max-w-[380px]">
+      {/* Left: photograph. Hands and cash — the actual subject of the product,
+          not an abstraction of it. Dark scrim so white type stays legible. */}
+      <div className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-ink">
+        <img
+          src="/cover.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/35" aria-hidden="true" />
+
+        <span className="relative text-[15px] font-semibold tracking-[-.02em] text-white">Susu</span>
+
+        <div className="relative">
+          <h1 className="text-[36px] font-semibold tracking-[-.03em] leading-[1.08] text-white max-w-[420px]">
             Run your susu with a proper ledger.
           </h1>
-          <p className="text-[13.5px] text-ink-2 mt-4 max-w-[340px] leading-relaxed">
+          <p className="text-[13.5px] text-white/70 mt-4 max-w-[380px] leading-relaxed">
             Members, groups, contributions and payouts — recorded, reconciled and
             auditable. Contributions close at 6:00 PM. Late payments are flagged
             automatically.
           </p>
         </div>
-        <p className="text-[12px] text-ink-3">Administrator access only.</p>
+
+        <p className="relative text-[12px] text-white/50">Administrator access only.</p>
       </div>
 
       {/* Right: the form */}

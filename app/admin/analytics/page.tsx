@@ -33,7 +33,7 @@ export default function AnalyticsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="flex justify-center py-32">'…'</div>
+  if (loading) return <div className="flex justify-center py-32">Loading…</div>
   if (!data?.analytics) return <div className="p-8 text-center text-ink-2">No data yet. Create a group and activate it first.</div>
 
   const a = data.analytics
@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
         </div>
         {/* Progress bar */}
         <div className="mt-4 h-2.5 bg-tint rounded-[10px] overflow-hidden">
-          <div className="h-full bg-blue rounded-[10px] transition-all"
+          <div className="h-full bg-ink rounded-[10px] transition-all"
                style={{ width: `${Math.min(Number(a.collection_rate_today), 100)}%` }} />
         </div>
       </div>
@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
                       <div className="absolute bottom-0 w-full bg-tint rounded-t transition-all"
                            style={{ height: `${expH}%` }} />
                       {/* Collected (foreground) */}
-                      <div className={`absolute bottom-0 w-full rounded-t transition-all ${Number(t.rate) >= 90 ? 'bg-ink' : Number(t.rate) >= 60 ? 'bg-blue' : 'bg-red'}`}
+                      <div className={`absolute bottom-0 w-full rounded-t transition-all ${Number(t.rate) >= 90 ? 'bg-ink' : Number(t.rate) >= 60 ? 'bg-ink' : 'bg-red'}`}
                            style={{ height: `${colH}%` }} />
                     </div>
                     <span className={`text-[9px] ${isToday ? 'text-ink font-bold' : 'text-ink-3'}`}>
@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex items-center gap-4 mt-4 text-xs">
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-ink" /><span className="text-ink-2">≥90%</span></span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue" /><span className="text-ink-2">60–89%</span></span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-ink" /><span className="text-ink-2">60–89%</span></span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red" /><span className="text-ink-2">&lt;60%</span></span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-tint" /><span className="text-ink-2">Expected</span></span>
             </div>
@@ -185,7 +185,7 @@ export default function AnalyticsPage() {
                     </span>
                   </div>
                   <div className="h-1.5 bg-tint rounded-[10px] overflow-hidden">
-                    <div className={`h-full rounded-[10px] ${Number(g.collection_rate) >= 90 ? 'bg-ink' : Number(g.collection_rate) >= 60 ? 'bg-blue' : 'bg-red'}`}
+                    <div className={`h-full rounded-[10px] ${Number(g.collection_rate) >= 90 ? 'bg-ink' : Number(g.collection_rate) >= 60 ? 'bg-ink' : 'bg-red'}`}
                          style={{ width: `${Math.min(Number(g.collection_rate), 100)}%` }} />
                   </div>
                 </div>

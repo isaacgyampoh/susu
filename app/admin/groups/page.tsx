@@ -54,13 +54,13 @@ export default function GroupsPage() {
           <h1 className="text-2xl font-extrabold text-ink">Groups</h1>
           <p className="text-ink-2 text-sm mt-1">{groups.length} susu groups</p>
         </div>
-        <Link href="/admin/groups/new" className="flex items-center gap-2 px-4 py-2.5 bg-blue text-ink font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
+        <Link href="/admin/groups/new" className="flex items-center gap-2 px-4 py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
           New Group
         </Link>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">'…'</div>
+        <div className="flex justify-center py-20">Loading…</div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {groups.map(g => {
@@ -108,14 +108,14 @@ export default function GroupsPage() {
                     <span>{g.current_members}/{g.max_members}</span>
                   </div>
                   <div className="h-1.5 bg-tint rounded-[10px] overflow-hidden">
-                    <div className="h-full bg-blue rounded-[10px] transition-all" style={{ width: `${(g.current_members / g.max_members) * 100}%` }} />
+                    <div className="h-full bg-ink rounded-[10px] transition-all" style={{ width: `${(g.current_members / g.max_members) * 100}%` }} />
                   </div>
                 </div>
 
                 {/* Activate button — only show for full/open groups */}
                 {(g.status === 'full' || g.status === 'open') && g.current_members > 0 && (
                   <button onClick={() => { setActivateTarget(g); setStartDate(''); setActivateErr('') }}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue text-white font-semibold rounded-[10px] text-sm transition-colors">
+                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm transition-colors">
                     Activate Group
                   </button>
                 )}
@@ -141,7 +141,7 @@ export default function GroupsPage() {
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Start Date *</label>
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-blue"
+                className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
                 min={new Date().toISOString().split('T')[0]}
               />
             </div>
@@ -163,8 +163,8 @@ export default function GroupsPage() {
             )}
 
             <button onClick={() => activateGroup(false)} disabled={!!activating || !startDate}
-              className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue text-white font-bold rounded-[10px] transition-colors disabled:opacity-50">
-              {activating ? '…' : ''}
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-ink text-white font-bold rounded-[10px] transition-colors disabled:opacity-50">
+              {activating ? 'Activating…' : 'Activate and notify members'}
               Activate & Notify Members
             </button>
             <button onClick={() => setActivateTarget(null)} className="w-full text-ink-2 text-sm hover:text-ink transition-colors py-2">Cancel</button>

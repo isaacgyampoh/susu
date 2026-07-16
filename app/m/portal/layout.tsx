@@ -32,7 +32,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
               return (
                 <Link key={href} href={href}
                   className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-[11px] text-[13px] font-semibold transition-all ${
-                    on ? 'bg-blue text-white' : 'text-ink-2 hover:bg-blue-lt'
+                    on ? 'bg-ink text-white' : 'text-ink-2 hover:bg-bg'
                   }`}>
                   {label}
                 </Link>
