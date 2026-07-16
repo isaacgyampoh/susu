@@ -14,6 +14,21 @@ export default function KYCPage() {
   const [toast, setToast]       = useState('')
   const [createdCreds, setCreatedCreds] = useState<{ member_id: string; passcode: string; full_name: string; phone: string; group?: string } | null>(null)
   const [copied, setCopied]     = useState(false)
+  const [docBusy, setDocBusy]   = useState(false)
+
+  /**
+   * Ghana Cards live in a private bucket. This mints a URL good for two minutes
+   * and records who looked. Opening a national ID should leave a trace.
+   */
+  async function openDocument(path: string, subject: string) {
+    setDocBusy(true)
+    const { data, error } = await callFunction<{ url: string }>('admin-document', {
+      method: 'POST', body: { path, subject }, token: getAdminToken()!,
+    })
+    setDocBusy(false)
+    if (error || !data?.url) { alert(error ?? 'Could not open document'); return }
+    window.open(data.url, '_blank', 'noopener,noreferrer')
+  }
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 4000) }
 

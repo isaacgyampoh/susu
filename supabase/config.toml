@@ -106,3 +106,6 @@ verify_jwt = false
 
 [functions.admin-reports]
 verify_jwt = false
+
+[functions.admin-document]
+verify_jwt = false

@@ -1,5 +1,7 @@
 const SECRET = Deno.env.get('JWT_SECRET') ?? 'susu-jwt-secret-change-in-production'
-const EXPIRY = 60 * 60 * 24 * 7 // 7 days
+// Seven days was generous for a money product. Two is plenty, and the token
+// now carries a version so it can be killed before then.
+const EXPIRY = 60 * 60 * 24 * 2
 
 function base64url(buf: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
@@ -54,12 +56,41 @@ export async function verifyJWT(token: string): Promise<Record<string, unknown> 
   }
 }
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const db = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  { auth: { autoRefreshToken: false, persistSession: false } },
+)
+
+/**
+ * A signed JWT alone is not enough. Until now a stolen token stayed valid for
+ * its full seven days — suspending a member did nothing to their live session.
+ * Every request now checks the token's version against the database, so
+ * suspending, removing or revoking cuts access immediately.
+ */
+async function stillValid(payload: Record<string, unknown>, kind: 'admin' | 'member'): Promise<boolean> {
+  const { data, error } = await db.rpc('session_is_current', {
+    p_id:      payload.sub as string,
+    p_kind:    kind,
+    p_version: (payload.tv as number) ?? 0,
+  })
+  if (error) {
+    // Fail closed. An unavailable check must not become an open door.
+    console.error('session check failed:', error.message)
+    return false
+  }
+  return data === true
+}
+
 export async function requireAdmin(req: Request): Promise<Record<string, unknown> | null> {
   const auth = req.headers.get('authorization') ?? req.headers.get('x-admin-token')
   if (!auth) return null
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : auth
   const payload = await verifyJWT(token)
   if (!payload || payload.type !== 'admin') return null
+  if (!(await stillValid(payload, 'admin'))) return null
   return payload
 }
 
@@ -69,5 +100,6 @@ export async function requireMember(req: Request): Promise<Record<string, unknow
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : auth
   const payload = await verifyJWT(token)
   if (!payload || payload.type !== 'member') return null
+  if (!(await stillValid(payload, 'member'))) return null
   return payload
 }

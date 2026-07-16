@@ -49,10 +49,15 @@ Deno.serve(async (req) => {
     const frontFile = formData.get('ghana_card_front') as File | null
     const backFile  = formData.get('ghana_card_back')  as File | null
 
+    for (const [file, label] of [[frontFile, 'Ghana Card front'], [backFile, 'Ghana Card back']] as const) {
+      const bad = checkImage(file, label)
+      if (bad) return error(bad, 400, req)
+    }
+
     if (frontFile) {
       const { data: up } = await supabaseAdmin.storage
         .from('kyc-documents')
-        .upload(`ghana-cards/${normPhone}-front-${ts}`, frontFile, { contentType: frontFile.type, upsert: true })
+        .upload(`ghana-cards/${crypto.randomUUID()}-front`, frontFile, { contentType: frontFile.type, upsert: false })
       if (up) {
         const { data: { publicUrl } } = supabaseAdmin.storage.from('kyc-documents').getPublicUrl(up.path)
         frontUrl = publicUrl
@@ -61,7 +66,7 @@ Deno.serve(async (req) => {
     if (backFile) {
       const { data: up } = await supabaseAdmin.storage
         .from('kyc-documents')
-        .upload(`ghana-cards/${normPhone}-back-${ts}`, backFile, { contentType: backFile.type, upsert: true })
+        .upload(`ghana-cards/${crypto.randomUUID()}-back`, backFile, { contentType: backFile.type, upsert: false })
       if (up) {
         const { data: { publicUrl } } = supabaseAdmin.storage.from('kyc-documents').getPublicUrl(up.path)
         backUrl = publicUrl

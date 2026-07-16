@@ -41,6 +41,11 @@ export async function callFunction<T = unknown>(
     try { json = text ? JSON.parse(text) : {} }
     catch { return { data: null, error: `Invalid response from server (${res.status})` } }
 
+    if (res.status === 401 && typeof window !== 'undefined') {
+      // Revoked or expired — don't sit on a dead session
+      const kind = fn.includes('member') || fn.startsWith('payments') || fn.startsWith('contact') ? 'member' : 'admin'
+      handleUnauthorized(kind as 'admin' | 'member')
+    }
     if (!res.ok) return { data: null, error: json?.error ?? `Request failed (${res.status})` }
     return { data: json as T, error: null }
   } catch (e) {
@@ -52,22 +57,48 @@ export async function callFunction<T = unknown>(
 export const getAdminToken  = () => typeof window !== 'undefined' ? localStorage.getItem('admin_token')  : null
 export const getMemberToken = () => typeof window !== 'undefined' ? localStorage.getItem('member_token') : null
 
+/*
+ * The cookie exists only so middleware can route; the Authorization header is
+ * the real credential. It cannot be httpOnly because it is written here in the
+ * browser — that would need a server route to set it, and is the next thing
+ * worth doing. Until then: Secure, SameSite=Strict, and a CSP that makes it
+ * hard for foreign script to run at all.
+ *
+ * Two days, matching the JWT. A cookie outliving its token is just litter.
+ */
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 2
+
+function setCookie(name: string, value: string) {
+  const secure = location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `${name}=${value}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Strict${secure}`
+}
+
 export const setAdminToken = (t: string) => {
   localStorage.setItem('admin_token', t)
-  document.cookie = `admin_token=${t}; path=/; max-age=604800; SameSite=Lax`
+  setCookie('admin_token', t)
 }
 export const setMemberToken = (t: string) => {
   localStorage.setItem('member_token', t)
-  document.cookie = `member_token=${t}; path=/; max-age=604800; SameSite=Lax`
+  setCookie('member_token', t)
 }
 
 export const clearAdminAuth = () => {
   localStorage.removeItem('admin_token')
   localStorage.removeItem('admin_user')
-  document.cookie = 'admin_token=; path=/; max-age=0'
+  document.cookie = 'admin_token=; path=/; max-age=0; SameSite=Strict'
 }
 export const clearMemberAuth = () => {
   localStorage.removeItem('member_token')
   localStorage.removeItem('member_user')
-  document.cookie = 'member_token=; path=/; max-age=0'
+  document.cookie = 'member_token=; path=/; max-age=0; SameSite=Strict'
+}
+
+/**
+ * A 401 means the session is gone — expired, or revoked because the member was
+ * suspended. Clear it and send them to sign in rather than leaving a dead token
+ * in place looking valid.
+ */
+export function handleUnauthorized(kind: 'admin' | 'member') {
+  if (kind === 'admin') { clearAdminAuth(); location.href = '/' }
+  else                  { clearMemberAuth(); location.href = '/m/login' }
 }

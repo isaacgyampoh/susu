@@ -40,6 +40,7 @@ Deno.serve(async (req) => {
       email:     admin.email,
       full_name: admin.full_name,
       role:      admin.role,
+      tv:        admin.token_version ?? 0,
       type:      'admin',
     })
 

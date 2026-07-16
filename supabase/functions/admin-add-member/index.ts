@@ -47,23 +47,25 @@ Deno.serve(async (req) => {
     const frontFile = formData.get('ghana_card_front') as File | null
     const backFile  = formData.get('ghana_card_back')  as File | null
 
+    const MAX_BYTES = 5 * 1024 * 1024
+    const ALLOWED   = ['image/jpeg','image/png','image/webp','image/heic','image/heif']
+    for (const [file, label] of [[frontFile, 'Ghana Card front'], [backFile, 'Ghana Card back']] as const) {
+      if (!file || file.size === 0) continue
+      if (file.size > MAX_BYTES) return error(`${label} is larger than 5MB`, 400)
+      if (!ALLOWED.includes(file.type)) return error(`${label} must be a photo`, 400)
+    }
+
     if (frontFile && frontFile.size > 0) {
       const { data: up } = await supabaseAdmin.storage
         .from('kyc-documents')
-        .upload(`ghana-cards/${normPhone}-front-${ts}`, frontFile, { contentType: frontFile.type, upsert: true })
-      if (up) {
-        const { data: { publicUrl } } = supabaseAdmin.storage.from('kyc-documents').getPublicUrl(up.path)
-        frontUrl = publicUrl
-      }
+        .upload(`ghana-cards/${crypto.randomUUID()}-front`, frontFile, { contentType: frontFile.type, upsert: false })
+      if (up) frontUrl = up.path
     }
     if (backFile && backFile.size > 0) {
       const { data: up } = await supabaseAdmin.storage
         .from('kyc-documents')
-        .upload(`ghana-cards/${normPhone}-back-${ts}`, backFile, { contentType: backFile.type, upsert: true })
-      if (up) {
-        const { data: { publicUrl } } = supabaseAdmin.storage.from('kyc-documents').getPublicUrl(up.path)
-        backUrl = publicUrl
-      }
+        .upload(`ghana-cards/${crypto.randomUUID()}-back`, backFile, { contentType: backFile.type, upsert: false })
+      if (up) backUrl = up.path
     }
 
     // Generate + hash passcode

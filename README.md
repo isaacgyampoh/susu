@@ -40,7 +40,11 @@ SQL Editor → run in order:
 2. `supabase/migrations/20240102000000_v2_business_rules.sql`
 
 ### 2. Supabase — storage bucket
-Storage → New bucket → name: `kyc-documents` → **Public** ✓
+Storage → New bucket → name: `kyc-documents` → **Private** (leave Public unticked)
+
+Ghana Cards are national ID documents. The bucket must stay private — admins
+view them through short-lived signed URLs minted by `admin-document`, and every
+view is recorded in `document_access_log`.
 
 ### 3. Supabase — Edge Function secrets
 Edge Functions → Manage Secrets:

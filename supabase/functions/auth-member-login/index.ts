@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
       member_id: member.member_id,
       full_name: member.full_name,
       phone:     member.phone,
+      tv:        member.token_version ?? 0,
       type:      'member',
     })
 

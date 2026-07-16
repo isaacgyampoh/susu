@@ -28,6 +28,7 @@ jobs:
             JWT_SECRET="${{ secrets.SUPABASE_JWT_SECRET }}" \
             FRONTEND_URL="${{ secrets.SUPABASE_FRONTEND_URL }}" \
             MEMBER_URL="${{ secrets.SUPABASE_MEMBER_URL }}" \
+            ALLOWED_ORIGINS="${{ secrets.SUPABASE_ALLOWED_ORIGINS }}" \
             --project-ref "$PROJECT_REF"
           echo "✅ Secrets pushed"
 
