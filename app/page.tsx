@@ -4,14 +4,10 @@ import { useRouter } from 'next/navigation'
 import { callFunction, setAdminToken } from '@/lib/supabase'
 
 /**
- * The root of this deployment IS the admin sign-in.
- *
- * This application is the management console — nothing else lives here. Member
- * sign-in is deliberately not linked or reachable from this site: each member
- * receives their own portal link when the admin creates their account. Two
- * doors on one building is an attack surface, not a convenience.
+ * The root of this deployment is the administrator sign-in. Nothing else lives
+ * here — members reach their portal by private link only.
  */
-export default function AdminSignIn() {
+export default function SignIn() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [pw, setPw]       = useState('')
@@ -32,74 +28,82 @@ export default function AdminSignIn() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-[1fr_460px]">
-      {/* Left: photograph. Hands and cash — the actual subject of the product,
-          not an abstraction of it. Dark scrim so white type stays legible. */}
-      <div className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-ink">
-        <img
-          src="/cover.jpg"
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-          aria-hidden="true"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/35" aria-hidden="true" />
+    <div className="relative min-h-[100dvh] lg:grid lg:grid-cols-[1fr_480px]">
 
-        <span className="relative text-[15px] font-semibold tracking-[-.02em] text-white">Susu</span>
-
-        <div className="relative">
-          <h1 className="text-[36px] font-semibold tracking-[-.03em] leading-[1.08] text-white max-w-[420px]">
-            Run your susu with a proper ledger.
-          </h1>
-          <p className="text-[13.5px] text-white/70 mt-4 max-w-[380px] leading-relaxed">
-            Members, groups, contributions and payouts — recorded, reconciled and
-            auditable. Contributions close at 6:00 PM. Late payments are flagged
-            automatically.
-          </p>
-        </div>
-
-        <p className="relative text-[12px] text-white/50">Administrator access only.</p>
+      {/* The engraving sits behind everything on mobile, and in the left panel
+          on desktop. One image, two roles — no blank white phone screen. */}
+      <div
+        className="absolute inset-0 lg:relative lg:col-start-1 overflow-hidden bg-ink"
+        aria-hidden="true"
+      >
+        <img src="/cover.jpg" alt="" className="w-full h-full object-cover" />
+        {/* Scrim: heavier on mobile because the form sits on top of it */}
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/75 via-ink/85 to-ink lg:from-ink/30 lg:via-ink/55 lg:to-ink/95" />
       </div>
 
-      {/* Right: the form */}
-      <div className="flex flex-col justify-center px-6 sm:px-10 py-12 bg-bg">
-        <div className="w-full max-w-[340px] mx-auto animate-fade-in">
-          <p className="lg:hidden text-[15px] font-semibold tracking-[-.02em] mb-8">Susu</p>
+      {/* Desktop-only wordmark + line, placed over the image */}
+      <div className="hidden lg:flex absolute inset-y-0 left-0 w-[calc(100%-480px)] flex-col justify-between p-12 pointer-events-none">
+        <span className="text-[15px] font-semibold tracking-[-.02em] text-white">Susu</span>
+        <h1 className="text-[38px] font-semibold tracking-[-.03em] leading-[1.06] text-white max-w-[440px]">
+          Run your susu with a proper ledger.
+        </h1>
+        <span className="text-[12px] text-white/45">Administrator access</span>
+      </div>
 
-          <h2 className="t-title">Sign in</h2>
-          <p className="t-meta mt-1.5 mb-8">Administrator access to the management console.</p>
+      {/* Form. On mobile it floats on the image; on desktop it's a solid panel. */}
+      <div className="relative min-h-[100dvh] lg:min-h-0 lg:col-start-2 flex flex-col justify-center px-6 py-12 lg:bg-surface lg:border-l lg:border-line">
+        <div className="w-full max-w-[340px] mx-auto">
+
+          <p className="lg:hidden text-[15px] font-semibold tracking-[-.02em] text-white mb-10">Susu</p>
+
+          <h2 className="text-[26px] font-semibold tracking-[-.02em] text-white lg:text-ink">Sign in</h2>
+          <p className="text-[13px] text-white/55 lg:text-ink-2 mt-1.5 mb-8">Administrator access</p>
 
           <form onSubmit={submit} className="space-y-4">
             {err && (
-              <p className="text-[12.5px] text-red bg-red/10 border border-red/20 rounded-lg px-3 py-2.5">{err}</p>
+              <p className="text-[12.5px] text-white bg-red/85 lg:bg-red/10 lg:text-red border border-red/40 rounded-lg px-3 py-2.5">
+                {err}
+              </p>
             )}
 
             <div>
-              <label htmlFor="email" className="in-lbl">Email</label>
-              <input id="email" className="in" type="email" required autoComplete="email"
-                value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
+              <label htmlFor="email" className="block text-[12.5px] font-medium text-white/70 lg:text-ink-2 mb-1.5">Email</label>
+              <input id="email" type="email" required autoComplete="email"
+                value={email} onChange={e => setEmail(e.target.value)}
+                className="w-full h-11 px-3.5 rounded-lg text-[14px] transition-all
+                           bg-white/10 border border-white/20 text-white placeholder-white/35
+                           focus:outline-none focus:border-white/60 focus:bg-white/15
+                           lg:bg-surface lg:border-line lg:text-ink lg:placeholder-ink-3
+                           lg:focus:border-ink lg:focus:ring-2 lg:focus:ring-ink/10"
+                placeholder="you@example.com" />
             </div>
 
             <div>
               <div className="flex items-baseline justify-between mb-1.5">
-                <label htmlFor="pw" className="text-[12.5px] font-medium text-ink-2">Password</label>
+                <label htmlFor="pw" className="text-[12.5px] font-medium text-white/70 lg:text-ink-2">Password</label>
                 <button type="button" onClick={() => setShow(!show)}
-                  className="text-[12px] font-medium text-ink-3 hover:text-ink transition-colors">
+                  className="text-[12px] font-medium text-white/50 hover:text-white lg:text-ink-3 lg:hover:text-ink transition-colors">
                   {show ? 'Hide' : 'Show'}
                 </button>
               </div>
-              <input id="pw" className="in" type={show ? 'text' : 'password'} required autoComplete="current-password"
-                value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" />
+              <input id="pw" type={show ? 'text' : 'password'} required autoComplete="current-password"
+                value={pw} onChange={e => setPw(e.target.value)}
+                className="w-full h-11 px-3.5 rounded-lg text-[14px] transition-all
+                           bg-white/10 border border-white/20 text-white placeholder-white/35
+                           focus:outline-none focus:border-white/60 focus:bg-white/15
+                           lg:bg-surface lg:border-line lg:text-ink lg:placeholder-ink-3
+                           lg:focus:border-ink lg:focus:ring-2 lg:focus:ring-ink/10"
+                placeholder="••••••••" />
             </div>
 
-            <button type="submit" disabled={busy} className="btn-dark btn-lg w-full">
+            <button type="submit" disabled={busy}
+              className="w-full h-12 rounded-lg text-[14px] font-medium transition-colors
+                         bg-white text-ink hover:bg-white/90
+                         lg:bg-ink lg:text-white lg:hover:bg-ink/90
+                         disabled:opacity-40 disabled:pointer-events-none">
               {busy ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
-
-          <p className="text-[12px] text-ink-3 mt-8 leading-relaxed">
-            Members do not sign in here. Each member receives a private portal
-            link when their account is created.
-          </p>
         </div>
       </div>
     </div>

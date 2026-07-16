@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearAdminAuth } from '@/lib/supabase'
+import { useSwipeDrawer } from '@/components/swipe-drawer'
 
 const NAV = [
   { group: 'Overview', items: [
@@ -29,7 +30,8 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router   = useRouter()
-  const [open, setOpen]   = useState(false)
+  const DRAWER = 264
+  const { open, setOpen, close, shown, dragging } = useSwipeDrawer(DRAWER)
   const [admin, setAdmin] = useState<{ full_name: string; role: string } | null>(null)
 
   useEffect(() => {
@@ -37,14 +39,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     try { setAdmin(JSON.parse(localStorage.getItem('admin_user') ?? '{}')) } catch {}
   }, [router])
 
-  // Close the drawer on navigation — otherwise it stays open over the new page
-  useEffect(() => { setOpen(false) }, [pathname])
-
-  // Don't let the page scroll behind an open drawer
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
+  // Close on navigation — otherwise the drawer hangs over the new page
+  useEffect(() => { close() }, [pathname, close])
 
   const on = (h: string, exact?: boolean) => exact ? pathname === h : pathname.startsWith(h)
 
@@ -93,27 +89,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {nav}
       </aside>
 
-      {/* Mobile bar */}
-      <div className="lg:hidden sticky top-0 z-40 h-14 bg-surface border-b border-line flex items-center justify-between px-5">
+      {/* Mobile bar — the drawer answers to a swipe from the left edge,
+          so there is no word to press. The grip hints where. */}
+      <div className="lg:hidden sticky top-0 z-30 h-14 bg-surface border-b border-line flex items-center px-5">
         <Link href="/admin" className="text-[14px] font-semibold tracking-[-.02em]">Susu</Link>
-        <button onClick={() => setOpen(true)} aria-label="Open menu"
-          className="text-[12.5px] font-medium text-ink-2 hover:text-ink">Menu</button>
       </div>
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Open navigation"
+        className="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 z-30 h-16 w-[7px] rounded-r-full bg-ink/15 active:bg-ink/30 transition-colors"
+      />
 
-      {/* Mobile drawer — slides from the LEFT, which is where a sidebar lives */}
-      {open && (
-        <>
-          <div className="lg:hidden fixed inset-0 z-40 bg-ink/25" onClick={() => setOpen(false)} />
-          <aside className="lg:hidden fixed inset-y-0 left-0 z-50 w-[264px] max-w-[82vw] bg-surface border-r border-line flex flex-col animate-fade-in">
-            <div className="px-5 h-14 flex items-center justify-between border-b border-line shrink-0">
-              <span className="text-[14px] font-semibold tracking-[-.02em]">Susu</span>
-              <button onClick={() => setOpen(false)} aria-label="Close menu"
-                className="text-[12.5px] font-medium text-ink-2">Close</button>
-            </div>
-            {nav}
-          </aside>
-        </>
+      {/* Scrim fades in proportion to the drag, so the gesture feels attached */}
+      {shown > 0 && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-ink"
+          style={{ opacity: (shown / DRAWER) * 0.3, transition: dragging ? 'none' : 'opacity .22s ease-out' }}
+          onClick={close}
+        />
       )}
+
+      <aside
+        className="lg:hidden fixed inset-y-0 left-0 z-50 w-[264px] max-w-[82vw] bg-surface border-r border-line flex flex-col"
+        style={{
+          transform: `translateX(${shown - DRAWER}px)`,
+          transition: dragging ? 'none' : 'transform .26s cubic-bezier(.32,.72,0,1)',
+          visibility: shown > 0 ? 'visible' : 'hidden',
+        }}
+      >
+        <div className="px-5 h-14 flex items-center border-b border-line shrink-0">
+          <span className="text-[14px] font-semibold tracking-[-.02em]">Susu</span>
+        </div>
+        {nav}
+      </aside>
 
       {/* Content: offset by the rail on desktop, full width on mobile.
           min-w-0 so wide tables scroll instead of blowing out the layout. */}

@@ -3,10 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { callFunction, setMemberToken } from '@/lib/supabase'
 
-/**
- * Member sign-in. Reachable only via the private link an admin shares — this
- * page is never linked from the console.
- */
+/** Member sign-in. Reached only by the private link an admin shares. */
 export default function MemberSignIn() {
   const router = useRouter()
   const [phone, setPhone] = useState('')
@@ -27,40 +24,49 @@ export default function MemberSignIn() {
     router.push('/m/portal/dashboard')
   }
 
+  const field = `w-full h-11 px-3.5 rounded-lg text-[14px] transition-all
+                 bg-white/10 border border-white/20 text-white placeholder-white/35
+                 focus:outline-none focus:border-white/60 focus:bg-white/15`
+
   return (
-    <div className="min-h-screen flex flex-col justify-center px-6 py-12 bg-bg">
-      <div className="w-full max-w-[340px] mx-auto animate-fade-in">
-        <p className="text-[15px] font-semibold tracking-[-.02em] mb-8">Susu</p>
-        <h1 className="t-title">Your account</h1>
-        <p className="t-meta mt-1.5 mb-8">Sign in with the phone number and passcode your admin gave you.</p>
+    <div className="relative min-h-[100dvh] flex flex-col justify-center px-6 py-12">
+      <div className="absolute inset-0 overflow-hidden bg-ink" aria-hidden="true">
+        <img src="/cover.jpg" alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/75 via-ink/85 to-ink" />
+      </div>
+
+      <div className="relative w-full max-w-[340px] mx-auto">
+        <p className="text-[15px] font-semibold tracking-[-.02em] text-white mb-10">Susu</p>
+        <h1 className="text-[26px] font-semibold tracking-[-.02em] text-white">Your account</h1>
+        <p className="text-[13px] text-white/55 mt-1.5 mb-8">Sign in with your phone and passcode</p>
 
         <form onSubmit={submit} className="space-y-4">
-          {err && <p className="text-[12.5px] text-red bg-red/10 border border-red/20 rounded-lg px-3 py-2.5">{err}</p>}
+          {err && <p className="text-[12.5px] text-white bg-red/85 border border-red/40 rounded-lg px-3 py-2.5">{err}</p>}
 
           <div>
-            <label htmlFor="phone" className="in-lbl">Phone number</label>
-            <input id="phone" className="in tnum" type="tel" required inputMode="tel" autoComplete="tel"
+            <label htmlFor="phone" className="block text-[12.5px] font-medium text-white/70 mb-1.5">Phone number</label>
+            <input id="phone" className={`${field} tnum`} type="tel" required inputMode="tel" autoComplete="tel"
               value={phone} onChange={e => setPhone(e.target.value)} placeholder="024 000 0000" />
           </div>
 
           <div>
             <div className="flex items-baseline justify-between mb-1.5">
-              <label htmlFor="pc" className="text-[12.5px] font-medium text-ink-2">Passcode</label>
+              <label htmlFor="pc" className="text-[12.5px] font-medium text-white/70">Passcode</label>
               <button type="button" onClick={() => setShow(!show)}
-                className="text-[12px] font-medium text-ink-3 hover:text-ink transition-colors">
+                className="text-[12px] font-medium text-white/50 hover:text-white transition-colors">
                 {show ? 'Hide' : 'Show'}
               </button>
             </div>
-            <input id="pc" className="in tnum" type={show ? 'text' : 'password'} required inputMode="numeric" maxLength={6}
-              value={pc} onChange={e => setPc(e.target.value.replace(/\D/g, ''))} placeholder="6 digits" />
+            <input id="pc" className={`${field} tnum`} type={show ? 'text' : 'password'} required
+              inputMode="numeric" maxLength={6} value={pc}
+              onChange={e => setPc(e.target.value.replace(/\D/g, ''))} placeholder="6 digits" />
           </div>
 
-          <button type="submit" disabled={busy} className="btn-dark btn-lg w-full">
+          <button type="submit" disabled={busy}
+            className="w-full h-12 rounded-lg text-[14px] font-medium bg-white text-ink hover:bg-white/90 transition-colors disabled:opacity-40 disabled:pointer-events-none">
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-
-        <p className="text-[12px] text-ink-3 mt-8">Lost your passcode? Ask your susu admin to reset it.</p>
       </div>
     </div>
   )
