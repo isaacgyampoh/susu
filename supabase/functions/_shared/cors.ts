@@ -68,3 +68,41 @@ export function json(data: unknown, status = 200, req?: Request): Response {
 export function error(message: string, status = 400, req?: Request): Response {
   return json({ error: message }, status, req)
 }
+
+
+/**
+ * Wraps a handler so CORS is applied to whatever it returns.
+ *
+ * The previous design had json()/error() take an optional `req` to resolve the
+ * allowed origin. Every call site that forgot it silently fell back to a
+ * hardcoded origin — which the browser then rejected, surfacing as "Failed to
+ * fetch" with no clue as to why. Correctness must not depend on remembering an
+ * argument in 100 places.
+ *
+ * Here the origin is resolved once, at the boundary, from the request that is
+ * definitely in scope. Handlers cannot get it wrong because they no longer
+ * touch it.
+ */
+export function serveWithCors(handler: (req: Request) => Promise<Response> | Response) {
+  Deno.serve(async (req) => {
+    const headers = cors(req)
+
+    if (req.method === 'OPTIONS') return new Response('ok', { headers })
+
+    try {
+      const res = await handler(req)
+
+      // A signed URL redirect or a CSV download must keep its own headers;
+      // we only overlay the CORS ones.
+      const merged = new Headers(res.headers)
+      for (const [k, v] of Object.entries(headers)) merged.set(k, v)
+      return new Response(res.body, { status: res.status, headers: merged })
+    } catch (e) {
+      console.error('unhandled:', e)
+      return new Response(JSON.stringify({ error: 'Internal server error' }), {
+        status: 500,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      })
+    }
+  })
+}

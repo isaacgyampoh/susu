@@ -1,9 +1,9 @@
-import { handleCors, json, error } from '../_shared/cors.ts'
+import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { initializeTransaction } from '../_shared/paystack.ts'
 import { paystackConfigured, devPaymentsAllowed } from '../_shared/mode.ts'
 
-Deno.serve(async (req) => {
+serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   if (req.method !== 'POST') return error('Method not allowed', 405)

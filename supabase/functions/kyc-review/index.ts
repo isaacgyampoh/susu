@@ -1,4 +1,4 @@
-import { handleCors, json, error } from '../_shared/cors.ts'
+import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
@@ -13,7 +13,7 @@ function generatePasscode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
-Deno.serve(async (req) => {
+serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
 

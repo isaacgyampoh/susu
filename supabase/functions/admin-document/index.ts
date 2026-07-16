@@ -1,4 +1,4 @@
-import { handleCors, json, error } from '../_shared/cors.ts'
+import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 
@@ -8,7 +8,7 @@ import { requireAdmin }            from '../_shared/jwt.ts'
  * The bucket is private. Nothing else can read it. Every view is recorded —
  * looking at someone's national ID is a privileged act and should leave a trace.
  */
-Deno.serve(async (req) => {
+serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
 

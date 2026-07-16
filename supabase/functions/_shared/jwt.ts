@@ -56,13 +56,28 @@ export async function verifyJWT(token: string): Promise<Record<string, unknown> 
   }
 }
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const db = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  { auth: { autoRefreshToken: false, persistSession: false } },
-)
+/**
+ * Built on first use, not at import.
+ *
+ * auth-admin-login imports signJWT from this module. A client constructed at
+ * module scope runs the moment the file loads — so a missing env var would
+ * throw before the function could boot, and a function that fails to boot
+ * returns no CORS headers, which the browser reports as "Failed to fetch" with
+ * nothing in it to diagnose. Sign-in must not depend on machinery it never uses.
+ */
+let _db: SupabaseClient | null = null
+function db(): SupabaseClient {
+  if (!_db) {
+    _db = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    )
+  }
+  return _db
+}
 
 /**
  * A signed JWT alone is not enough. Until now a stolen token stayed valid for
@@ -71,7 +86,7 @@ const db = createClient(
  * suspending, removing or revoking cuts access immediately.
  */
 async function stillValid(payload: Record<string, unknown>, kind: 'admin' | 'member'): Promise<boolean> {
-  const { data, error } = await db.rpc('session_is_current', {
+  const { data, error } = await db().rpc('session_is_current', {
     p_id:      payload.sub as string,
     p_kind:    kind,
     p_version: (payload.tv as number) ?? 0,

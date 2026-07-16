@@ -1,4 +1,4 @@
-import { handleCors, json, error } from '../_shared/cors.ts'
+import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
 import { initializeTransaction } from '../_shared/paystack.ts'
@@ -6,7 +6,7 @@ import { devPaymentsAllowed, paymentsUnavailable } from '../_shared/mode.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') ?? 'http://localhost:3000'
 
-Deno.serve(async (req) => {
+serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   if (req.method !== 'POST') return error('Method not allowed', 405)

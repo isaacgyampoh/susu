@@ -1,9 +1,9 @@
-import { handleCors, json, error } from '../_shared/cors.ts'
+import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
 import { verifyPaystackSignature, isPaystackConfigured } from '../_shared/paystack-verify.ts'
 
-Deno.serve(async (req) => {
+serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
 
