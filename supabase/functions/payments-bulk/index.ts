@@ -1,7 +1,8 @@
 import { handleCors, json, error } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
-import { initializeTransaction, isPaystackEnabled } from '../_shared/paystack.ts'
+import { initializeTransaction } from '../_shared/paystack.ts'
+import { devPaymentsAllowed, paymentsUnavailable } from '../_shared/mode.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') ?? ''
 
@@ -12,6 +13,9 @@ Deno.serve(async (req) => {
   const session = await requireMember(req)
   if (!session) return error('Unauthorized', 401)
   const memberId = session.sub as string
+
+  const blocked = paymentsUnavailable(req, error)
+  if (blocked) return blocked
 
   const url = new URL(req.url)
 
@@ -93,8 +97,8 @@ Deno.serve(async (req) => {
     const batchId   = crypto.randomUUID()
     const unpaidIds = unpaid.map((c: any) => c.id)
 
-    // ── DEV MODE: mark all as paid instantly ──
-    if (!isPaystackEnabled()) {
+    // ── DEV MODE: explicit opt-in only ──
+    if (devPaymentsAllowed()) {
       const ref = `BULK-DEV-${batchId.slice(0, 8)}`
       await supabaseAdmin.from('contributions')
         .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: ref, batch_id: batchId })

@@ -19,6 +19,9 @@ const NAV = [
     { href: '/admin/contributions', label: 'Contributions' },
     { href: '/admin/payouts',       label: 'Payouts' },
   ]},
+  { group: 'Account', items: [
+    { href: '/admin/password', label: 'Change password' },
+  ]},
   { group: 'Records', items: [
     { href: '/admin/messages',      label: 'Messages' },
     { href: '/admin/announcements', label: 'Announcements' },
@@ -32,7 +35,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router   = useRouter()
   const DRAWER = 264
   const { open, setOpen, close, shown, dragging } = useSwipeDrawer(DRAWER)
-  const [admin, setAdmin] = useState<{ full_name: string; role: string } | null>(null)
+  const [admin, setAdmin] = useState<{ full_name: string; role: string; must_change_password?: boolean } | null>(null)
 
   useEffect(() => {
     if (!localStorage.getItem('admin_token')) { router.replace('/'); return }
@@ -137,6 +140,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* min-w-0 lets children shrink; children scroll their own wide content.
           overflow-x-hidden here would CLIP tables rather than let them scroll. */}
       <main className="lg:pl-[210px] min-w-0">
+        {/* The shipped password is public — it is in the repo. Say so, loudly,
+            on every screen until it is changed. */}
+        {admin?.must_change_password && pathname !== '/admin/password' && (
+          <div className="bg-red text-white px-5 sm:px-8 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[12.5px]">
+              This account still uses the default password, which is published in the source code.
+            </p>
+            <Link href="/admin/password" className="text-[12.5px] font-semibold underline underline-offset-2">
+              Change it now
+            </Link>
+          </div>
+        )}
         <div className="min-w-0">{children}</div>
       </main>
     </div>

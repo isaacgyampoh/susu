@@ -1,6 +1,7 @@
 import { handleCors, json, error } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
-import { initializeTransaction, isPaystackEnabled } from '../_shared/paystack.ts'
+import { initializeTransaction } from '../_shared/paystack.ts'
+import { paystackConfigured, devPaymentsAllowed } from '../_shared/mode.ts'
 
 Deno.serve(async (req) => {
   const cors = handleCors(req)
@@ -90,8 +91,8 @@ Deno.serve(async (req) => {
         bank_account_number:   formData.get('bank_account_number') as string | null,
         bank_account_name:     formData.get('bank_account_name') as string | null,
         registration_fee_amount: group.registration_fee,
-        // If no Paystack, mark fee as paid immediately (dev/cash mode)
-        registration_fee_paid: !isPaystackEnabled() || group.registration_fee === 0,
+        // Only ever true without a real payment when dev mode is explicitly on
+        registration_fee_paid: devPaymentsAllowed() || group.registration_fee === 0,
         status: 'pending',
       })
       .select('id')
@@ -101,7 +102,7 @@ Deno.serve(async (req) => {
 
     // Initialize Paystack payment (if enabled and fee > 0)
     let paystackData = null
-    if (isPaystackEnabled() && group.registration_fee > 0) {
+    if (paystackConfigured() && group.registration_fee > 0) {
       const reference  = `KYC-${kyc.id}-${ts}`
       const paystackRes = await initializeTransaction({
         email:        (formData.get('email') as string) ?? `${normPhone.replace('+', '')}@susu.platform`,
@@ -119,7 +120,7 @@ Deno.serve(async (req) => {
       message:  'KYC application submitted successfully',
       kyc_id:   kyc.id,
       fee:      group.registration_fee,
-      fee_paid: !isPaystackEnabled(),
+      fee_paid: devPaymentsAllowed(),
       paystack: paystackData,
     }, 201)
   } catch (e) {

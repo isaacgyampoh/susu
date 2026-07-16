@@ -2,6 +2,7 @@ import { handleCors, json, error } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
 import { verifyTransaction }       from '../_shared/paystack.ts'
+import { paymentsUnavailable }     from '../_shared/mode.ts'
 
 Deno.serve(async (req) => {
   const cors = handleCors(req)
@@ -11,6 +12,9 @@ Deno.serve(async (req) => {
 
   const session = await requireMember(req)
   if (!session) return error('Unauthorized', 401)
+
+  const blocked = paymentsUnavailable(req, error)
+  if (blocked) return blocked
 
   try {
     const { reference } = await req.json()

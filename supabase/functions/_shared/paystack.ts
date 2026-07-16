@@ -18,29 +18,21 @@ export async function initializeTransaction(params: {
   email: string; amount: number; reference: string
   callback_url?: string; metadata?: Record<string, unknown>
 }) {
-  if (!PAYSTACK_SECRET) {
-    // Dev mode: return a fake auth URL that marks payment as done
-    return {
-      status: true,
-      data: {
-        authorization_url: `${params.callback_url ?? ''}${params.callback_url?.includes('?') ? '&' : '?'}dev_ref=${params.reference}&dev_paid=true`,
-        reference: params.reference,
-      },
-    }
-  }
+  // No fake success. Callers gate on mode.ts and refuse when unconfigured —
+  // a helper that invents a successful payment is how a missing key becomes
+  // free money.
+  if (!PAYSTACK_SECRET) throw new Error('PAYSTACK_SECRET_KEY is not set')
   return paystackRequest('POST', '/transaction/initialize', params)
 }
 
 export async function verifyTransaction(reference: string) {
-  if (!PAYSTACK_SECRET) {
-    return { status: true, data: { status: 'success', reference, amount: 0, metadata: {} } }
-  }
+  if (!PAYSTACK_SECRET) throw new Error('PAYSTACK_SECRET_KEY is not set')
   return paystackRequest('GET', `/transaction/verify/${reference}`)
 }
 
 export async function createTransfer(params: {
   source: 'balance'; amount: number; recipient: string; reason?: string; reference?: string
 }) {
-  if (!PAYSTACK_SECRET) return { status: true, data: { transfer_code: 'DEV_TRANSFER' } }
+  if (!PAYSTACK_SECRET) throw new Error('PAYSTACK_SECRET_KEY is not set')
   return paystackRequest('POST', '/transfer', params)
 }

@@ -52,7 +52,14 @@ Edge Functions → Manage Secrets:
 | Key | Value |
 |-----|-------|
 | `JWT_SECRET` | `a45ff29522fcf5f5347f36b4ca5105ad` |
-| `FRONTEND_URL` | Your Vercel URL |
+| `FRONTEND_URL` | `https://admin.abbiewealthsusu.com` |
+| `MEMBER_URL` | `https://my.abbiewealthsusu.com` |
+| `ALLOWED_ORIGINS` | comma-separated origins allowed to call the API |
+| `PAYSTACK_SECRET_KEY` | **required in production** |
+
+> **Payments fail closed.** Without `PAYSTACK_SECRET_KEY`, payment endpoints
+> return 503. To test without Paystack you must set `ALLOW_DEV_PAYMENTS=true`
+> deliberately — a missing key can no longer become free contributions.
 
 *Paystack and SMS are optional — the system runs in dev mode without them.*
 

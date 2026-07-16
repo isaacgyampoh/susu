@@ -1,7 +1,8 @@
 import { handleCors, json, error } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
-import { initializeTransaction, isPaystackEnabled } from '../_shared/paystack.ts'
+import { initializeTransaction } from '../_shared/paystack.ts'
+import { devPaymentsAllowed, paymentsUnavailable } from '../_shared/mode.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') ?? 'http://localhost:3000'
 
@@ -12,6 +13,10 @@ Deno.serve(async (req) => {
 
   const session = await requireMember(req)
   if (!session) return error('Unauthorized', 401)
+
+  // Refuse rather than give away contributions if Paystack is unset
+  const blocked = paymentsUnavailable(req, error)
+  if (blocked) return blocked
 
   try {
     const { contribution_id } = await req.json()
@@ -27,8 +32,8 @@ Deno.serve(async (req) => {
     if (!contribution) return error('Contribution not found', 404)
     if (contribution.status === 'paid') return error('Already paid')
 
-    // DEV MODE — no Paystack key: mark as paid immediately
-    if (!isPaystackEnabled()) {
+    // DEV MODE — explicitly enabled via ALLOW_DEV_PAYMENTS, never inferred
+    if (devPaymentsAllowed()) {
       const devRef = `DEV-${contribution_id}-${Date.now()}`
       await supabaseAdmin.from('contributions')
         .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: devRef })

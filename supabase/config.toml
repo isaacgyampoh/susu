@@ -109,3 +109,6 @@ verify_jwt = false
 
 [functions.admin-document]
 verify_jwt = false
+
+[functions.admin-change-password]
+verify_jwt = false

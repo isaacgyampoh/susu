@@ -44,7 +44,13 @@ Deno.serve(async (req) => {
       type:      'admin',
     })
 
-    return json({ token, admin: { id: admin.id, email: admin.email, full_name: admin.full_name, role: admin.role } })
+    return json({
+      token,
+      admin: {
+        id: admin.id, email: admin.email, full_name: admin.full_name, role: admin.role,
+        must_change_password: admin.must_change_password ?? false,
+      },
+    })
   } catch (e) {
     console.error(e)
     return error('Internal server error', 500)
