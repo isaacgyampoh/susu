@@ -1,110 +1,96 @@
-import Link from 'next/link'
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { callFunction, setAdminToken } from '@/lib/supabase'
 
-export default function Landing() {
+/**
+ * The root of this deployment IS the admin sign-in.
+ *
+ * This application is the management console — nothing else lives here. Member
+ * sign-in is deliberately not linked or reachable from this site: each member
+ * receives their own portal link when the admin creates their account. Two
+ * doors on one building is an attack surface, not a convenience.
+ */
+export default function AdminSignIn() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [pw, setPw]       = useState('')
+  const [show, setShow]   = useState(false)
+  const [busy, setBusy]   = useState(false)
+  const [err, setErr]     = useState('')
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setErr('')
+    const { data, error } = await callFunction<any>('auth-admin-login', {
+      method: 'POST', body: { email, password: pw },
+    })
+    setBusy(false)
+    if (error) { setErr(error); return }
+    setAdminToken(data.token)
+    localStorage.setItem('admin_user', JSON.stringify(data.admin))
+    router.push('/admin')
+  }
+
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-line">
-        <div className="mx-auto max-w-[1200px] px-6 h-16 flex items-center justify-between">
-          <span className="text-[15px] font-extrabold tracking-[-.02em]">Susu</span>
-          <Link href="/login" className="text-[13px] font-semibold text-ink-2 hover:text-ink transition-colors">
-            Sign in
-          </Link>
+    <div className="min-h-screen grid lg:grid-cols-[1fr_460px]">
+      {/* Left: identity, quiet */}
+      <div className="hidden lg:flex flex-col justify-between p-12 border-r border-line bg-surface">
+        <span className="text-[15px] font-semibold tracking-[-.02em]">Susu</span>
+        <div>
+          <h1 className="text-[34px] font-semibold tracking-[-.03em] leading-[1.1] max-w-[380px]">
+            Run your susu with a proper ledger.
+          </h1>
+          <p className="text-[13.5px] text-ink-2 mt-4 max-w-[340px] leading-relaxed">
+            Members, groups, contributions and payouts — recorded, reconciled and
+            auditable. Contributions close at 6:00 PM. Late payments are flagged
+            automatically.
+          </p>
         </div>
-      </header>
+        <p className="text-[12px] text-ink-3">Administrator access only.</p>
+      </div>
 
-      {/* Hero */}
-      <main className="flex-1">
-        <div className="mx-auto max-w-[1200px] px-6 py-16 sm:py-24 grid lg:grid-cols-2 gap-14 lg:gap-20 items-center">
+      {/* Right: the form */}
+      <div className="flex flex-col justify-center px-6 sm:px-10 py-12 bg-bg">
+        <div className="w-full max-w-[340px] mx-auto animate-fade-in">
+          <p className="lg:hidden text-[15px] font-semibold tracking-[-.02em] mb-8">Susu</p>
 
-          <div>
-            <span className="inline-block px-3 py-1.5 rounded-full bg-blue-lt text-blue text-[12px] font-semibold mb-7">
-              Trusted rotating savings, run properly
-            </span>
+          <h2 className="t-title">Sign in</h2>
+          <p className="t-meta mt-1.5 mb-8">Administrator access to the management console.</p>
 
-            <h1 className="text-[44px] sm:text-[58px] font-extrabold tracking-[-.04em] leading-[.98]">
-              Save daily.
-              <br />
-              <span className="font-normal italic text-ink-2">Collect on</span>
-              <br />
-              your day.
-            </h1>
+          <form onSubmit={submit} className="space-y-4">
+            {err && (
+              <p className="text-[12.5px] text-red bg-red/10 border border-red/20 rounded-lg px-3 py-2.5">{err}</p>
+            )}
 
-            <p className="mt-6 text-[16px] text-ink-2 leading-relaxed max-w-[420px]">
-              Everyone pays in each day. One member collects the whole pot on their
-              turn. Your slot, your date, your money — tracked to the pesewa.
-            </p>
-
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/login" className="btn-blue btn-lg">Open your account</Link>
-              <Link href="/admin/login" className="btn-line btn-lg">Admin sign in</Link>
+            <div>
+              <label htmlFor="email" className="in-lbl">Email</label>
+              <input id="email" className="in" type="email" required autoComplete="email"
+                value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
             </div>
 
-            <p className="mt-6 text-[13px] text-ink-3">
-              Not a member yet? Ask your susu admin to add you.
-            </p>
-          </div>
-
-          {/* Visual: the rotation, stated plainly. No illustration, no stock art. */}
-          <div className="panel p-7 sm:p-9">
-            <p className="t-label mb-6">How a cycle works</p>
-
-            <div className="space-y-5">
-              {[
-                { k: 'Everyone pays', v: 'GHS 55', s: 'every day, before 6:00 PM' },
-                { k: 'Group size',    v: '11 members', s: 'one collects per turn' },
-                { k: 'Each turn',     v: '30 days', s: 'then the next member collects' },
-              ].map(({ k, v, s }) => (
-                <div key={k} className="flex items-baseline justify-between gap-4 pb-5 border-b border-line">
-                  <div>
-                    <p className="text-[14px] font-semibold">{k}</p>
-                    <p className="text-[12px] text-ink-3 mt-0.5">{s}</p>
-                  </div>
-                  <p className="text-[18px] font-extrabold tnum whitespace-nowrap">{v}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-7 well p-5 flex items-end justify-between gap-4">
-              <div>
-                <p className="t-label !text-blue">You collect</p>
-                <p className="text-[11px] text-ink-2 mt-1.5">plus your registration fee back</p>
+            <div>
+              <div className="flex items-baseline justify-between mb-1.5">
+                <label htmlFor="pw" className="text-[12.5px] font-medium text-ink-2">Password</label>
+                <button type="button" onClick={() => setShow(!show)}
+                  className="text-[12px] font-medium text-ink-3 hover:text-ink transition-colors">
+                  {show ? 'Hide' : 'Show'}
+                </button>
               </div>
-              <p className="text-[34px] font-extrabold tracking-[-.03em] leading-none tnum text-blue">
-                <span className="text-[15px] align-[.45em] mr-0.5">GHS</span>16,540
-              </p>
+              <input id="pw" className="in" type={show ? 'text' : 'password'} required autoComplete="current-password"
+                value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" />
             </div>
-          </div>
-        </div>
 
-        {/* Two doors — plainly named */}
-        <div className="border-t border-line bg-tint">
-          <div className="mx-auto max-w-[1200px] px-6 py-14 grid sm:grid-cols-2 gap-4">
-            <Link href="/login" className="panel p-6 hover:border-blue transition-colors group">
-              <p className="t-label">For members</p>
-              <p className="text-[19px] font-extrabold tracking-[-.02em] mt-2 group-hover:text-blue transition-colors">
-                Open your account
-              </p>
-              <p className="t-meta mt-1.5">See your plan, pay contributions, track your collection date.</p>
-            </Link>
+            <button type="submit" disabled={busy} className="btn-dark btn-lg w-full">
+              {busy ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
 
-            <Link href="/admin/login" className="panel p-6 hover:border-blue transition-colors group">
-              <p className="t-label">For admins</p>
-              <p className="text-[19px] font-extrabold tracking-[-.02em] mt-2 group-hover:text-blue transition-colors">
-                Admin sign in
-              </p>
-              <p className="t-meta mt-1.5">Manage members, groups, contributions and payouts.</p>
-            </Link>
-          </div>
+          <p className="text-[12px] text-ink-3 mt-8 leading-relaxed">
+            Members do not sign in here. Each member receives a private portal
+            link when their account is created.
+          </p>
         </div>
-      </main>
-
-      <footer className="border-t border-line">
-        <div className="mx-auto max-w-[1200px] px-6 py-7 flex flex-wrap gap-3 items-center justify-between">
-          <span className="text-[13px] font-bold">Susu</span>
-          <span className="text-[12px] text-ink-3">Contributions close 6:00 PM daily. Late payments are flagged.</span>
-        </div>
-      </footer>
+      </div>
     </div>
   )
 }

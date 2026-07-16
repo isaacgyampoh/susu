@@ -149,8 +149,8 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <Link href="/member/payments" className="act-primary">Pay ahead</Link>
-            <Link href="/member/payments" className="act-quiet">History</Link>
+            <Link href="/m/portal/payments" className="act-primary">Pay ahead</Link>
+            <Link href="/m/portal/payments" className="act-quiet">History</Link>
           </div>
 
           {/* Rotation */}
@@ -172,7 +172,7 @@ export default function Dashboard() {
       <div className="panel p-5">
         <div className="flex items-center justify-between mb-3">
           <p className="t-h2">Recent payments</p>
-          <Link href="/member/payments" className="t-meta font-semibold flex items-center gap-0.5 hover:text-blue transition-colors">
+          <Link href="/m/portal/payments" className="t-meta font-semibold flex items-center gap-0.5 hover:text-blue transition-colors">
             See all </Link>
         </div>
         {recentPayments.filter(p => p.status === 'paid').length === 0 ? (

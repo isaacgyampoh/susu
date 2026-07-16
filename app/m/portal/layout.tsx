@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearMemberAuth } from '@/lib/supabase'
 const TABS = [
-  { href: '/member/dashboard', label: 'Home' },
-  { href: '/member/payments',  label: 'Payments' },
-  { href: '/member/profile',   label: 'Profile' },
+  { href: '/m/portal/dashboard', label: 'Home' },
+  { href: '/m/portal/payments',  label: 'Payments' },
+  { href: '/m/portal/profile',   label: 'Profile' },
 ]
 
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
@@ -15,7 +15,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem('member_token')) { router.replace('/login'); return }
+    if (!localStorage.getItem('member_token')) { router.replace('/m/login'); return }
     setReady(true)
   }, [router])
   if (!ready) return null
@@ -38,7 +38,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
                 </Link>
               )
             })}
-            <button onClick={() => { clearMemberAuth(); router.push('/login') }} aria-label="Sign out"
+            <button onClick={() => { clearMemberAuth(); router.push('/m/login') }} aria-label="Sign out"
               className="w-11 h-11 grid place-items-center rounded-[11px] text-ink-3 hover:text-red hover:bg-red-50 transition-colors">
               </button>
           </div>

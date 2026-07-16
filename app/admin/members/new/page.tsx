@@ -63,7 +63,7 @@ export default function AddMemberPage() {
   function copyCreds() {
     if (!created) return
     navigator.clipboard.writeText(
-      `SusuPlatform Login\nMember ID: ${created.member_id}\nPhone: ${created.phone}\nPasscode: ${created.passcode}`
+      `Susu — your account\n\nSign in: ${window.location.origin}/m/login\nPhone: ${created.phone}\nPasscode: ${created.passcode}\nMember ID: ${created.member_id}\n\nContributions close 6:00 PM daily.`
     )
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -100,6 +100,12 @@ export default function AddMemberPage() {
                 <span className="text-ink font-bold">#{created.payout_position}</span>
               </div>
             )}
+          </div>
+
+          <div className="p-4 bg-bg border border-line rounded-lg text-left">
+            <p className="text-[12px] font-medium text-ink-2 mb-1.5">Their portal link</p>
+            <p className="text-[12.5px] font-mono break-all">{typeof window !== 'undefined' ? `${window.location.origin}/m/login` : '/m/login'}</p>
+            <p className="text-[11.5px] text-ink-3 mt-2">Send this link with the credentials above. Members sign in here, not on the console.</p>
           </div>
 
           <button onClick={copyCreds}

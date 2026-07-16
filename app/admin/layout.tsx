@@ -3,18 +3,27 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearAdminAuth } from '@/lib/supabase'
+
 const NAV = [
-  { href: '/admin',               label: 'Dashboard', exact: true },
-  { href: '/admin/analytics',     label: 'Analytics' },
-  { href: '/admin/members',       label: 'Members' },
-  { href: '/admin/groups',        label: 'Groups' },
-  { href: '/admin/contributions', label: 'Contributions' },
-  { href: '/admin/payouts',       label: 'Payouts' },
-  { href: '/admin/messages',      label: 'Messages' },
-  { href: '/admin/announcements', label: 'Announcements' },
-  { href: '/admin/reports',       label: 'Reports' },
-  { href: '/admin/audit',         label: 'Audit log' },
-  { href: '/admin/kyc',           label: 'KYC review' },
+  { group: 'Overview', items: [
+    { href: '/admin',               label: 'Dashboard', exact: true },
+    { href: '/admin/analytics',     label: 'Analytics' },
+  ]},
+  { group: 'People', items: [
+    { href: '/admin/members',       label: 'Members' },
+    { href: '/admin/groups',        label: 'Groups' },
+    { href: '/admin/kyc',           label: 'Applications' },
+  ]},
+  { group: 'Money', items: [
+    { href: '/admin/contributions', label: 'Contributions' },
+    { href: '/admin/payouts',       label: 'Payouts' },
+  ]},
+  { group: 'Records', items: [
+    { href: '/admin/messages',      label: 'Messages' },
+    { href: '/admin/announcements', label: 'Announcements' },
+    { href: '/admin/reports',       label: 'Reports' },
+    { href: '/admin/audit',         label: 'Audit log' },
+  ]},
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -22,70 +31,68 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router   = useRouter()
   const [open, setOpen]   = useState(false)
   const [admin, setAdmin] = useState<{ full_name: string; role: string } | null>(null)
-  const isLogin = pathname === '/admin/login'
 
   useEffect(() => {
-    if (isLogin) return
-    if (!localStorage.getItem('admin_token')) { router.replace('/admin/login'); return }
+    if (!localStorage.getItem('admin_token')) { router.replace('/'); return }
     try { setAdmin(JSON.parse(localStorage.getItem('admin_user') ?? '{}')) } catch {}
-  }, [router, isLogin])
+  }, [router])
 
-  if (isLogin) return <>{children}</>
-  const active = (h: string, exact?: boolean) => exact ? pathname === h : pathname.startsWith(h)
+  const on = (h: string, exact?: boolean) => exact ? pathname === h : pathname.startsWith(h)
 
   const nav = (
-    <>
-      <div className="px-5 pt-6 pb-5">
-        <Link href="/admin" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-[10px] bg-blue grid place-items-center">
-            <span className="text-white font-extrabold text-[15px]">S</span>
-          </div>
-          <span className="font-extrabold text-[15px]">Susu</span>
-        </Link>
-        {admin && (
-          <div className="mt-5 p-3 bg-blue-lt rounded-[12px]">
-            <p className="text-[13px] font-bold truncate">{admin.full_name}</p>
-            <p className="text-[11px] text-blue font-semibold capitalize mt-0.5">{admin.role?.replace('_', ' ')}</p>
-          </div>
-        )}
-        <Link href="/admin/members/new" onClick={() => setOpen(false)} className="act-primary act-sm w-full mt-3">
-          Add member
-        </Link>
+    <div className="flex flex-col h-full">
+      <div className="px-5 h-14 flex items-center border-b border-line">
+        <Link href="/admin" className="text-[14px] font-semibold tracking-[-.02em]">Susu</Link>
       </div>
 
-      <nav className="flex-1 px-3 overflow-y-auto space-y-0.5">
-        {NAV.map(({ href, label, exact }) => (
-          <Link key={href} href={href} onClick={() => setOpen(false)}
-            className={`flex items-center gap-2.5 px-3 h-10 rounded-[10px] text-[13.5px] transition-colors ${
-              active(href, exact) ? 'bg-blue text-white font-bold' : 'text-ink-2 font-medium hover:bg-blue-lt hover:text-ink'
-            }`}>
-            {label}
-          </Link>
+      <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-6">
+        {NAV.map(({ group, items }) => (
+          <div key={group}>
+            <p className="px-2.5 mb-1.5 text-[11px] font-medium text-ink-3">{group}</p>
+            <div className="space-y-0.5">
+              {items.map(({ href, label, exact }) => (
+                <Link key={href} href={href} onClick={() => setOpen(false)}
+                  className={`block px-2.5 py-1.5 rounded-lg text-[13px] transition-colors ${
+                    on(href, exact) ? 'bg-ink text-white font-medium' : 'text-ink-2 hover:text-ink hover:bg-bg'
+                  }`}>
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
-      <div className="px-3 py-4 border-t border-line">
-        <button onClick={() => { clearAdminAuth(); router.push('/admin/login') }}
-          className="flex items-center gap-2.5 px-3 h-10 w-full rounded-[10px] text-[13.5px] font-medium text-ink-2 hover:bg-red-50 hover:text-red transition-colors">
+      <div className="border-t border-line p-3">
+        {admin && (
+          <div className="px-2.5 pb-2.5">
+            <p className="text-[12.5px] font-medium truncate">{admin.full_name}</p>
+            <p className="text-[11px] text-ink-3 capitalize">{admin.role?.replace('_', ' ')}</p>
+          </div>
+        )}
+        <button onClick={() => { clearAdminAuth(); router.push('/') }}
+          className="w-full text-left px-2.5 py-1.5 rounded-lg text-[12.5px] text-ink-2 hover:text-ink hover:bg-bg transition-colors">
           Sign out
         </button>
       </div>
-    </>
+    </div>
   )
 
   return (
     <div className="min-h-screen flex">
-      <aside className="hidden md:flex flex-col w-[244px] bg-paper border-r border-line fixed inset-y-0">{nav}</aside>
+      <aside className="hidden lg:block w-[210px] shrink-0 bg-surface border-r border-line fixed inset-y-0">
+        {nav}
+      </aside>
 
-      <div className="md:hidden fixed top-0 inset-x-0 z-50 h-14 bg-paper border-b border-line flex items-center justify-between px-5">
-        <span className="font-extrabold text-[15px]">Susu</span>
-        <button onClick={() => setOpen(!open)} aria-label={open ? 'Close menu' : 'Open menu'} className="text-ink">
-          {open ? '' : ''}
+      <div className="lg:hidden fixed top-0 inset-x-0 z-50 h-14 bg-surface border-b border-line flex items-center justify-between px-5">
+        <span className="text-[14px] font-semibold tracking-[-.02em]">Susu</span>
+        <button onClick={() => setOpen(!open)} className="text-[12.5px] font-medium text-ink-2">
+          {open ? 'Close' : 'Menu'}
         </button>
       </div>
-      {open && <div className="md:hidden fixed inset-0 z-40 bg-paper pt-14 flex flex-col animate-fade-in">{nav}</div>}
+      {open && <div className="lg:hidden fixed inset-0 z-40 bg-surface pt-14">{nav}</div>}
 
-      <main className="flex-1 md:ml-[244px] pt-14 md:pt-0 min-w-0">{children}</main>
+      <main className="flex-1 lg:ml-[210px] pt-14 lg:pt-0 min-w-0">{children}</main>
     </div>
   )
 }
