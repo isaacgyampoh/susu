@@ -57,7 +57,7 @@ export default function Profile() {
           <div className="divide-y divide-line border-y border-line">
             {plans.map(p => {
               const g = p.susu_groups!
-              const cashout = Number(p.payout_amount ?? g.cashout_amount ?? 0) + Number(g.registration_fee ?? 0)
+              const cashout = Number(p.payout_amount ?? g.cashout_amount ?? 0)
               return (
                 <div key={p.id} className="py-4 flex items-baseline justify-between gap-4">
                   <div className="min-w-0">

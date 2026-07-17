@@ -119,6 +119,9 @@ export default function GroupsPage() {
                     Activate Group
                   </button>
                 )}
+                <Link href={`/admin/groups/${g.id}/edit`}
+                  className="btn-line btn-sm w-full mb-2">Edit group</Link>
+
                 {g.status === 'active' && (
                   <div className="flex items-center justify-center gap-2 text-ink text-sm py-2">
                     Running since {g.start_date ? format(new Date(g.start_date), 'MMM d, yyyy') : '—'}

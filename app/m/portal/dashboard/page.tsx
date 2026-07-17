@@ -51,7 +51,8 @@ export default function Dashboard() {
   const collected = group?.start_date && group?.cycle_days
     ? Math.max(0, Math.floor(differenceInCalendarDays(new Date(), new Date(group.start_date)) / group.cycle_days))
     : 0
-  const cashout = Number(plan?.payout_amount ?? group?.cashout_amount ?? 0) + Number(group?.registration_fee ?? 0)
+  // The registration fee is the operator's commission — never part of what a member collects.
+  const cashout = Number(plan?.payout_amount ?? group?.cashout_amount ?? 0)
   const toTurn  = plan?.payout_date ? differenceInCalendarDays(new Date(plan.payout_date), new Date()) : null
 
   return (

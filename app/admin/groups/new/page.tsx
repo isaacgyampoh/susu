@@ -132,10 +132,8 @@ export default function NewGroupPage() {
             required type="number" min="1" step="0.01" value={form.cashout_amount}
             onChange={e => set('cashout_amount', e.target.value)} placeholder="16430.00" />
           <p className="text-xs text-ink-2 mt-2">
-            The registration fee (GHS {form.registration_fee || '110'}) will be added to this on payout day.
-            Total cashout = <span className="text-ink font-semibold">
-              GHS {((parseFloat(form.cashout_amount) || 0) + parseFloat(form.registration_fee || '0')).toLocaleString()}
-            </span>
+            This is exactly what the member receives and sees. The registration fee is
+            your commission and is kept separate — it is never added to this figure.
           </p>
         </div>
 

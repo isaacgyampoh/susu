@@ -117,9 +117,11 @@ export default function Dashboard() {
               <table className="w-full min-w-[560px] lg:min-w-0">
               <tbody className="divide-y divide-line">
                 {groups.map(g => (
-                  <tr key={g.id}>
+                  <tr key={g.id} className="hover:bg-bg transition-colors">
                     <td className="py-2.5 pr-3">
-                      <p className="text-[13px] font-medium">{g.name}</p>
+                      <Link href={`/admin/groups/${g.id}/edit`} className="text-[13px] font-medium hover:underline underline-offset-4">
+                        {g.name}
+                      </Link>
                       <p className="text-[11.5px] text-ink-3 tnum">
                         GHS {n0(g.contribution_amount)} {g.contribution_frequency} · {g.current_members}/{g.max_members} members
                       </p>
