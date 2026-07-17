@@ -21,9 +21,25 @@ export default function NewGroupPage() {
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  const formulaEst = form.contribution_amount && form.max_members && form.cycle_days
-    ? parseFloat(form.contribution_amount) * parseInt(form.max_members) * parseInt(form.cycle_days)
-    : null
+  /*
+   * One turn at a time. Everyone pays for the length of a turn, and exactly ONE
+   * member collects at the end of it. Comparing a turn's collection against
+   * every member's payout is the mistake — it makes a sound group look
+   * catastrophic.
+   *
+   * None of this decides the cashout. It shows the pool you are deciding from.
+   */
+  const n     = parseInt(form.max_members) || 0
+  const days  = parseInt(form.cycle_days) || 0
+  const rate  = parseFloat(form.contribution_amount) || 0
+  const cash  = parseFloat(form.cashout_amount) || 0
+  const fee   = parseFloat(form.registration_fee) || 0
+
+  const perTurnCollected = rate && n && days ? rate * n * days : null
+  const perTurnMargin    = perTurnCollected !== null && cash ? perTurnCollected - cash : null
+  const rotationMargin   = perTurnMargin !== null ? perTurnMargin * n : null
+  const commission       = fee * n
+  const pool             = perTurnCollected
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -111,15 +127,82 @@ export default function NewGroupPage() {
           </div>
         </div>
 
-        {/* Formula estimate */}
-        {formulaEst !== null && (
-          <div className="p-4 bg-tint border border-line rounded-[10px]">
-            <p className="text-xs text-ink-2 flex items-center gap-1.5 mb-2">Formula estimate (for reference only)</p>
-            <p className="text-ink-2 text-sm">
-              {form.contribution_amount} × {form.max_members} members × {form.cycle_days} days =
-              <span className="font-bold text-ink ml-1">GHS {formulaEst.toLocaleString()}</span>
+        {/* The pool you are deciding from. Never a suggested payout. */}
+        {pool !== null && (
+          <div className="p-4 bg-tint border border-line rounded-lg">
+            <p className="t-label mb-3">One turn — {days} days</p>
+            <table className="w-full">
+              <tbody className="divide-y divide-line border-y border-line">
+                <tr>
+                  <td className="py-2 text-[12.5px] text-ink-2">
+                    The group collects
+                    <span className="block text-[11px] text-ink-3 tnum">
+                      {rate} × {n} members × {days} days
+                    </span>
+                  </td>
+                  <td className="py-2 text-right text-[13.5px] font-medium tnum align-top">GHS {pool.toLocaleString()}</td>
+                </tr>
+                {cash > 0 && (
+                  <>
+                    <tr>
+                      <td className="py-2 text-[12.5px] text-ink-2">
+                        One member collects
+                        <span className="block text-[11px] text-ink-3">the cashout you set</span>
+                      </td>
+                      <td className="py-2 text-right text-[13.5px] font-medium tnum align-top">−GHS {cash.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 text-[12.5px] font-medium">Left, per turn</td>
+                      <td className={`py-2 text-right text-[14px] font-semibold tnum ${perTurnMargin !== null && perTurnMargin < 0 ? 'text-red' : ''}`}>
+                        GHS {(perTurnMargin ?? 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  </>
+                )}
+              </tbody>
+            </table>
+
+            {cash > 0 && (
+              <>
+                <p className="t-label mt-5 mb-3">Full rotation — {n} turns, {days * n} days</p>
+                <table className="w-full">
+                  <tbody className="divide-y divide-line border-y border-line">
+                    <tr>
+                      <td className="py-2 text-[12.5px] text-ink-2">
+                        From contributions
+                        <span className="block text-[11px] text-ink-3 tnum">{(perTurnMargin ?? 0).toLocaleString()} × {n} turns</span>
+                      </td>
+                      <td className="py-2 text-right text-[13.5px] font-medium tnum align-top">GHS {(rotationMargin ?? 0).toLocaleString()}</td>
+                    </tr>
+                    {commission > 0 && (
+                      <tr>
+                        <td className="py-2 text-[12.5px] text-ink-2">
+                          Registration commission
+                          <span className="block text-[11px] text-ink-3 tnum">{fee} × {n} members</span>
+                        </td>
+                        <td className="py-2 text-right text-[13.5px] font-medium tnum align-top">GHS {commission.toLocaleString()}</td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td className="py-2 text-[12.5px] font-medium">Total to you</td>
+                      <td className="py-2 text-right text-[15px] font-semibold tnum">
+                        GHS {((rotationMargin ?? 0) + commission).toLocaleString()}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            {perTurnMargin !== null && perTurnMargin < 0 && (
+              <p className="text-[12px] text-red mt-3">
+                The cashout is GHS {Math.abs(perTurnMargin).toLocaleString()} more than a turn collects.
+                You would lose money on every turn.
+              </p>
+            )}
+            <p className="text-[11.5px] text-ink-3 mt-3">
+              The cashout is yours to decide — nothing here calculates it.
             </p>
-            <p className="text-ink-2 text-xs mt-1">You can set any cashout amount below — the formula is just a reference.</p>
           </div>
         )}
 

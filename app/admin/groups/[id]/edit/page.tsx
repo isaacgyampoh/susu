@@ -47,6 +47,12 @@ export default function EditGroup() {
 
   const running = g?.status === 'active'
 
+  /* One turn: everyone pays for its length, one member collects at the end. */
+  const members    = Number(f.max_members) || 0
+  const perTurn    = (Number(f.contribution_amount) || 0) * members * (Number(f.cycle_days) || 0)
+  const turnMargin = perTurn - (Number(f.cashout_amount) || 0)
+  const commission = (Number(f.registration_fee) || 0) * members
+
   async function save(e: React.FormEvent, force = false) {
     e.preventDefault()
     setBusy(true); setErr(''); setNote('')
@@ -214,17 +220,41 @@ export default function EditGroup() {
           <table className="w-full">
             <tbody className="divide-y divide-line border-y border-line">
               <tr>
-                <td className="py-2.5 text-[12.5px] text-ink-2">Commission each</td>
-                <td className="py-2.5 text-right text-[13px] font-medium tnum">GHS {n0(f.registration_fee)}</td>
+                <td className="py-2.5 text-[12.5px] text-ink-2">
+                  Margin per turn
+                  <span className="block text-[11px] text-ink-3 tnum">
+                    {n0(perTurn)} collected − {n0(f.cashout_amount)} paid
+                  </span>
+                </td>
+                <td className={`py-2.5 text-right text-[13px] font-medium tnum align-top ${turnMargin < 0 ? 'text-red' : ''}`}>
+                  GHS {n0(turnMargin)}
+                </td>
               </tr>
               <tr>
-                <td className="py-2.5 text-[12.5px] text-ink-2">At {f.max_members || 0} members</td>
-                <td className="py-2.5 text-right text-[15px] font-semibold tnum">
-                  GHS {n0((Number(f.registration_fee) || 0) * (Number(f.max_members) || 0))}
+                <td className="py-2.5 text-[12.5px] text-ink-2">
+                  Over {members} turns
+                  <span className="block text-[11px] text-ink-3">full rotation</span>
                 </td>
+                <td className="py-2.5 text-right text-[13px] font-medium tnum align-top">GHS {n0(turnMargin * members)}</td>
+              </tr>
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">
+                  Commission
+                  <span className="block text-[11px] text-ink-3 tnum">{n0(f.registration_fee)} × {members}</span>
+                </td>
+                <td className="py-2.5 text-right text-[13px] font-medium tnum align-top">GHS {n0(commission)}</td>
+              </tr>
+              <tr>
+                <td className="py-2.5 text-[12.5px] font-medium">Total to you</td>
+                <td className="py-2.5 text-right text-[15px] font-semibold tnum">GHS {n0(turnMargin * members + commission)}</td>
               </tr>
             </tbody>
           </table>
+          {turnMargin < 0 && (
+            <p className="text-[12px] text-red mt-3">
+              The cashout exceeds what a turn collects. You lose money on every turn.
+            </p>
+          )}
           <p className="text-[11.5px] text-ink-3 mt-3">Never shown to members.</p>
         </div>
 

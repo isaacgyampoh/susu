@@ -30,6 +30,10 @@ serveWithCors(async (req) => {
       if (!b.name || !b.contribution_amount || !b.max_members || !b.cycle_days) {
         return error('name, contribution_amount, max_members and cycle_days are required')
       }
+      // The payout is decided, never derived. Without it there is no group.
+      if (!b.cashout_amount || Number(b.cashout_amount) <= 0) {
+        return error('Set the member cashout amount. It is what members are paid and it is not calculated from the other fields.')
+      }
 
       const { data: group, error: e } = await supabaseAdmin
         .from('susu_groups')
@@ -41,7 +45,7 @@ serveWithCors(async (req) => {
           cycle_days:             parseInt(b.cycle_days),
           max_members:            parseInt(b.max_members),
           registration_fee:       parseFloat(b.registration_fee ?? 0),
-          cashout_amount:         b.cashout_amount ? parseFloat(b.cashout_amount) : null,
+          cashout_amount:         parseFloat(b.cashout_amount),
           payment_deadline:       b.payment_deadline ?? '18:00:00',
           penalty_per_late_day:   parseFloat(b.penalty_per_late_day ?? 0),
           reg_fee_to_cashout:     false,   // commission is never folded into a payout
@@ -76,6 +80,10 @@ serveWithCors(async (req) => {
         if (k in patch && patch[k] !== null && patch[k] !== '') patch[k] = Number(patch[k])
       }
       if (Object.keys(patch).length === 0) return error('Nothing to update')
+
+      if ('cashout_amount' in patch && (!patch.cashout_amount || Number(patch.cashout_amount) <= 0)) {
+        return error('The member cashout cannot be empty. It is what members are paid.')
+      }
 
       // Once a schedule exists, structural edits would move real dates and money
       const { count: paidCount } = await supabaseAdmin
