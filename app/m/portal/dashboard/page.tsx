@@ -7,8 +7,8 @@ import { format, differenceInCalendarDays, isToday } from 'date-fns'
 import StampCard from '@/components/susu/stamp-card'
 import Rotation from '@/components/susu/rotation'
 import { useDeadline } from '@/components/susu/deadline'
+import { ghs as n0 } from '@/lib/money'
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })
 
 export default function Dashboard() {
   const [d, setD]       = useState<MemberDashboard | null>(null)

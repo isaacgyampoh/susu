@@ -4,8 +4,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { SusuGroup } from '@/types'
+import { ghs as n0 } from '@/lib/money'
 
-const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })
 
 export default function EditGroup() {
   const { id }  = useParams<{ id: string }>()

@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { AdminDashboard } from '@/types'
 import { format } from 'date-fns'
+import { ghs as n0 } from '@/lib/money'
 
-const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })
 
 export default function Dashboard() {
   const [d, setD]        = useState<AdminDashboard | null>(null)

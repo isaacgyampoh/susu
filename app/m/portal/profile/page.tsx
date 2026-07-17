@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { MemberDashboard } from '@/types'
 import { format } from 'date-fns'
+import { ghs as n0 } from '@/lib/money'
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { maximumFractionDigits: 0 })
 
 function Row({ k, v }: { k: string; v?: string | null }) {
   if (!v) return null
