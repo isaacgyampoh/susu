@@ -51,7 +51,7 @@ export default function NewGroupPage() {
 
       <form onSubmit={handleSubmit} className="border border-line rounded-[10px] p-6 space-y-5">
 
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <div className="sm:col-span-2">
             <label className="block text-sm text-ink-2 mb-1.5">Group Name *</label>
             <input className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"

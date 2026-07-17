@@ -73,16 +73,24 @@ export default function EditGroup() {
   if (!g)      return <div className="px-5 sm:px-8 py-10 text-[13px] text-ink-3">{err || 'Group not found'}</div>
 
   return (
-    <div className="px-5 sm:px-8 py-7 pb-16 max-w-[640px] animate-fade-in">
+    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
       <Link href="/admin/groups" className="text-[12.5px] font-medium text-ink-2 hover:text-ink transition-colors">
         Back to groups
       </Link>
 
-      <h1 className="t-title mt-4">Edit group</h1>
-      <p className="t-meta mt-1.5">{g.name} · {g.current_members}/{g.max_members} members · {g.status}</p>
+      <header className="mt-4 mb-7 flex items-start justify-between gap-6 flex-wrap">
+        <div>
+          <h1 className="t-title">Edit group</h1>
+          <p className="t-meta mt-1.5">{g.name} · {g.current_members}/{g.max_members} members · {g.status}</p>
+        </div>
+        <span className={g.status === 'active' ? 'pill-on' : 'pill-off'}>{g.status}</span>
+      </header>
+
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
+      <div className="min-w-0">
 
       {running && (
-        <div className="mt-5 p-3.5 rounded-lg border border-line bg-bg">
+        <div className="p-3.5 rounded-lg border border-line bg-bg mb-5">
           <p className="text-[12.5px] text-ink-2">
             This group is running. You can change the name, description, rules, notes,
             deadline, penalty and cashout. Changing the daily amount, cycle length,
@@ -92,10 +100,10 @@ export default function EditGroup() {
         </div>
       )}
 
-      {err  && <p className="mt-5 text-[12.5px] text-red bg-red/10 border border-red/20 rounded-lg px-3 py-2.5">{err}</p>}
-      {note && <p className="mt-5 text-[12.5px] text-ink bg-bg border border-line rounded-lg px-3 py-2.5">{note}</p>}
+      {err  && <p className="mb-5 text-[12.5px] text-red bg-red/10 border border-red/20 rounded-lg px-3 py-2.5">{err}</p>}
+      {note && <p className="mb-5 text-[12.5px] text-ink bg-bg border border-line rounded-lg px-3 py-2.5">{note}</p>}
 
-      <form onSubmit={e => save(e)} className="mt-6 space-y-5">
+      <form onSubmit={e => save(e)} className="card p-5 sm:p-6 space-y-5">
         <div>
           <label className="in-lbl">Group name</label>
           <input className="in" required value={f.name} onChange={e => set('name', e.target.value)} />
@@ -105,7 +113,7 @@ export default function EditGroup() {
           <input className="in" value={f.description} onChange={e => set('description', e.target.value)} />
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <div>
             <label className="in-lbl">Contribution (GHS)</label>
             <input className="in tnum" type="number" step="0.01" value={f.contribution_amount}
@@ -174,33 +182,79 @@ export default function EditGroup() {
           <Link href="/admin/groups" className="btn-line">Cancel</Link>
         </div>
       </form>
+      </div>
 
-      {/* Delete — guarded server-side, but say what will happen first */}
-      <div className="mt-12 pt-6 border-t border-line">
-        <h2 className="t-h2">Delete this group</h2>
-        <p className="t-meta mt-1.5 max-w-[460px]">
-          Only possible while a group has no members and no paid contributions.
-          Once money has gone in, deleting it would erase that record — mark it
-          completed instead.
-        </p>
+      {/* Aside: what the numbers being typed actually mean, and the danger zone.
+          This is what the extra width is for — not wider inputs. */}
+      <aside className="space-y-4 lg:sticky lg:top-6">
+        <div className="card p-5">
+          <p className="t-label mb-4">What members see</p>
+          <table className="w-full">
+            <tbody className="divide-y divide-line border-y border-line">
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">They pay</td>
+                <td className="py-2.5 text-right text-[13px] font-medium tnum">
+                  GHS {n0(f.contribution_amount)} <span className="text-ink-3 font-normal">{f.contribution_frequency}</span>
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">They collect</td>
+                <td className="py-2.5 text-right text-[15px] font-semibold tnum">GHS {n0(f.cashout_amount)}</td>
+              </tr>
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">Deadline</td>
+                <td className="py-2.5 text-right text-[13px] font-medium tnum">{f.payment_deadline || '18:00'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        {!confirm ? (
-          <button onClick={() => setConfirm(true)} className="btn-line btn-sm mt-4 !text-red !border-red/30">
-            Delete group
-          </button>
-        ) : (
-          <div className="mt-4 p-4 rounded-lg border border-red/30 bg-red/5 max-w-[460px]">
-            <p className="text-[13px] font-medium">Type the group name to confirm</p>
-            <p className="text-[12px] text-ink-2 mt-1">{g.name}</p>
-            <input className="in mt-3" value={typed} onChange={e => setTyped(e.target.value)} placeholder={g.name} />
-            <div className="flex gap-2 mt-3">
-              <button onClick={remove} disabled={busy || typed !== g.name} className="btn-red btn-sm">
-                {busy ? 'Deleting…' : 'Delete permanently'}
-              </button>
-              <button onClick={() => { setConfirm(false); setTyped('') }} className="btn-line btn-sm">Cancel</button>
+        <div className="card p-5">
+          <p className="t-label mb-4">Yours</p>
+          <table className="w-full">
+            <tbody className="divide-y divide-line border-y border-line">
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">Commission each</td>
+                <td className="py-2.5 text-right text-[13px] font-medium tnum">GHS {n0(f.registration_fee)}</td>
+              </tr>
+              <tr>
+                <td className="py-2.5 text-[12.5px] text-ink-2">At {f.max_members || 0} members</td>
+                <td className="py-2.5 text-right text-[15px] font-semibold tnum">
+                  GHS {n0((Number(f.registration_fee) || 0) * (Number(f.max_members) || 0))}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="text-[11.5px] text-ink-3 mt-3">Never shown to members.</p>
+        </div>
+
+        <div className="card p-5 border-red/25">
+          <p className="t-label !text-red mb-2">Delete this group</p>
+          <p className="text-[12px] text-ink-2 leading-relaxed">
+            Only possible while a group has no members and no paid contributions.
+            Once money has gone in, deleting would erase that record — mark it
+            completed instead.
+          </p>
+
+          {!confirm ? (
+            <button onClick={() => setConfirm(true)} className="btn-line btn-sm mt-4 w-full !text-red !border-red/30">
+              Delete group
+            </button>
+          ) : (
+            <div className="mt-4">
+              <p className="text-[12.5px] font-medium">Type the name to confirm</p>
+              <p className="text-[11.5px] text-ink-2 mt-0.5 mb-2">{g.name}</p>
+              <input className="in" value={typed} onChange={e => setTyped(e.target.value)} placeholder={g.name} />
+              <div className="flex gap-2 mt-3">
+                <button onClick={remove} disabled={busy || typed !== g.name} className="btn-red btn-sm flex-1">
+                  {busy ? 'Deleting…' : 'Delete'}
+                </button>
+                <button onClick={() => { setConfirm(false); setTyped('') }} className="btn-line btn-sm">Cancel</button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      </aside>
       </div>
     </div>
   )

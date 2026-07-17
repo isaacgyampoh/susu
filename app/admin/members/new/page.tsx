@@ -88,7 +88,7 @@ export default function AddMemberPage() {
   // Success: the admin's job here is to send the member their link.
   if (created) {
     return (
-      <div className="px-5 sm:px-8 py-7 pb-16 max-w-[560px] animate-fade-in">
+      <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 max-w-[560px] animate-fade-in">
         <p className="t-label">Member created</p>
         <h1 className="t-title mt-1.5">{created.full_name}</h1>
         <p className="t-meta mt-1">Send them the link and credentials below. They cannot sign in until you do.</p>
