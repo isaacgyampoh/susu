@@ -40,6 +40,7 @@ serveWithCors(async (req) => {
       const status    = url.searchParams.get('status')
       const group_id  = url.searchParams.get('group_id')
       const member_id = url.searchParams.get('member_id')
+      const sortAsc   = url.searchParams.get('sort') === 'asc'   // oldest first, for collection
       const page      = parseInt(url.searchParams.get('page') ?? '1')
       const limit     = 30
       const offset    = (page - 1) * limit
@@ -51,7 +52,7 @@ serveWithCors(async (req) => {
           members(id, member_id, full_name, phone),
           susu_groups(id, name)
         `, { count: 'exact' })
-        .order('due_date', { ascending: false })
+        .order('due_date', { ascending: sortAsc })
         .range(offset, offset + limit - 1)
 
       if (status)    query = query.eq('status', status)
