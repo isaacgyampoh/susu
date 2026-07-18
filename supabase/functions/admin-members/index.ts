@@ -13,8 +13,78 @@ serveWithCors(async (req) => {
   const url    = new URL(req.url)
   const method = req.method
   const id     = url.searchParams.get('id')
+  const membershipId = url.searchParams.get('membership_id')
 
   try {
+    // PATCH /admin-members?membership_id=xxx — edit payout details on a plan
+    if (method === 'PATCH' && membershipId) {
+      const body = await req.json()
+
+      const { data: gm } = await supabaseAdmin
+        .from('group_memberships')
+        .select('id, member_id, group_id, payout_position, payout_received, susu_groups(name)')
+        .eq('id', membershipId).single()
+      if (!gm) return error('Membership not found', 404)
+      if (gm.payout_received) return error('This payout has already been received and cannot be edited', 400)
+
+      const updates: Record<string, unknown> = {}
+
+      if (body.payout_position !== undefined && body.payout_position !== null && body.payout_position !== '') {
+        const newPos = Number(body.payout_position)
+        if (!Number.isInteger(newPos) || newPos < 1) return error('payout_position must be a positive whole number')
+        if (newPos !== gm.payout_position) {
+          const { data: clash } = await supabaseAdmin
+            .from('group_memberships').select('id')
+            .eq('group_id', gm.group_id).eq('payout_position', newPos)
+            .neq('id', membershipId).maybeSingle()
+          if (clash) return error(`Payout position #${newPos} is already taken in this group`, 409)
+          updates.payout_position = newPos
+        }
+      }
+      if (body.payout_date !== undefined)   updates.payout_date   = body.payout_date || null
+      if (body.payout_amount !== undefined && body.payout_amount !== '') {
+        const amt = Number(body.payout_amount)
+        if (isNaN(amt) || amt < 0) return error('payout_amount must be a positive number')
+        updates.payout_amount = amt
+      }
+
+      if (Object.keys(updates).length === 0) return error('Nothing to update')
+
+      const { error: upErr } = await supabaseAdmin
+        .from('group_memberships').update(updates).eq('id', membershipId)
+      if (upErr) return error(upErr.message, 500)
+
+      // Keep the payouts schedule in step with the membership
+      const { data: upcoming } = await supabaseAdmin
+        .from('payouts').select('id')
+        .eq('membership_id', membershipId).eq('status', 'upcoming')
+        .maybeSingle()
+
+      const newDate   = updates.payout_date !== undefined ? updates.payout_date : undefined
+      const newAmount = updates.payout_amount
+
+      if (newDate === null && upcoming) {
+        // Date cleared — remove the scheduled payout
+        await supabaseAdmin.from('payouts').delete().eq('id', upcoming.id)
+      } else if (upcoming) {
+        const patch: Record<string, unknown> = {}
+        if (typeof newDate === 'string') patch.scheduled_date = newDate
+        if (newAmount !== undefined)     patch.total_amount   = newAmount
+        if (Object.keys(patch).length) await supabaseAdmin.from('payouts').update(patch).eq('id', upcoming.id)
+      } else if (typeof newDate === 'string') {
+        // Date newly set and no scheduled payout yet — create one
+        const { data: fresh } = await supabaseAdmin
+          .from('group_memberships').select('payout_amount').eq('id', membershipId).single()
+        await supabaseAdmin.from('payouts').insert({
+          member_id: gm.member_id, group_id: gm.group_id, membership_id: membershipId,
+          total_amount: fresh?.payout_amount ?? 0, scheduled_date: newDate,
+          status: 'upcoming', notes: 'Scheduled by admin edit',
+        })
+      }
+
+      return json({ message: 'Payout details updated' })
+    }
+
     // GET /admin-members — list all members with filters
     if (method === 'GET' && !id) {
       const status = url.searchParams.get('status') ?? 'active'

@@ -16,6 +16,9 @@ export default function MemberDetailPage() {
   const [message, setMessage] = useState('')
   const [processing, setProcessing] = useState(false)
   const [toast, setToast]     = useState('')
+  const [editTarget, setEditTarget] = useState<any>(null)
+  const [editForm, setEditForm] = useState({ payout_position: '', payout_date: '', payout_amount: '' })
+  const [savingEdit, setSavingEdit] = useState(false)
 
   function showToast(m: string) { setToast(m); setTimeout(() => setToast(''), 3000) }
 
@@ -25,6 +28,33 @@ export default function MemberDetailPage() {
       .then(({ data }) => setMember(data?.member))
       .finally(() => setLoading(false))
   }, [id])
+
+  function openEdit(gm: any) {
+    setEditTarget(gm)
+    setEditForm({
+      payout_position: gm.payout_position ? String(gm.payout_position) : '',
+      payout_date:     gm.payout_date ?? '',
+      payout_amount:   gm.payout_amount != null ? String(gm.payout_amount) : '',
+    })
+  }
+
+  async function saveEdit() {
+    if (!editTarget) return
+    setSavingEdit(true)
+    const token = getAdminToken()
+    const { error } = await callFunction<{ message: string }>(
+      `admin-members?membership_id=${editTarget.id}`,
+      { method: 'PATCH', token: token!, body: {
+        payout_position: editForm.payout_position || undefined,
+        payout_date:     editForm.payout_date,           // '' clears the date
+        payout_amount:   editForm.payout_amount || undefined,
+      }})
+    setSavingEdit(false)
+    if (error) { alert(error); return }
+    setEditTarget(null)
+    showToast('Payout details updated')
+    load()
+  }
 
   async function handleStatusChange(status: string) {
     setProcessing(true)
@@ -188,6 +218,15 @@ export default function MemberDetailPage() {
                     {gm.status === 'defaulted' && gm.forfeit_reason && (
                       <p className="text-xs text-red mt-2 pt-2 border-t border-red/40">Reason: {gm.forfeit_reason}</p>
                     )}
+                    {gm.status === 'active' && !gm.payout_received && !gm.payout_date && (
+                      <p className="text-[11px] text-gold mt-1.5">No payout date set yet</p>
+                    )}
+                    {gm.status === 'active' && !gm.payout_received && (
+                      <button onClick={() => openEdit(gm)}
+                        className="mt-2 pt-2 border-t border-line w-full flex items-center justify-center gap-1.5 text-xs text-ink-2 hover:text-ink transition-colors">
+                        Edit payout date / position / amount
+                      </button>
+                    )}
                     {gm.status === 'active' && !gm.payout_received && (
                       <button onClick={() => setForfeitTarget(gm)}
                         className="mt-2 pt-2 border-t border-line w-full flex items-center justify-center gap-1.5 text-xs text-red hover:text-red transition-colors">
@@ -201,6 +240,46 @@ export default function MemberDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Edit payout modal */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setEditTarget(null)}>
+          <div className="bg-white border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div>
+              <h2 className="font-bold text-ink text-lg">Edit payout details</h2>
+              <p className="text-ink-2 text-xs mt-0.5">{editTarget.susu_groups?.name}</p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm text-ink-2 mb-1.5">Payout position</label>
+                <input type="number" min="1" value={editForm.payout_position}
+                  onChange={e => setEditForm(p => ({ ...p, payout_position: e.target.value }))}
+                  className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:border-ink" />
+              </div>
+              <div>
+                <label className="block text-sm text-ink-2 mb-1.5">Payout date</label>
+                <input type="date" value={editForm.payout_date}
+                  onChange={e => setEditForm(p => ({ ...p, payout_date: e.target.value }))}
+                  className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:border-ink" />
+                <p className="text-[11px] text-ink-3 mt-1">Clearing this removes the scheduled payout.</p>
+              </div>
+              <div>
+                <label className="block text-sm text-ink-2 mb-1.5">Payout amount (GHS)</label>
+                <input type="number" min="0" step="0.01" value={editForm.payout_amount}
+                  onChange={e => setEditForm(p => ({ ...p, payout_amount: e.target.value }))}
+                  className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:border-ink" />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setEditTarget(null)} className="flex-1 py-3 border border-line text-ink font-semibold rounded-[10px] hover:bg-tint transition-colors">Cancel</button>
+              <button onClick={saveEdit} disabled={savingEdit}
+                className="flex-1 py-3 bg-ink text-white font-semibold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-50">
+                {savingEdit ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Forfeit modal */}
       {forfeitTarget && (
