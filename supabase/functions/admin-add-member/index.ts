@@ -25,7 +25,11 @@ serveWithCors(async (req) => {
     const full_name         = formData.get('full_name') as string
     const phone             = formData.get('phone') as string
     const ghana_card_number = formData.get('ghana_card_number') as string
-    const group_id          = formData.get('group_id') as string
+
+    // Multi-group: 'group_ids' is a comma-separated list. The old single
+    // 'group_id' field is still honoured so nothing existing breaks.
+    const groupIdsRaw = (formData.get('group_ids') as string) || (formData.get('group_id') as string) || ''
+    const groupIds    = groupIdsRaw.split(',').map(s => s.trim()).filter(Boolean)
 
     if (!full_name || !phone || !ghana_card_number) {
       return error('full_name, phone, and ghana_card_number are required')
@@ -98,49 +102,48 @@ serveWithCors(async (req) => {
 
     if (memErr) return error(memErr.message, 500)
 
-    // Assign to group if provided
-    let assignedPosition: number | null = null
-    if (group_id) {
+    // Assign to one or more groups if provided
+    const assignments: { group_id: string; group_name: string; payout_position: number }[] = []
+    const feePaid = formData.get('registration_fee_paid') === 'true'
+
+    for (const gid of groupIds) {
       const { data: group } = await supabaseAdmin
-        .from('susu_groups').select('id, name, max_members, current_members, status')
-        .eq('id', group_id).single()
+        .from('susu_groups').select('id, name, max_members, current_members, status, registration_fee')
+        .eq('id', gid).single()
+      if (!group) continue
 
-      if (group) {
-        if (group.current_members >= group.max_members) {
-          return error(`Group "${group.name}" is full (${group.current_members}/${group.max_members})`, 400)
-        }
+      if (group.current_members >= group.max_members) {
+        return error(`Group "${group.name}" is full (${group.current_members}/${group.max_members})`, 400)
+      }
 
-        const { data: slots } = await supabaseAdmin
-          .from('group_memberships').select('payout_position')
-          .eq('group_id', group_id)
-          .order('payout_position', { ascending: false }).limit(1)
+      const { data: slots } = await supabaseAdmin
+        .from('group_memberships').select('payout_position')
+        .eq('group_id', gid)
+        .order('payout_position', { ascending: false }).limit(1)
 
-        assignedPosition = (slots?.[0]?.payout_position ?? 0) + 1
+      const position = (slots?.[0]?.payout_position ?? 0) + 1
 
-        const { error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
-          member_id: member.id, group_id,
-          payout_position: assignedPosition, status: 'active',
+      const { error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
+        member_id: member.id, group_id: gid,
+        payout_position: position, status: 'active',
+      })
+      if (gmErr) return error(`Member created but assignment to "${group.name}" failed: ${gmErr.message}`, 500)
+
+      assignments.push({ group_id: gid, group_name: group.name, payout_position: position })
+
+      // Record registration fee as a transaction if group has one
+      if (group.registration_fee > 0 && feePaid) {
+        await supabaseAdmin.from('transactions').insert({
+          member_id: member.id, type: 'registration_fee',
+          amount: group.registration_fee,
+          reference: `REG-${member.id}-${gid.slice(0, 8)}-${ts}`,
+          description: `Registration fee for "${group.name}" (recorded by admin)`,
+          status: 'success',
         })
-        if (gmErr) return error(`Member created but group assignment failed: ${gmErr.message}`, 500)
-
-        // Record registration fee as a transaction if group has one
-        const { data: fullGroup } = await supabaseAdmin
-          .from('susu_groups').select('registration_fee').eq('id', group_id).single()
-
-        if (fullGroup && fullGroup.registration_fee > 0) {
-          const feePaid = formData.get('registration_fee_paid') === 'true'
-          if (feePaid) {
-            await supabaseAdmin.from('transactions').insert({
-              member_id: member.id, type: 'registration_fee',
-              amount: fullGroup.registration_fee,
-              reference: `REG-${member.id}-${ts}`,
-              description: 'Registration fee (recorded by admin)',
-              status: 'success',
-            })
-          }
-        }
       }
     }
+
+    const assignedPosition = assignments[0]?.payout_position ?? null
 
     // Send welcome SMS (silently skipped if no AT key)
     await sendSMS(normPhone, smsTemplates.welcome(full_name, member.member_id, passcode, SIGNIN_URL))
@@ -154,7 +157,8 @@ serveWithCors(async (req) => {
         phone:     member.phone,
       },
       passcode,
-      payout_position: assignedPosition,
+      payout_position: assignedPosition,   // kept for old clients
+      assignments,                          // one entry per group joined
       portal_url: SIGNIN_URL,
     }, 201)
   } catch (e) {

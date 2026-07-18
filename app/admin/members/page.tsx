@@ -49,10 +49,16 @@ export default function MembersPage() {
           <h1 className="text-2xl font-extrabold text-ink">Members</h1>
           <p className="text-ink-2 text-sm mt-1">{total} total members</p>
         </div>
-        <Link href="/admin/members/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
-          Add Member
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/members/onboard"
+            className="flex items-center gap-2 px-4 py-2.5 border border-line text-ink font-semibold rounded-[10px] text-sm hover:bg-tint transition-colors">
+            Onboard Existing
+          </Link>
+          <Link href="/admin/members/new"
+            className="flex items-center gap-2 px-4 py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm hover:brightness-105 transition-colors">
+            Add Member
+          </Link>
+        </div>
       </div>
 
       {/* Controls */}

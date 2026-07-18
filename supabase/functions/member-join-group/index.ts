@@ -1,0 +1,94 @@
+import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
+import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
+import { requireMember }           from '../_shared/jwt.ts'
+
+/*
+ * A signed-in member joining MORE groups from the portal. They may select
+ * several at once ({ group_ids: [...] }); each is validated independently
+ * so one full group doesn't sink the whole request.
+ *
+ * Registration fees are not collected here — if a group has one, a pending
+ * 'registration_fee' transaction is recorded so the admin can collect and
+ * confirm it, exactly as with admin-recorded fees.
+ */
+serveWithCors(async (req) => {
+  const cors = handleCors(req)
+  if (cors) return cors
+  if (req.method !== 'POST') return error('Method not allowed', 405)
+
+  const session = await requireMember(req)
+  if (!session) return error('Unauthorized', 401)
+
+  try {
+    const memberId = session.sub as string
+    const { group_ids } = await req.json()
+    const ids: string[] = [...new Set((Array.isArray(group_ids) ? group_ids : []).filter(Boolean))]
+    if (ids.length === 0) return error('Select at least one group to join')
+
+    const { data: member } = await supabaseAdmin
+      .from('members').select('id, full_name, status').eq('id', memberId).single()
+    if (!member) return error('Member not found', 404)
+    if (member.status !== 'active') return error('Your account is not active. Contact the administrator.', 403)
+
+    const joined: any[] = []
+    const failed: any[] = []
+
+    for (const gid of ids) {
+      const { data: group } = await supabaseAdmin
+        .from('susu_groups')
+        .select('id, name, status, max_members, current_members, registration_fee, cashout_amount')
+        .eq('id', gid).single()
+
+      if (!group) { failed.push({ group_id: gid, reason: 'Group not found' }); continue }
+      if (!['open', 'full', 'active'].includes(group.status) || group.current_members >= group.max_members) {
+        failed.push({ group: group.name, reason: 'No longer accepting members' }); continue
+      }
+
+      const { data: existing } = await supabaseAdmin
+        .from('group_memberships').select('id')
+        .eq('member_id', memberId).eq('group_id', gid).maybeSingle()
+      if (existing) { failed.push({ group: group.name, reason: 'You are already in this group' }); continue }
+
+      const { data: slots } = await supabaseAdmin
+        .from('group_memberships').select('payout_position')
+        .eq('group_id', gid)
+        .order('payout_position', { ascending: false }).limit(1)
+      const position = (slots?.[0]?.payout_position ?? 0) + 1
+
+      const { error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
+        member_id: memberId, group_id: gid,
+        payout_position: position, status: 'active',
+      })
+      if (gmErr) { failed.push({ group: group.name, reason: gmErr.message }); continue }
+
+      if (Number(group.registration_fee) > 0) {
+        await supabaseAdmin.from('transactions').insert({
+          member_id: memberId, type: 'registration_fee',
+          amount: group.registration_fee,
+          reference: `REG-${memberId.slice(0, 8)}-${gid.slice(0, 8)}-${Date.now()}`,
+          description: `Registration fee for "${group.name}" (member joined from portal — awaiting payment)`,
+          status: 'pending',
+        })
+      }
+
+      joined.push({
+        group: group.name,
+        payout_position: position,
+        registration_fee: Number(group.registration_fee || 0),
+        cashout_amount:   Number(group.cashout_amount || 0),
+      })
+    }
+
+    if (joined.length === 0) {
+      return error(failed[0]?.reason ?? 'Could not join the selected groups', 400)
+    }
+
+    return json({
+      message: `Joined ${joined.length} group${joined.length > 1 ? 's' : ''}`,
+      joined, failed,
+    }, 201)
+  } catch (e) {
+    console.error(e)
+    return error('Internal server error', 500)
+  }
+})

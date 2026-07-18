@@ -64,6 +64,8 @@ export interface PaymentPenalty {
 export interface KYCApplication {
   id: string; full_name: string; phone: string; email?: string
   ghana_card_number: string; selected_group_id: string
+  selected_group_ids?: string[]
+  selected_groups?: { id: string; name: string }[]
   registration_fee_paid: boolean; status: KYCStatus
   rejection_reason?: string; submitted_at: string; reviewed_at?: string
   susu_groups?: { name: string }

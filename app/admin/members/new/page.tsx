@@ -15,6 +15,7 @@ export default function AddMemberPage() {
   const [copied, setCopied]     = useState(false)
   const [created, setCreated]   = useState<{
     member_id: string; full_name: string; phone: string; passcode: string; payout_position: number | null
+    assignments: { group_id: string; group_name: string; payout_position: number }[]
   } | null>(null)
 
   const [form, setForm] = useState({
@@ -22,8 +23,12 @@ export default function AddMemberPage() {
     ghana_card_number: '', date_of_birth: '', occupation: '', residential_address: '',
     mobile_money_number: '', mobile_money_provider: 'MTN',
     bank_name: '', bank_account_number: '', bank_account_name: '',
-    group_id: '', registration_fee_paid: 'true',
+    registration_fee_paid: 'true',
   })
+  const [groupIds, setGroupIds] = useState<string[]>([])
+
+  const toggleGroup = (id: string) =>
+    setGroupIds(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id])
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
 
@@ -40,6 +45,7 @@ export default function AddMemberPage() {
 
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => v && fd.append(k, v))
+    if (groupIds.length) fd.append('group_ids', groupIds.join(','))
     if (frontFile) fd.append('ghana_card_front', frontFile)
     if (backFile)  fd.append('ghana_card_back', backFile)
 
@@ -47,6 +53,7 @@ export default function AddMemberPage() {
     const { data, error: err } = await callFunction<{
       member: { member_id: string; full_name: string; phone: string }
       passcode: string; payout_position: number | null
+      assignments?: { group_id: string; group_name: string; payout_position: number }[]
     }>('admin-add-member', { method: 'POST', body: fd, token: token! })
 
     setLoading(false)
@@ -58,10 +65,12 @@ export default function AddMemberPage() {
       phone:           data!.member.phone,
       passcode:        data!.passcode,
       payout_position: data!.payout_position,
+      assignments:     data!.assignments ?? [],
     })
   }
 
-  const selectedGroup = groups.find(g => g.id === form.group_id)
+  const selectedGroups = groups.filter(g => groupIds.includes(g.id))
+  const totalRegFee    = selectedGroups.reduce((s, g) => s + Number(g.registration_fee || 0), 0)
 
   // Success screen
   const portalUrl = memberSignInUrl()
@@ -116,12 +125,12 @@ export default function AddMemberPage() {
                 <td className="py-2.5 text-[12.5px] text-ink-2">Member ID</td>
                 <td className="py-2.5 text-right text-[13px] font-medium">{created.member_id}</td>
               </tr>
-              {created.payout_position && (
-                <tr>
-                  <td className="py-2.5 text-[12.5px] text-ink-2">Payout position</td>
-                  <td className="py-2.5 text-right text-[13px] font-medium">#{created.payout_position}</td>
+              {created.assignments.map(a => (
+                <tr key={a.group_id}>
+                  <td className="py-2.5 text-[12.5px] text-ink-2">{a.group_name}</td>
+                  <td className="py-2.5 text-right text-[13px] font-medium">Payout position #{a.payout_position}</td>
                 </tr>
-              )}
+              ))}
             </tbody>
             </table>
           </div>
@@ -249,34 +258,49 @@ export default function AddMemberPage() {
           </div>
         </div>
 
-        {/* Group assignment */}
+        {/* Group assignment — a member can join several groups at once */}
         <div className="border-t border-line pt-5">
-          <h2 className="font-semibold text-ink mb-3 text-sm">Assign to Group</h2>
-          <select className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
-            value={form.group_id} onChange={e => set('group_id', e.target.value)}>
-            <option value="">No group (assign later)</option>
-            {groups.map(g => (
-              <option key={g.id} value={g.id}>
-                {g.name} — {g.current_members}/{g.max_members} members {g.current_members >= g.max_members ? '(FULL)' : ''}
-              </option>
-            ))}
-          </select>
+          <h2 className="font-semibold text-ink mb-1 text-sm">Assign to Groups</h2>
+          <p className="text-xs text-ink-3 mb-3">Tick every group this member should join. Leave all unticked to assign later.</p>
 
-          {selectedGroup && (
-            <div className="mt-3 p-3 bg-tint border border-line rounded-[10px] text-sm space-y-1">
-              <div className="flex justify-between"><span className="text-ink-2">Contribution</span><span className="text-ink">GHS {selectedGroup.contribution_amount}/{selectedGroup.contribution_frequency}</span></div>
-              <div className="flex justify-between"><span className="text-ink-2">Cashout</span><span className="text-ink font-bold">GHS {Number(selectedGroup.cashout_amount ?? 0).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-ink-2">Payout position</span><span className="text-ink">#{selectedGroup.current_members + 1}</span></div>
-              <div className="flex justify-between"><span className="text-ink-2">Registration fee</span><span className="text-ink">GHS {selectedGroup.registration_fee}</span></div>
-            </div>
-          )}
+          <div className="space-y-2">
+            {groups.map(g => {
+              const full    = g.current_members >= g.max_members
+              const checked = groupIds.includes(g.id)
+              return (
+                <label key={g.id}
+                  className={`flex items-start gap-3 p-3 border rounded-[10px] transition-colors ${
+                    full && !checked ? 'opacity-50 cursor-not-allowed border-line'
+                    : checked ? 'border-ink bg-tint cursor-pointer' : 'border-line hover:border-ink/40 cursor-pointer'}`}>
+                  <input type="checkbox" className="w-4 h-4 mt-0.5 accent-green"
+                    checked={checked} disabled={full && !checked}
+                    onChange={() => toggleGroup(g.id)} />
+                  <span className="flex-1">
+                    <span className="block text-sm font-semibold text-ink">
+                      {g.name} {full ? <span className="text-red font-normal">(FULL)</span> : ''}
+                    </span>
+                    <span className="block text-xs text-ink-2 mt-0.5">
+                      GHS {g.contribution_amount}/{g.contribution_frequency} · Cashout GHS {Number(g.cashout_amount ?? 0).toLocaleString()} ·
+                      {' '}{g.current_members}/{g.max_members} members · Reg. fee GHS {g.registration_fee}
+                    </span>
+                    {checked && (
+                      <span className="block text-xs text-ink mt-1">Payout position: next free slot (~#{g.current_members + 1})</span>
+                    )}
+                  </span>
+                </label>
+              )
+            })}
+            {groups.length === 0 && <p className="text-sm text-ink-3">No open groups available.</p>}
+          </div>
 
-          {selectedGroup && selectedGroup.registration_fee > 0 && (
+          {totalRegFee > 0 && (
             <label className="flex items-center gap-2 mt-3 cursor-pointer">
               <input type="checkbox" checked={form.registration_fee_paid === 'true'}
                 onChange={e => set('registration_fee_paid', e.target.checked ? 'true' : 'false')}
                 className="w-4 h-4 accent-green" />
-              <span className="text-sm text-ink">Registration fee of GHS {selectedGroup.registration_fee} has been paid</span>
+              <span className="text-sm text-ink">
+                Registration fee{selectedGroups.length > 1 ? 's' : ''} totalling GHS {totalRegFee.toLocaleString()} ha{selectedGroups.length > 1 ? 've' : 's'} been paid
+              </span>
             </label>
           )}
         </div>

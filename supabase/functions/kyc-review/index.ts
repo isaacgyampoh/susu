@@ -32,7 +32,20 @@ serveWithCors(async (req) => {
     if (status !== 'all') query = query.eq('status', status)
     const { data, error: dbErr } = await query
     if (dbErr) return error(dbErr.message, 500)
-    return json(data)
+
+    // Resolve names for multi-group selections
+    const allIds = [...new Set((data ?? []).flatMap((a: any) => a.selected_group_ids ?? []))]
+    let nameMap: Record<string, string> = {}
+    if (allIds.length > 0) {
+      const { data: gs } = await supabaseAdmin.from('susu_groups').select('id, name').in('id', allIds)
+      nameMap = Object.fromEntries((gs ?? []).map((g: any) => [g.id, g.name]))
+    }
+    const enriched = (data ?? []).map((a: any) => ({
+      ...a,
+      selected_groups: (a.selected_group_ids ?? [a.selected_group_id]).filter(Boolean)
+        .map((id: string) => ({ id, name: nameMap[id] ?? a.susu_groups?.name ?? '—' })),
+    }))
+    return json(enriched)
   }
 
   if (req.method !== 'POST') return error('Method not allowed', 405)
@@ -65,9 +78,18 @@ serveWithCors(async (req) => {
       return json({ message: 'Application rejected' })
     }
 
-    // APPROVE
-    const group = kyc.susu_groups
-    if (group.current_members >= group.max_members) return error('Group is now full', 400)
+    // APPROVE — the applicant may have chosen several groups
+    const targetIds: string[] = (kyc.selected_group_ids && kyc.selected_group_ids.length > 0)
+      ? kyc.selected_group_ids
+      : [kyc.selected_group_id]
+
+    const { data: targetGroups } = await supabaseAdmin
+      .from('susu_groups').select('id, name, max_members, current_members')
+      .in('id', targetIds)
+
+    const openTargets = (targetGroups ?? []).filter(g => g.current_members < g.max_members)
+    const fullTargets = (targetGroups ?? []).filter(g => g.current_members >= g.max_members)
+    if (openTargets.length === 0) return error('All selected groups are now full', 400)
 
     const passcode = generatePasscode()
 
@@ -97,18 +119,22 @@ serveWithCors(async (req) => {
 
     if (memErr) return error(memErr.message, 500)
 
-    // Assign next available payout position
-    const { data: slots } = await supabaseAdmin
-      .from('group_memberships').select('payout_position')
-      .eq('group_id', kyc.selected_group_id)
-      .order('payout_position', { ascending: false }).limit(1)
+    // Assign next available payout position in each open group
+    const assignments: { group: string; payout_position: number }[] = []
+    for (const g of openTargets) {
+      const { data: slots } = await supabaseAdmin
+        .from('group_memberships').select('payout_position')
+        .eq('group_id', g.id)
+        .order('payout_position', { ascending: false }).limit(1)
 
-    const nextPosition = (slots?.[0]?.payout_position ?? 0) + 1
+      const nextPosition = (slots?.[0]?.payout_position ?? 0) + 1
 
-    await supabaseAdmin.from('group_memberships').insert({
-      member_id: member.id, group_id: kyc.selected_group_id,
-      payout_position: nextPosition, status: 'active',
-    })
+      await supabaseAdmin.from('group_memberships').insert({
+        member_id: member.id, group_id: g.id,
+        payout_position: nextPosition, status: 'active',
+      })
+      assignments.push({ group: g.name, payout_position: nextPosition })
+    }
 
     // Update KYC
     await supabaseAdmin.from('kyc_applications')
@@ -123,6 +149,8 @@ serveWithCors(async (req) => {
       member_id:  member.member_id,
       passcode,   // also returned in response so admin can share manually if no SMS
       portal_url: SIGNIN_URL,
+      assignments,
+      skipped_full_groups: fullTargets.map(g => g.name),
     })
   } catch (e) {
     console.error(e)

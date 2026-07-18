@@ -14,10 +14,16 @@ serveWithCors(async (req) => {
     const full_name         = formData.get('full_name') as string
     const phone             = formData.get('phone') as string
     const ghana_card_number = formData.get('ghana_card_number') as string
-    const selected_group_id = formData.get('selected_group_id') as string
 
-    if (!full_name || !phone || !ghana_card_number || !selected_group_id) {
-      return error('full_name, phone, ghana_card_number, selected_group_id are required')
+    // An applicant may select several groups at once. 'selected_group_ids'
+    // is comma-separated; the old single 'selected_group_id' still works.
+    const rawIds = (formData.get('selected_group_ids') as string)
+                ?? (formData.get('selected_group_id') as string) ?? ''
+    const selectedGroupIds = [...new Set(rawIds.split(',').map(s => s.trim()).filter(Boolean))]
+    const selected_group_id = selectedGroupIds[0]
+
+    if (!full_name || !phone || !ghana_card_number || selectedGroupIds.length === 0) {
+      return error('full_name, phone, ghana_card_number and at least one selected group are required')
     }
 
     const normPhone = phone.trim().replace(/^0/, '+233').replace(/^\+?233/, '+233')
@@ -31,16 +37,22 @@ serveWithCors(async (req) => {
       .maybeSingle()
     if (existing) return error('An application with this phone number already exists', 409)
 
-    // Verify group
-    const { data: group } = await supabaseAdmin
+    // Verify every selected group
+    const { data: groupsData } = await supabaseAdmin
       .from('susu_groups')
       .select('id, name, registration_fee, status, current_members, max_members')
-      .eq('id', selected_group_id)
-      .single()
-    if (!group) return error('Group not found', 404)
-    if (!['open', 'full'].includes(group.status) || group.current_members >= group.max_members) {
-      return error('This group is no longer accepting new members', 400)
+      .in('id', selectedGroupIds)
+
+    if (!groupsData || groupsData.length !== selectedGroupIds.length) return error('One or more selected groups were not found', 404)
+    for (const g of groupsData) {
+      if (!['open', 'full'].includes(g.status) || g.current_members >= g.max_members) {
+        return error(`"${g.name}" is no longer accepting new members — remove it and try again`, 400)
+      }
     }
+
+    // Total registration fee across all selected groups
+    const totalFee = groupsData.reduce((s, g) => s + Number(g.registration_fee || 0), 0)
+    const group = { registration_fee: totalFee }
 
     // Upload Ghana Card images
     let frontUrl: string | null = null
@@ -85,6 +97,7 @@ serveWithCors(async (req) => {
         residential_address: formData.get('residential_address') as string | null,
         ghana_card_number, ghana_card_front_url: frontUrl, ghana_card_back_url: backUrl,
         selected_group_id,
+        selected_group_ids: selectedGroupIds,
         mobile_money_number:   formData.get('mobile_money_number') as string | null,
         mobile_money_provider: formData.get('mobile_money_provider') as string | null,
         bank_name:             formData.get('bank_name') as string | null,
@@ -109,7 +122,7 @@ serveWithCors(async (req) => {
         amount:       Math.round(group.registration_fee * 100),
         reference,
         callback_url: `${Deno.env.get('FRONTEND_URL') ?? ''}/join/${selected_group_id}?ref=${reference}`,
-        metadata:     { kyc_id: kyc.id, group_id: selected_group_id, type: 'registration_fee' },
+        metadata:     { kyc_id: kyc.id, group_id: selected_group_id, group_ids: selectedGroupIds, type: 'registration_fee' },
       })
       if (paystackRes.status) {
         paystackData = { authorization_url: paystackRes.data.authorization_url, reference: paystackRes.data.reference }

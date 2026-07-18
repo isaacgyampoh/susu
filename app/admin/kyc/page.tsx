@@ -60,7 +60,7 @@ export default function KYCPage() {
         passcode:  data.passcode,
         full_name: selected.full_name,
         phone:     selected.phone,
-        group:     (selected as any).susu_groups?.name,
+        group:     ((selected as any).selected_groups?.map((g: any) => g.name).join(', ')) ?? (selected as any).susu_groups?.name,
       })
     } else {
       showToast(action === 'approve' ? 'Member approved' : 'Application rejected')
@@ -132,7 +132,7 @@ export default function KYCPage() {
                 <tr key={app.id} className="hover:bg-tint transition-colors">
                   <td className="px-5 py-4 text-ink font-medium">{app.full_name}</td>
                   <td className="px-5 py-4 text-ink-2 hidden sm:table-cell">{app.phone}</td>
-                  <td className="px-5 py-4 text-ink-2 hidden md:table-cell">{(app as any).susu_groups?.name}</td>
+                  <td className="px-5 py-4 text-ink-2 hidden md:table-cell">{((app as any).selected_groups?.map((g: any) => g.name).join(', ')) ?? (app as any).susu_groups?.name}</td>
                   <td className="px-5 py-4">
                     <span className={app.registration_fee_paid ? 'badge-green' : 'badge-gold'}>
                       {app.registration_fee_paid ? 'Paid' : 'Pending'}
@@ -162,7 +162,7 @@ export default function KYCPage() {
                 ['Phone', selected.phone],
                 ['Email', (selected as any).email ?? '—'],
                 ['Ghana Card', selected.ghana_card_number],
-                ['Group', (selected as any).susu_groups?.name ?? '—'],
+                [((selected as any).selected_groups?.length ?? 0) > 1 ? 'Groups' : 'Group', ((selected as any).selected_groups?.map((g: any) => g.name).join(', ')) ?? (selected as any).susu_groups?.name ?? '—'],
                 ['Reg. Fee', selected.registration_fee_paid ? 'Paid' : '⏳ Pending'],
                 ['Status', selected.status],
               ].map(([k, v]) => (

@@ -7,6 +7,7 @@ import InstallApp from '@/components/install-app'
 const TABS = [
   { href: '/m/portal/dashboard', label: 'Home' },
   { href: '/m/portal/payments',  label: 'Payments' },
+  { href: '/m/portal/groups',    label: 'Groups' },
   { href: '/m/portal/profile',   label: 'Profile' },
 ]
 
