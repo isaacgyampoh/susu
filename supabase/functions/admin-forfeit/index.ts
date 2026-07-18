@@ -17,7 +17,7 @@ serveWithCors(async (req) => {
 
     const { data: m } = await supabaseAdmin
       .from('group_memberships')
-      .select('*, members(id, member_id, full_name, phone), susu_groups(name)')
+      .select('*, members!member_id(id, member_id, full_name, phone), susu_groups(name)')
       .eq('id', membership_id).single()
 
     if (!m) return error('Membership not found', 404)

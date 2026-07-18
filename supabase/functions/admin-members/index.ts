@@ -97,7 +97,7 @@ serveWithCors(async (req) => {
         .from('members')
         .select(`
           id, member_id, full_name, phone, email, status, created_at,
-          group_memberships(count),
+          group_memberships!member_id(count),
           contributions(count)
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
@@ -118,7 +118,7 @@ serveWithCors(async (req) => {
         .from('members')
         .select(`
           *,
-          group_memberships(
+          group_memberships!member_id(
             id, payout_position, payout_date, payout_amount, payout_received, status, joined_at,
             susu_groups(id, name, contribution_amount, status)
           ),

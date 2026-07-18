@@ -36,7 +36,7 @@ serveWithCors(async (req) => {
     // Notify all members in the group
     const { data: memberships } = await supabaseAdmin
       .from('group_memberships')
-      .select('members(full_name, phone, member_id), payout_date, payout_amount')
+      .select('members!member_id(full_name, phone, member_id), payout_date, payout_amount')
       .eq('group_id', group_id)
       .eq('status', 'active')
 

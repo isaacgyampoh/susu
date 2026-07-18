@@ -37,7 +37,7 @@ serveWithCors(async (req) => {
 
     if (report === 'contributions') {
       let q = supabaseAdmin.from('contributions')
-        .select('due_date, amount, status, paid_at, is_late, penalty_due, paystack_ref, members(member_id, full_name, phone), susu_groups(name)')
+        .select('due_date, amount, status, paid_at, is_late, penalty_due, paystack_ref, members!member_id(member_id, full_name, phone), susu_groups(name)')
         .order('due_date', { ascending: false }).limit(5000)
       if (group) q = q.eq('group_id', group)
       const { data } = await q
@@ -73,7 +73,7 @@ serveWithCors(async (req) => {
 
     else if (report === 'defaulters') {
       const { data } = await supabaseAdmin.from('group_memberships')
-        .select('forfeited_at, forfeit_reason, payout_position, status, members(member_id, full_name, phone), susu_groups(name)')
+        .select('forfeited_at, forfeit_reason, payout_position, status, members!member_id(member_id, full_name, phone), susu_groups(name)')
         .eq('status', 'defaulted').order('forfeited_at', { ascending: false })
       rows = (data ?? []).map((m: any) => ({
         member_id: m.members?.member_id, member_name: m.members?.full_name, phone: m.members?.phone,
