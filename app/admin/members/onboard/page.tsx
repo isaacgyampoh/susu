@@ -186,26 +186,26 @@ export default function OnboardMemberPage() {
   const field = "w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
 
   return (
-    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in max-w-[760px]">
-      <Link href="/admin/members" className="flex items-center gap-2 text-ink-2 hover:text-ink text-sm mb-6 transition-colors">
+    <div className="px-4 sm:px-8 lg:px-10 py-6 sm:py-7 pb-16 animate-fade-in">
+      <Link href="/admin/members" className="flex items-center gap-2 text-ink-2 hover:text-ink text-sm mb-5 sm:mb-6 transition-colors">
         Back to Members
       </Link>
 
-      <h1 className="text-2xl font-extrabold text-ink mb-2">Onboard Existing Member</h1>
-      <p className="text-ink-2 text-sm mb-8">
+      <h1 className="text-xl sm:text-2xl font-extrabold text-ink mb-2">Onboard Existing Member</h1>
+      <p className="text-ink-2 text-sm mb-6 sm:mb-8 max-w-[640px]">
         For members who were already contributing before this system. Record how much they have paid so far,
         when they started, and when their payout is due — across one or several groups.
       </p>
 
       {error && <div className="p-3 bg-tint border border-red/40 rounded-[10px] text-red text-sm mb-5">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="lg:grid lg:grid-cols-[380px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)] lg:gap-6 lg:items-start">
 
         {/* ── Who ── */}
-        <div className="border border-line rounded-[10px] p-6">
+        <div className="border border-line rounded-[10px] p-4 sm:p-6 lg:sticky lg:top-6 mb-6 lg:mb-0">
           <h2 className="font-semibold text-ink mb-3 text-sm">Member</h2>
 
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-4">
             {(['existing', 'new'] as const).map(m => (
               <button key={m} type="button" onClick={() => setMode(m)}
                 className={`px-4 py-2 rounded-[10px] text-sm font-semibold transition-all ${
@@ -247,7 +247,7 @@ export default function OnboardMemberPage() {
               </div>
             )
           ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm text-ink-2 mb-1.5">Full Name *</label>
                 <input required className={field} value={newMember.full_name}
@@ -286,12 +286,13 @@ export default function OnboardMemberPage() {
           )}
         </div>
 
-        {/* ── Plans ── */}
+        {/* ── Plans (right column on desktop) ── */}
+        <div className="space-y-5 sm:space-y-6">
         {plans.map((plan, i) => {
           const g = groupFor(plan.group_id)
           const days = daysPaid(plan)
           return (
-            <div key={i} className="border border-line rounded-[10px] p-6">
+            <div key={i} className="border border-line rounded-[10px] p-4 sm:p-6">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-ink text-sm">Group {plans.length > 1 ? i + 1 : ''} — existing progress</h2>
                 {plans.length > 1 && (
@@ -300,8 +301,8 @@ export default function OnboardMemberPage() {
                 )}
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
+              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="sm:col-span-2 xl:col-span-3">
                   <label className="block text-sm text-ink-2 mb-1.5">Susu Group *</label>
                   <select required className={field} value={plan.group_id}
                     onChange={e => {
@@ -357,7 +358,7 @@ export default function OnboardMemberPage() {
                     placeholder={g?.cashout_amount ? String(g.cashout_amount) : '0.00'} />
                 </div>
 
-                <label className="flex items-center gap-2 cursor-pointer sm:col-span-2">
+                <label className="flex items-center gap-2 cursor-pointer sm:col-span-2 xl:col-span-3">
                   <input type="checkbox" checked={plan.payout_received}
                     onChange={e => setPlan(i, { payout_received: e.target.checked })}
                     className="w-4 h-4 accent-green" />
@@ -377,6 +378,7 @@ export default function OnboardMemberPage() {
           className="w-full py-3.5 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50">
           {loading ? 'Onboarding…' : 'Onboard Member with Existing History'}
         </button>
+        </div>
       </form>
     </div>
   )
