@@ -115,140 +115,156 @@ serveWithCors(async (req) => {
       if (start_date > today)       return error('start_date cannot be in the future')
       if (amount_paid < 0)          return error('amount_paid cannot be negative')
 
+      const slots = Math.max(1, Math.min(10, Number(plan.slots ?? 1)))
+
       const { data: group } = await supabaseAdmin
         .from('susu_groups')
         .select('id, name, contribution_amount, cycle_days, max_members, current_members, cashout_amount, status')
         .eq('id', group_id).single()
       if (!group) return error(`Group not found: ${group_id}`, 404)
 
-      // Already in this group?
-      const { data: dupMem } = await supabaseAdmin
-        .from('group_memberships').select('id')
-        .eq('member_id', member.id).eq('group_id', group_id).maybeSingle()
-      if (dupMem) return error(`${member.full_name} is already a member of "${group.name}"`, 409)
-
-      if (group.current_members >= group.max_members) {
-        return error(`Group "${group.name}" is full (${group.current_members}/${group.max_members})`, 400)
+      if (group.current_members + slots > group.max_members) {
+        return error(`Group "${group.name}" only has ${group.max_members - group.current_members} slot(s) left — cannot take ${slots}`, 400)
       }
 
-      // Payout position: requested slot if free, otherwise next available
+      // Positions currently taken in this group
       const { data: taken } = await supabaseAdmin
         .from('group_memberships').select('payout_position')
         .eq('group_id', group_id)
       const usedSlots = new Set((taken ?? []).map((r: any) => r.payout_position))
 
-      let position = plan.payout_position ? Number(plan.payout_position) : null
-      if (position && usedSlots.has(position)) {
-        return error(`Payout position #${position} in "${group.name}" is already taken`, 409)
-      }
-      if (!position) {
-        position = 1
-        while (usedSlots.has(position)) position++
-      }
+      // The recorded amount is the member's TOTAL across all their slots;
+      // split it evenly, giving any rounding remainder to the last slot.
+      const perSlot = slots > 1 ? Math.floor((amount_paid / slots) * 100) / 100 : amount_paid
+      let backfilledTotal = 0
+      const slotResults: any[] = []
 
-      const payout_amount   = plan.payout_amount != null ? Number(plan.payout_amount) : Number(group.cashout_amount ?? 0)
-      const payout_date     = plan.payout_date || null
-      const payout_received = !!plan.payout_received
+      for (let sIdx = 0; sIdx < slots; sIdx++) {
+        // First slot may use the requested position; extras take next free
+        let position = sIdx === 0 && plan.payout_position ? Number(plan.payout_position) : 0
+        if (position && usedSlots.has(position)) {
+          return error(`Payout position #${position} in "${group.name}" is already taken`, 409)
+        }
+        if (!position) {
+          position = 1
+          while (usedSlots.has(position)) position++
+        }
+        usedSlots.add(position)
 
-      // ── Membership, joined_at backdated to when they actually started ──
-      const gmRow: Record<string, unknown> = {
-        member_id: member.id, group_id,
-        payout_position: position,
-        payout_date, payout_amount, payout_received,
-        status: 'active',
-        joined_at: `${start_date}T00:00:00Z`,
-        onboarded_existing: true,
-      }
-      let { data: membership, error: gmErr } = await supabaseAdmin
-        .from('group_memberships').insert(gmRow).select('id').single()
-      if (gmErr && /onboarded_existing/.test(gmErr.message)) {
-        // v9 migration not applied yet — the marker is nice-to-have, not load-bearing
-        delete gmRow.onboarded_existing
-        ;({ data: membership, error: gmErr } = await supabaseAdmin
-          .from('group_memberships').insert(gmRow).select('id').single())
-      }
-      if (gmErr || !membership) return error(`Membership failed for "${group.name}": ${gmErr?.message}`, 500)
+        const payout_amount   = plan.payout_amount != null ? Number(plan.payout_amount) : Number(group.cashout_amount ?? 0)
+        // Payout date/received apply to the FIRST slot; set the others
+        // per-slot afterwards from the member's page.
+        const payout_date     = sIdx === 0 ? (plan.payout_date || null) : null
+        const payout_received = sIdx === 0 ? !!plan.payout_received : false
 
-      // ── Backfill PAID contributions from start_date, daily ──
-      const daily = Number(group.contribution_amount)
-      const fullDays  = daily > 0 ? Math.floor(amount_paid / daily) : 0
-      const remainder = daily > 0 ? Math.round((amount_paid - fullDays * daily) * 100) / 100 : 0
+        const slotAmount = sIdx === slots - 1
+          ? Math.round((amount_paid - perSlot * (slots - 1)) * 100) / 100
+          : perSlot
 
-      const rows: any[] = []
-      for (let i = 0; i < fullDays; i++) {
-        const due = addDays(start_date, i)
-        rows.push({
-          member_id: member.id, group_id, membership_id: membership.id,
-          amount: daily, due_date: due, paid_at: `${due}T12:00:00Z`,
-          status: 'paid', cycle_number: Math.floor(i / group.cycle_days) + 1,
-          is_backfilled: true,
-        })
-      }
-      if (remainder > 0) {
-        const due = addDays(start_date, fullDays)
-        rows.push({
-          member_id: member.id, group_id, membership_id: membership.id,
-          amount: remainder, due_date: due, paid_at: `${due}T12:00:00Z`,
-          status: 'paid', cycle_number: Math.floor(fullDays / group.cycle_days) + 1,
-          is_backfilled: true,
-        })
-      }
+        // ── Membership, joined_at backdated to when they actually started ──
+        const gmRow: Record<string, unknown> = {
+          member_id: member.id, group_id,
+          payout_position: position,
+          payout_date, payout_amount, payout_received,
+          status: 'active',
+          joined_at: `${start_date}T00:00:00Z`,
+          onboarded_existing: true,
+        }
+        let { data: membership, error: gmErr } = await supabaseAdmin
+          .from('group_memberships').insert(gmRow).select('id').single()
+        if (gmErr && /onboarded_existing/.test(gmErr.message)) {
+          delete gmRow.onboarded_existing
+          ;({ data: membership, error: gmErr } = await supabaseAdmin
+            .from('group_memberships').insert(gmRow).select('id').single())
+        }
+        if (gmErr || !membership) return error(`Membership failed for "${group.name}": ${gmErr?.message}`, 500)
 
-      // ── Forward PENDING schedule from today (or day after history ends)
-      //    up to schedule_end_date (default: payout_date) ──
-      const scheduleEnd = plan.schedule_end_date || payout_date
-      if (scheduleEnd) {
-        const historyEnd = addDays(start_date, fullDays + (remainder > 0 ? 1 : 0) - 1)
-        let cursor = historyEnd >= today ? addDays(historyEnd, 1) : today
-        let i = fullDays + (remainder > 0 ? 1 : 0)
-        while (cursor <= scheduleEnd) {
+        // ── Backfill PAID contributions for this slot, daily from start ──
+        const daily = Number(group.contribution_amount)
+        const fullDays  = daily > 0 ? Math.floor(slotAmount / daily) : 0
+        const remainder = daily > 0 ? Math.round((slotAmount - fullDays * daily) * 100) / 100 : 0
+
+        const rows: any[] = []
+        for (let i = 0; i < fullDays; i++) {
+          const due = addDays(start_date, i)
           rows.push({
             member_id: member.id, group_id, membership_id: membership.id,
-            amount: daily, due_date: cursor,
-            status: 'pending', cycle_number: Math.floor(i / group.cycle_days) + 1,
+            amount: daily, due_date: due, paid_at: `${due}T12:00:00Z`,
+            status: 'paid', cycle_number: Math.floor(i / group.cycle_days) + 1,
+            is_backfilled: true,
           })
-          cursor = addDays(cursor, 1); i++
         }
-      }
-
-      // Insert in chunks — long histories can be hundreds of rows
-      for (let i = 0; i < rows.length; i += 400) {
-        let chunk = rows.slice(i, i + 400)
-        let { error: cErr } = await supabaseAdmin.from('contributions').insert(chunk)
-        if (cErr && /is_backfilled/.test(cErr.message)) {
-          chunk = chunk.map(({ is_backfilled: _drop, ...rest }) => rest)
-          ;({ error: cErr } = await supabaseAdmin.from('contributions').insert(chunk))
+        if (remainder > 0) {
+          const due = addDays(start_date, fullDays)
+          rows.push({
+            member_id: member.id, group_id, membership_id: membership.id,
+            amount: remainder, due_date: due, paid_at: `${due}T12:00:00Z`,
+            status: 'paid', cycle_number: Math.floor(fullDays / group.cycle_days) + 1,
+            is_backfilled: true,
+          })
         }
-        if (cErr) return error(`Contribution backfill failed for "${group.name}": ${cErr.message}`, 500)
-      }
 
-      // ── Payout record ──
-      if (payout_date || payout_received) {
-        await supabaseAdmin.from('payouts').insert({
-          member_id: member.id, group_id, membership_id: membership.id,
-          total_amount: payout_amount,
-          scheduled_date: payout_date ?? today,
-          status: payout_received ? 'paid' : 'upcoming',
-          paid_at: payout_received ? new Date().toISOString() : null,
-          notes: 'Created during onboarding of existing member',
-        })
+        // ── Forward PENDING schedule up to schedule_end (default payout_date) ──
+        const scheduleEnd = plan.schedule_end_date || payout_date
+        if (scheduleEnd) {
+          const historyEnd = addDays(start_date, fullDays + (remainder > 0 ? 1 : 0) - 1)
+          let cursor = historyEnd >= today ? addDays(historyEnd, 1) : today
+          let i = fullDays + (remainder > 0 ? 1 : 0)
+          while (cursor <= scheduleEnd) {
+            rows.push({
+              member_id: member.id, group_id, membership_id: membership.id,
+              amount: daily, due_date: cursor,
+              status: 'pending', cycle_number: Math.floor(i / group.cycle_days) + 1,
+            })
+            cursor = addDays(cursor, 1); i++
+          }
+        }
+
+        for (let i = 0; i < rows.length; i += 400) {
+          let chunk = rows.slice(i, i + 400)
+          let { error: cErr } = await supabaseAdmin.from('contributions').insert(chunk)
+          if (cErr && /is_backfilled/.test(cErr.message)) {
+            chunk = chunk.map(({ is_backfilled: _drop, ...rest }) => rest)
+            ;({ error: cErr } = await supabaseAdmin.from('contributions').insert(chunk))
+          }
+          if (cErr) return error(`Contribution backfill failed for "${group.name}": ${cErr.message}`, 500)
+        }
+
+        // ── Payout record ──
+        if (payout_date || payout_received) {
+          await supabaseAdmin.from('payouts').insert({
+            member_id: member.id, group_id, membership_id: membership.id,
+            total_amount: payout_amount,
+            scheduled_date: payout_date ?? today,
+            status: payout_received ? 'paid' : 'upcoming',
+            paid_at: payout_received ? new Date().toISOString() : null,
+            notes: 'Created during onboarding of existing member',
+          })
+        }
+
+        backfilledTotal += fullDays + (remainder > 0 ? 1 : 0)
+        slotResults.push({ payout_position: position, payout_date, amount: slotAmount })
       }
 
       // ── Audit trail: one summary transaction for the historical money ──
       if (amount_paid > 0) {
         await supabaseAdmin.from('transactions').insert({
           member_id: member.id, type: 'contribution', amount: amount_paid,
-          reference: `ONBOARD-${membership.id}`,
-          description: `Historical contributions for "${group.name}" (onboarded existing member, started ${start_date})`,
+          reference: `ONBOARD-${member.id.slice(0, 8)}-${group_id.slice(0, 8)}-${Date.now()}`,
+          description: `Historical contributions for "${group.name}"${slots > 1 ? ` across ${slots} slots` : ''} (onboarded existing member, started ${start_date})`,
           status: 'success',
         })
       }
 
       results.push({
         group: group.name,
-        payout_position: position,
-        payout_date, payout_amount, payout_received,
-        contributions_backfilled: fullDays + (remainder > 0 ? 1 : 0),
+        slots,
+        slot_details: slotResults,
+        payout_position: slotResults[0]?.payout_position,
+        payout_date: slotResults[0]?.payout_date ?? null,
+        payout_amount: plan.payout_amount != null ? Number(plan.payout_amount) : Number(group.cashout_amount ?? 0),
+        payout_received: !!plan.payout_received,
+        contributions_backfilled: backfilledTotal,
         amount_recorded: amount_paid,
       })
     }

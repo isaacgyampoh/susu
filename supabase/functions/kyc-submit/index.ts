@@ -17,9 +17,21 @@ serveWithCors(async (req) => {
 
     // An applicant may select several groups at once. 'selected_group_ids'
     // is comma-separated; the old single 'selected_group_id' still works.
+    // Preferred: selected_groups JSON [{ id, slots }]; legacy: comma ids
+    let slotMap: Record<string, number> = {}
+    try {
+      const rawSel = formData.get('selected_groups') as string | null
+      if (rawSel) for (const g of JSON.parse(rawSel)) {
+        if (g?.id) slotMap[g.id] = Math.max(1, Math.min(10, Number(g.slots ?? 1)))
+      }
+    } catch (_) { /* fall through to ids */ }
+
     const rawIds = (formData.get('selected_group_ids') as string)
                 ?? (formData.get('selected_group_id') as string) ?? ''
-    const selectedGroupIds = [...new Set(rawIds.split(',').map(s => s.trim()).filter(Boolean))]
+    const selectedGroupIds = Object.keys(slotMap).length > 0
+      ? Object.keys(slotMap)
+      : [...new Set(rawIds.split(',').map(s => s.trim()).filter(Boolean))]
+    if (Object.keys(slotMap).length === 0) for (const id of selectedGroupIds) slotMap[id] = 1
     const selected_group_id = selectedGroupIds[0]
 
     if (!full_name || !phone || !ghana_card_number || selectedGroupIds.length === 0) {
@@ -45,13 +57,14 @@ serveWithCors(async (req) => {
 
     if (!groupsData || groupsData.length !== selectedGroupIds.length) return error('One or more selected groups were not found', 404)
     for (const g of groupsData) {
-      if (!['open', 'full'].includes(g.status) || g.current_members >= g.max_members) {
-        return error(`"${g.name}" is no longer accepting new members — remove it and try again`, 400)
+      const want = slotMap[g.id] ?? 1
+      if (!['open', 'full'].includes(g.status) || g.current_members + want > g.max_members) {
+        return error(`"${g.name}" cannot take ${want} slot(s) — only ${Math.max(0, g.max_members - g.current_members)} left`, 400)
       }
     }
 
-    // Total registration fee across all selected groups
-    const totalFee = groupsData.reduce((s, g) => s + Number(g.registration_fee || 0), 0)
+    // Total registration fee: fee × slots, across all selected groups
+    const totalFee = groupsData.reduce((s, g) => s + Number(g.registration_fee || 0) * (slotMap[g.id] ?? 1), 0)
     const group = { registration_fee: totalFee }
 
     // Upload Ghana Card images
@@ -96,6 +109,7 @@ serveWithCors(async (req) => {
         ghana_card_number, ghana_card_front_url: frontUrl, ghana_card_back_url: backUrl,
         selected_group_id,
         selected_group_ids: selectedGroupIds,
+        selected_slots: slotMap,
         mobile_money_number:   formData.get('mobile_money_number') as string | null,
         mobile_money_provider: formData.get('mobile_money_provider') as string | null,
         bank_name:             formData.get('bank_name') as string | null,
@@ -108,6 +122,11 @@ serveWithCors(async (req) => {
       })
     let { data: kyc, error: kycErr } = await supabaseAdmin
       .from('kyc_applications').insert(kycRow).select('id').single()
+    if (kycErr && /selected_slots/.test(kycErr.message)) {
+      delete kycRow.selected_slots
+      ;({ data: kyc, error: kycErr } = await supabaseAdmin
+        .from('kyc_applications').insert(kycRow).select('id').single())
+    }
     if (kycErr && /selected_group_ids/.test(kycErr.message)) {
       // v9 migration not applied — keep the first choice, drop the array
       delete kycRow.selected_group_ids

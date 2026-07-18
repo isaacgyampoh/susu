@@ -16,6 +16,7 @@ const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH')
 export default function JoinPage() {
   const [groups, setGroups]   = useState<SusuGroup[]>([])
   const [picked, setPicked]   = useState<Set<string>>(new Set())
+  const [slotsFor, setSlotsFor] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError]     = useState('')
@@ -42,7 +43,7 @@ export default function JoinPage() {
     })
 
   const pickedGroups = groups.filter(g => picked.has(g.id))
-  const totalFee     = pickedGroups.reduce((s, g) => s + Number(g.registration_fee || 0), 0)
+  const totalFee     = pickedGroups.reduce((s, g) => s + Number(g.registration_fee || 0) * (slotsFor[g.id] || 1), 0)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -55,6 +56,7 @@ export default function JoinPage() {
     setSending(true)
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => v && fd.append(k, v))
+    fd.append('selected_groups', JSON.stringify(Array.from(picked).map(id => ({ id, slots: slotsFor[id] || 1 }))))
     fd.append('selected_group_ids', Array.from(picked).join(','))
 
     const { data, error: err } = await callFunction<{
@@ -139,6 +141,20 @@ export default function JoinPage() {
                           {Number(g.registration_fee) > 0 && <> · Registration GHS {n0(g.registration_fee)}</>}
                         </span>
                         {g.description && <span className="block text-[11px] text-ink-3 mt-1">{g.description}</span>}
+                        {checked && (
+                          <span className="flex items-center gap-2 mt-2" onClick={e => e.preventDefault()}>
+                            <span className="text-[12px] text-ink-2">How many slots?</span>
+                            {[1,2,3,4,5].map(n => (
+                              <button key={n} type="button"
+                                onClick={e => { e.stopPropagation(); setSlotsFor(prev => ({ ...prev, [g.id]: n })) }}
+                                disabled={g.current_members + n > g.max_members}
+                                className={`w-8 h-8 rounded-[9px] text-[13px] font-bold transition-all disabled:opacity-30 ${
+                                  (slotsFor[g.id] || 1) === n ? 'bg-ink text-white' : 'bg-white border border-line text-ink-2'}`}>
+                                {n}
+                              </button>
+                            ))}
+                          </span>
+                        )}
                       </span>
                     </label>
                   )

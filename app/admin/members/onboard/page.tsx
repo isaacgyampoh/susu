@@ -16,6 +16,7 @@ import type { SusuGroup } from '@/types'
 
 type PlanForm = {
   group_id: string
+  slots: string
   start_date: string
   amount_paid: string
   payout_position: string
@@ -25,7 +26,7 @@ type PlanForm = {
 }
 
 const emptyPlan = (): PlanForm => ({
-  group_id: '', start_date: '', amount_paid: '',
+  group_id: '', slots: '1', start_date: '', amount_paid: '',
   payout_position: '', payout_date: '', payout_amount: '', payout_received: false,
 })
 
@@ -102,6 +103,7 @@ export default function OnboardMemberPage() {
     const body: any = {
       plans: plans.map(p => ({
         group_id: p.group_id,
+        slots: Math.max(1, parseInt(p.slots || '1')),
         start_date: p.start_date,
         amount_paid: parseFloat(p.amount_paid || '0'),
         payout_position: p.payout_position ? parseInt(p.payout_position) : undefined,
@@ -144,6 +146,8 @@ export default function OnboardMemberPage() {
                 <span className="text-right font-medium tnum">GHS {Number(p.amount_recorded).toLocaleString()}</span>
                 <span className="text-ink-2">Backfilled days</span>
                 <span className="text-right font-medium tnum">{p.contributions_backfilled}</span>
+                {p.slots > 1 && (<><span className="text-ink-2">Slots</span>
+                <span className="text-right font-medium">{p.slots} (positions {p.slot_details?.map((d: any) => `#${d.payout_position}`).join(', ')})</span></>)}
                 <span className="text-ink-2">Payout position</span>
                 <span className="text-right font-medium">#{p.payout_position}</span>
                 <span className="text-ink-2">Payout date</span>
@@ -319,6 +323,17 @@ export default function OnboardMemberPage() {
                         </option>
                       ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-ink-2 mb-1.5">Slots in this group</label>
+                  <input type="number" min="1" max="10" className={field}
+                    value={plan.slots} onChange={e => setPlan(i, { slots: e.target.value })} />
+                  {parseInt(plan.slots || '1') > 1 && (
+                    <p className="text-xs text-ink-3 mt-1.5">
+                      Amount paid is split across {plan.slots} slots. Payout date/position apply to the first slot — set the others from the member's page after.
+                    </p>
+                  )}
                 </div>
 
                 <div>

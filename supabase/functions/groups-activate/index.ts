@@ -15,7 +15,7 @@ serveWithCors(async (req) => {
   if (!admin) return error('Unauthorized', 401)
 
   try {
-    const { group_id, start_date, force, allow_past } = await req.json()
+    const { group_id, start_date, force, allow_past, recompute_payouts, notify = true } = await req.json()
     if (!group_id || !start_date) return error('group_id and start_date are required')
 
     // A past start date is valid for legacy groups that pre-date this system,
@@ -30,12 +30,17 @@ serveWithCors(async (req) => {
       p_start_date: start_date,
       p_force:      !!force,
       p_allow_past: !!allow_past,
+      p_recompute_payouts: recompute_payouts === undefined ? null : !!recompute_payouts,
     })
 
     // The DB guards against rebuilding a schedule members have paid into
     if (activateErr) return error(activateErr.message, 409)
 
     // Notify all members in the group
+    if (!notify) {
+      return json({ message: 'Schedule rebuilt from the new start date. Members were not notified.' })
+    }
+
     const { data: memberships } = await supabaseAdmin
       .from('group_memberships')
       .select('members!member_id(full_name, phone, member_id), payout_date, payout_amount')

@@ -10,6 +10,9 @@ export default function GroupsPage() {
   const [activating, setActivating] = useState<string | null>(null)
   const [activateErr, setActivateErr] = useState('')
   const [allowPast, setAllowPast]     = useState(false)
+  const [editMode, setEditMode]       = useState(false)      // correcting an active group's date
+  const [recompute, setRecompute]     = useState(true)
+  const [notifySms, setNotifySms]     = useState(true)
   const [startDate, setStartDate]   = useState('')
   const [activateTarget, setActivateTarget] = useState<SusuGroup | null>(null)
   const [toast, setToast]     = useState('')
@@ -34,7 +37,7 @@ export default function GroupsPage() {
     setActivateErr('')
     const token = getAdminToken()
     const { error } = await callFunction('groups-activate', {
-      method: 'POST', body: { group_id: activateTarget.id, start_date: startDate, force, allow_past: allowPast }, token: token!,
+      method: 'POST', body: { group_id: activateTarget.id, start_date: startDate, force: force || editMode, allow_past: allowPast, recompute_payouts: editMode ? recompute : undefined, notify: editMode ? notifySms : true }, token: token!,
     })
     setActivating(null)
     if (error) { setActivateErr(error); return }
@@ -117,7 +120,7 @@ export default function GroupsPage() {
 
                 {/* Activate button — only show for full/open groups */}
                 {(g.status === 'full' || g.status === 'open') && g.current_members > 0 && (
-                  <button onClick={() => { setActivateTarget(g); setStartDate(''); setActivateErr(''); setAllowPast(false) }}
+                  <button onClick={() => { setActivateTarget(g); setEditMode(false); setStartDate(''); setActivateErr(''); setAllowPast(false); setRecompute(true); setNotifySms(true) }}
                     className="flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm transition-colors">
                     Activate Group
                   </button>
@@ -128,6 +131,10 @@ export default function GroupsPage() {
                 {g.status === 'active' && (
                   <div className="flex items-center justify-center gap-2 text-ink text-sm py-2">
                     Running since {g.start_date ? format(new Date(g.start_date), 'MMM d, yyyy') : '—'}
+                    <button onClick={() => { setActivateTarget(g); setEditMode(true); setStartDate(g.start_date ?? ''); setActivateErr(''); setAllowPast(false); setRecompute(true); setNotifySms(false) }}
+                      className="text-xs text-ink-2 underline underline-offset-2 hover:text-ink transition-colors">
+                      change date
+                    </button>
                   </div>
                 )}
               </div>
@@ -140,9 +147,11 @@ export default function GroupsPage() {
       {activateTarget && (
         <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setActivateTarget(null)}>
           <div className="border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
-            <h2 className="font-bold text-ink text-lg">Activate: {activateTarget.name}</h2>
+            <h2 className="font-bold text-ink text-lg">{editMode ? 'Change start date' : 'Activate'}: {activateTarget.name}</h2>
             <p className="text-ink-2 text-sm">
-              This will generate the full contribution schedule and payout dates for all {activateTarget.current_members} members, and notify them via SMS.
+              {editMode
+                ? 'Fix a wrongly entered start date. Paid days are kept; the pending schedule is rebuilt from the new date.'
+                : `This will generate the full contribution schedule and payout dates for all ${activateTarget.current_members} members.`}
             </p>
             <div>
               <label className="block text-sm text-ink-2 mb-1.5">Start Date *</label>
@@ -172,6 +181,23 @@ export default function GroupsPage() {
                 </label>
               </div>
             )}
+            {editMode && (
+              <div className="space-y-2.5">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={recompute} onChange={e => setRecompute(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 accent-green" />
+                  <span className="text-xs text-ink leading-relaxed">
+                    <strong>Recompute payout dates</strong> from the new start date and positions.
+                    Untick to keep every member's current payout date and only shift the daily schedule.
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={notifySms} onChange={e => setNotifySms(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 accent-green" />
+                  <span className="text-xs text-ink">Send SMS to members about their (new) payout date</span>
+                </label>
+              </div>
+            )}
             {activateErr && (
               <div className="p-3 rounded-[3px] border border-red-200 bg-red-50">
                 <p className="text-[12px] text-red-700 font-medium">{activateErr}</p>
@@ -186,8 +212,8 @@ export default function GroupsPage() {
 
             <button onClick={() => activateGroup(false)} disabled={!!activating || !startDate}
               className="w-full flex items-center justify-center gap-2 py-3.5 bg-ink text-white font-bold rounded-[10px] transition-colors disabled:opacity-50">
-              {activating ? 'Activating…' : 'Activate and notify members'}
-              Activate & Notify Members
+              {activating ? (editMode ? 'Rebuilding…' : 'Activating…')
+                : editMode ? 'Change start date & rebuild schedule' : 'Activate & Notify Members'}
             </button>
             <button onClick={() => setActivateTarget(null)} className="w-full text-ink-2 text-sm hover:text-ink transition-colors py-2">Cancel</button>
           </div>

@@ -43,7 +43,11 @@ serveWithCors(async (req) => {
     const enriched = (data ?? []).map((a: any) => ({
       ...a,
       selected_groups: (a.selected_group_ids ?? [a.selected_group_id]).filter(Boolean)
-        .map((id: string) => ({ id, name: nameMap[id] ?? a.susu_groups?.name ?? '—' })),
+        .map((id: string) => ({
+          id,
+          name: nameMap[id] ?? a.susu_groups?.name ?? '—',
+          slots: Math.max(1, Number(a.selected_slots?.[id] ?? 1)),
+        })),
     }))
     return json(enriched)
   }
@@ -92,8 +96,9 @@ serveWithCors(async (req) => {
     // body.payout_dates = { "<group_id>": "YYYY-MM-DD", ... }
     const payoutDates: Record<string, string> = body.payout_dates ?? {}
 
-    const openTargets = (targetGroups ?? []).filter(g => g.current_members < g.max_members)
-    const fullTargets = (targetGroups ?? []).filter(g => g.current_members >= g.max_members)
+    const slotWanted = (gid: string) => Math.max(1, Math.min(10, Number(kyc.selected_slots?.[gid] ?? 1)))
+    const openTargets = (targetGroups ?? []).filter(g => g.current_members + slotWanted(g.id) <= g.max_members)
+    const fullTargets = (targetGroups ?? []).filter(g => g.current_members + slotWanted(g.id) > g.max_members)
     if (openTargets.length === 0) return error('All selected groups are now full', 400)
 
     const passcode = generatePasscode()
@@ -127,30 +132,36 @@ serveWithCors(async (req) => {
     // Assign next available payout position in each open group
     const assignments: { group: string; payout_position: number; payout_date?: string | null }[] = []
     for (const g of openTargets) {
-      const { data: slots } = await supabaseAdmin
+      const wanted = slotWanted(g.id)
+      const { data: taken } = await supabaseAdmin
         .from('group_memberships').select('payout_position')
         .eq('group_id', g.id)
-        .order('payout_position', { ascending: false }).limit(1)
+      const used = new Set((taken ?? []).map((r: any) => r.payout_position))
 
-      const nextPosition = (slots?.[0]?.payout_position ?? 0) + 1
-      const payoutDate   = payoutDates[g.id] || null
       const payoutAmount = Number(g.cashout_amount ?? 0)
+      for (let i = 0; i < wanted; i++) {
+        let nextPosition = 1
+        while (used.has(nextPosition)) nextPosition++
+        used.add(nextPosition)
 
-      const { data: gm } = await supabaseAdmin.from('group_memberships').insert({
-        member_id: member.id, group_id: g.id,
-        payout_position: nextPosition, status: 'active',
-        payout_date: payoutDate, payout_amount: payoutAmount,
-      }).select('id').single()
+        // Admin-chosen payout date applies to the first slot only
+        const payoutDate = i === 0 ? (payoutDates[g.id] || null) : null
 
-      // If a payout date was set, schedule the payout right away
-      if (payoutDate && gm) {
-        await supabaseAdmin.from('payouts').insert({
-          member_id: member.id, group_id: g.id, membership_id: gm.id,
-          total_amount: payoutAmount, scheduled_date: payoutDate,
-          status: 'upcoming', notes: 'Scheduled at KYC approval',
-        })
+        const { data: gm } = await supabaseAdmin.from('group_memberships').insert({
+          member_id: member.id, group_id: g.id,
+          payout_position: nextPosition, status: 'active',
+          payout_date: payoutDate, payout_amount: payoutAmount,
+        }).select('id').single()
+
+        if (payoutDate && gm) {
+          await supabaseAdmin.from('payouts').insert({
+            member_id: member.id, group_id: g.id, membership_id: gm.id,
+            total_amount: payoutAmount, scheduled_date: payoutDate,
+            status: 'upcoming', notes: 'Scheduled at KYC approval',
+          })
+        }
+        assignments.push({ group: g.name, payout_position: nextPosition, payout_date: payoutDate, slot: i + 1, of_slots: wanted })
       }
-      assignments.push({ group: g.name, payout_position: nextPosition, payout_date: payoutDate })
     }
 
     // Update KYC

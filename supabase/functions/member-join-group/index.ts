@@ -21,9 +21,16 @@ serveWithCors(async (req) => {
 
   try {
     const memberId = session.sub as string
-    const { group_ids } = await req.json()
-    const ids: string[] = [...new Set((Array.isArray(group_ids) ? group_ids : []).filter(Boolean))]
-    if (ids.length === 0) return error('Select at least one group to join')
+    const body = await req.json()
+    // New shape: selections: [{ group_id, slots }]; legacy: group_ids: [...]
+    const selections: { group_id: string; slots: number }[] =
+      Array.isArray(body.selections)
+        ? body.selections
+            .filter((s: any) => s?.group_id)
+            .map((s: any) => ({ group_id: s.group_id, slots: Math.max(1, Math.min(10, Number(s.slots ?? 1))) }))
+        : [...new Set(((Array.isArray(body.group_ids) ? body.group_ids : []) as string[]).filter(Boolean))]
+            .map(id => ({ group_id: id, slots: 1 }))
+    if (selections.length === 0) return error('Select at least one group to join')
 
     const { data: member } = await supabaseAdmin
       .from('members').select('id, full_name, status').eq('id', memberId).single()
@@ -33,48 +40,58 @@ serveWithCors(async (req) => {
     const joined: any[] = []
     const failed: any[] = []
 
-    for (const gid of ids) {
+    for (const { group_id: gid, slots } of selections) {
       const { data: group } = await supabaseAdmin
         .from('susu_groups')
         .select('id, name, status, max_members, current_members, registration_fee, cashout_amount')
         .eq('id', gid).single()
 
       if (!group) { failed.push({ group_id: gid, reason: 'Group not found' }); continue }
-      if (!['open', 'full', 'active'].includes(group.status) || group.current_members >= group.max_members) {
+      if (!['open', 'full', 'active'].includes(group.status)) {
         failed.push({ group: group.name, reason: 'No longer accepting members' }); continue
       }
+      if (group.current_members + slots > group.max_members) {
+        failed.push({ group: group.name, reason: `Only ${group.max_members - group.current_members} slot(s) left` }); continue
+      }
 
-      const { data: existing } = await supabaseAdmin
-        .from('group_memberships').select('id')
-        .eq('member_id', memberId).eq('group_id', gid).maybeSingle()
-      if (existing) { failed.push({ group: group.name, reason: 'You are already in this group' }); continue }
-
-      const { data: slots } = await supabaseAdmin
+      // A member already in the group is simply taking MORE slots — allowed.
+      const { data: taken } = await supabaseAdmin
         .from('group_memberships').select('payout_position')
         .eq('group_id', gid)
-        .order('payout_position', { ascending: false }).limit(1)
-      const position = (slots?.[0]?.payout_position ?? 0) + 1
+      const used = new Set((taken ?? []).map((r: any) => r.payout_position))
 
-      const { error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
-        member_id: memberId, group_id: gid,
-        payout_position: position, status: 'active',
-      })
-      if (gmErr) { failed.push({ group: group.name, reason: gmErr.message }); continue }
+      const positions: number[] = []
+      let ok = true
+      for (let i = 0; i < slots; i++) {
+        let position = 1
+        while (used.has(position)) position++
+        used.add(position)
 
-      if (Number(group.registration_fee) > 0) {
+        const { error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
+          member_id: memberId, group_id: gid,
+          payout_position: position, status: 'active',
+        })
+        if (gmErr) { failed.push({ group: group.name, reason: gmErr.message }); ok = false; break }
+        positions.push(position)
+      }
+      if (!ok && positions.length === 0) continue
+
+      if (Number(group.registration_fee) > 0 && positions.length > 0) {
         await supabaseAdmin.from('transactions').insert({
           member_id: memberId, type: 'registration_fee',
-          amount: group.registration_fee,
+          amount: group.registration_fee * positions.length,
           reference: `REG-${memberId.slice(0, 8)}-${gid.slice(0, 8)}-${Date.now()}`,
-          description: `Registration fee for "${group.name}" (member joined from portal — awaiting payment)`,
+          description: `Registration fee for "${group.name}"${positions.length > 1 ? ` × ${positions.length} slots` : ''} (member joined from portal — awaiting payment)`,
           status: 'pending',
         })
       }
 
       joined.push({
         group: group.name,
-        payout_position: position,
-        registration_fee: Number(group.registration_fee || 0),
+        slots: positions.length,
+        payout_positions: positions,
+        payout_position: positions[0],
+        registration_fee: Number(group.registration_fee || 0) * positions.length,
         cashout_amount:   Number(group.cashout_amount || 0),
       })
     }

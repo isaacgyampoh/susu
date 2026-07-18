@@ -32,7 +32,7 @@ serveWithCors(async (req) => {
     const groupIds    = groupIdsRaw.split(',').map(s => s.trim()).filter(Boolean)
 
     // Optional per-group settings: JSON array [{ group_id, payout_date?, payout_position? }]
-    let groupSettings: Record<string, { payout_date?: string; payout_position?: number }> = {}
+    let groupSettings: Record<string, { payout_date?: string; payout_position?: number; slots?: number }> = {}
     try {
       const raw = formData.get('group_settings') as string | null
       if (raw) {
@@ -128,49 +128,58 @@ serveWithCors(async (req) => {
       }
 
       const settings = groupSettings[gid] ?? {}
+      const slots    = Math.max(1, Math.min(10, Number(settings.slots ?? 1)))
+
+      if (group.current_members + slots > group.max_members) {
+        return error(`Group "${group.name}" only has ${group.max_members - group.current_members} slot(s) left — cannot take ${slots}`, 400)
+      }
 
       const { data: taken } = await supabaseAdmin
         .from('group_memberships').select('payout_position')
         .eq('group_id', gid)
       const usedSlots = new Set((taken ?? []).map((r: any) => r.payout_position))
 
-      let position = settings.payout_position ? Number(settings.payout_position) : 0
-      if (position && usedSlots.has(position)) {
-        return error(`Payout position #${position} in "${group.name}" is already taken`, 409)
+      // First slot may use the requested position/date; extra slots take the
+      // next free positions with no payout date (set later per slot).
+      for (let sIdx = 0; sIdx < slots; sIdx++) {
+        let position = sIdx === 0 && settings.payout_position ? Number(settings.payout_position) : 0
+        if (position && usedSlots.has(position)) {
+          return error(`Payout position #${position} in "${group.name}" is already taken`, 409)
+        }
+        if (!position) {
+          position = 1
+          while (usedSlots.has(position)) position++
+        }
+        usedSlots.add(position)
+
+        const payoutDate   = sIdx === 0 ? (settings.payout_date || null) : null
+        const payoutAmount = Number(group.cashout_amount ?? 0)
+
+        const { data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
+          member_id: member.id, group_id: gid,
+          payout_position: position, status: 'active',
+          payout_date: payoutDate, payout_amount: payoutAmount,
+        }).select('id').single()
+        if (gmErr) return error(`Member created but assignment to "${group.name}" failed: ${gmErr.message}`, 500)
+
+        if (payoutDate && gm) {
+          await supabaseAdmin.from('payouts').insert({
+            member_id: member.id, group_id: gid, membership_id: gm.id,
+            total_amount: payoutAmount, scheduled_date: payoutDate,
+            status: 'upcoming', notes: 'Scheduled when member was added',
+          })
+        }
+
+        assignments.push({ group_id: gid, group_name: group.name, payout_position: position, payout_date: payoutDate })
       }
-      if (!position) {
-        position = 1
-        while (usedSlots.has(position)) position++
-      }
-
-      const payoutDate   = settings.payout_date || null
-      const payoutAmount = Number(group.cashout_amount ?? 0)
-
-      const { data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
-        member_id: member.id, group_id: gid,
-        payout_position: position, status: 'active',
-        payout_date: payoutDate, payout_amount: payoutAmount,
-      }).select('id').single()
-      if (gmErr) return error(`Member created but assignment to "${group.name}" failed: ${gmErr.message}`, 500)
-
-      // Schedule the payout immediately if a date was chosen
-      if (payoutDate && gm) {
-        await supabaseAdmin.from('payouts').insert({
-          member_id: member.id, group_id: gid, membership_id: gm.id,
-          total_amount: payoutAmount, scheduled_date: payoutDate,
-          status: 'upcoming', notes: 'Scheduled when member was added',
-        })
-      }
-
-      assignments.push({ group_id: gid, group_name: group.name, payout_position: position, payout_date: payoutDate })
 
       // Record registration fee as a transaction if group has one
       if (group.registration_fee > 0 && feePaid) {
         await supabaseAdmin.from('transactions').insert({
           member_id: member.id, type: 'registration_fee',
-          amount: group.registration_fee,
+          amount: group.registration_fee * slots,
           reference: `REG-${member.id}-${gid.slice(0, 8)}-${ts}`,
-          description: `Registration fee for "${group.name}" (recorded by admin)`,
+          description: `Registration fee for "${group.name}"${slots > 1 ? ` × ${slots} slots` : ''} (recorded by admin)`,
           status: 'success',
         })
       }
