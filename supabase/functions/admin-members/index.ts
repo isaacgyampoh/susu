@@ -85,6 +85,50 @@ serveWithCors(async (req) => {
       return json({ message: 'Payout details updated' })
     }
 
+    // DELETE /admin-members?id=xxx — permanently erase a mistakenly created member
+    // This is for mistakes (duplicates, wrong entries), not for members leaving —
+    // those should be suspended/removed so their money history survives.
+    if (method === 'DELETE' && id) {
+      const { data: member } = await supabaseAdmin
+        .from('members').select('id, member_id, full_name, phone').eq('id', id).single()
+      if (!member) return error('Member not found', 404)
+
+      // A member who has RECEIVED money has real financial history — deleting
+      // them would erase the record that the payout happened. Refuse.
+      const { count: paidPayouts } = await supabaseAdmin
+        .from('payouts').select('*', { count: 'exact', head: true })
+        .eq('member_id', id).eq('status', 'paid')
+      if ((paidPayouts ?? 0) > 0) {
+        return error(`${member.full_name} has ${paidPayouts} paid payout${paidPayouts! > 1 ? 's' : ''} on record. Deleting would erase real money history — suspend or remove them instead.`, 409)
+      }
+
+      // Unwind dependents in FK order (children before parents)
+      const steps: [string, () => PromiseLike<{ error: { message: string } | null }>][] = [
+        ['notifications',  () => supabaseAdmin.from('notifications').delete().eq('member_id', id)],
+        ['transactions',   () => supabaseAdmin.from('transactions').delete().eq('member_id', id)],
+        ['contributions',  () => supabaseAdmin.from('contributions').delete().eq('member_id', id)],
+        ['payouts',        () => supabaseAdmin.from('payouts').delete().eq('member_id', id)],
+        // References TO this member from other rows become null, not blockers
+        ['replaced_by refs', () => supabaseAdmin.from('group_memberships').update({ replaced_by: null }).eq('replaced_by', id)],
+        ['kyc link',       () => supabaseAdmin.from('kyc_applications').update({ created_member_id: null }).eq('created_member_id', id)],
+        ['memberships',    () => supabaseAdmin.from('group_memberships').delete().eq('member_id', id)],
+        ['member',         () => supabaseAdmin.from('members').delete().eq('id', id)],
+      ]
+      for (const [label, run] of steps) {
+        const { error: stepErr } = await run()
+        if (stepErr) return error(`Delete failed at ${label}: ${stepErr.message}`, 500)
+      }
+
+      await supabaseAdmin.from('audit_log').insert({
+        admin_id: admin.sub, admin_name: (admin as any).full_name ?? (admin as any).email,
+        action: 'member.deleted', entity_type: 'member', entity_id: id,
+        entity_label: `${member.member_id} — ${member.full_name}`,
+        details: { phone: member.phone, reason: 'admin hard delete' },
+      })
+
+      return json({ message: `${member.full_name} and all their records have been deleted` })
+    }
+
     // GET /admin-members — list all members with filters
     if (method === 'GET' && !id) {
       const status = url.searchParams.get('status') ?? 'active'

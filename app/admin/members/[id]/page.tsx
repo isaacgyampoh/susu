@@ -33,6 +33,10 @@ export default function MemberDetailPage() {
   const [msgOpen, setMsgOpen]   = useState(false)
   const [msgText, setMsgText]   = useState('')
   const [msgSending, setMsgSending] = useState(false)
+  // Danger zone
+  const [delOpen, setDelOpen]   = useState(false)
+  const [delText, setDelText]   = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   function showToast(m: string) { setToast(m); setTimeout(() => setToast(''), 3000) }
 
@@ -131,6 +135,18 @@ export default function MemberDetailPage() {
     if (error) { alert(error); return }
     setMsgOpen(false); setMsgText('')
     showToast('SMS sent to ' + member.full_name.split(' ')[0])
+  }
+
+  async function deleteMember() {
+    setDeleting(true)
+    const token = getAdminToken()
+    const { data, error } = await callFunction<{ message: string }>(`admin-members?id=${id}`, {
+      method: 'DELETE', token: token!,
+    })
+    setDeleting(false)
+    if (error) { alert(error); return }
+    alert(data?.message ?? 'Member deleted')
+    router.push('/admin/members')
   }
 
   async function handleStatusChange(status: string) {
@@ -453,6 +469,50 @@ export default function MemberDetailPage() {
               <button onClick={saveEdit} disabled={savingEdit}
                 className="flex-1 py-3 bg-ink text-white font-semibold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-50">
                 {savingEdit ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Danger zone */}
+      <div className="border border-red/40 rounded-[10px] p-5 mt-6">
+        <h2 className="font-bold text-red text-sm">Danger zone</h2>
+        <p className="text-ink-2 text-xs mt-1.5 leading-relaxed">
+          Permanently delete this member and every record attached to them — memberships, contributions,
+          scheduled payouts, transactions and notifications. This is for members created <strong>by mistake</strong>.
+          If a real member is leaving, suspend them instead so their money history survives.
+        </p>
+        <button onClick={() => { setDelOpen(true); setDelText('') }}
+          className="mt-3 px-4 py-2 border border-red/50 text-red text-sm font-semibold rounded-[10px] hover:bg-red hover:text-white transition-colors">
+          Delete this member permanently
+        </button>
+      </div>
+
+      {/* Delete confirm modal */}
+      {delOpen && (
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setDelOpen(false)}>
+          <div className="bg-white border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div>
+              <h2 className="font-bold text-red text-lg">Delete {member.full_name}?</h2>
+              <p className="text-ink-2 text-sm mt-1.5 leading-relaxed">
+                This erases their account and all attached records. It cannot be undone.
+                Members who have already received a payout cannot be deleted.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm text-ink-2 mb-1.5">
+                Type <span className="font-mono font-semibold text-ink">{member.member_id}</span> to confirm
+              </label>
+              <input autoFocus value={delText} onChange={e => setDelText(e.target.value)}
+                placeholder={member.member_id}
+                className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] font-mono focus:outline-none focus:border-red" />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setDelOpen(false)} className="flex-1 py-3 border border-line text-ink font-semibold rounded-[10px] hover:bg-tint transition-colors">Cancel</button>
+              <button onClick={deleteMember} disabled={deleting || delText.trim() !== member.member_id}
+                className="flex-1 py-3 bg-red text-white font-semibold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-40">
+                {deleting ? 'Deleting…' : 'Delete forever'}
               </button>
             </div>
           </div>
