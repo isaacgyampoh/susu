@@ -56,7 +56,8 @@ serveWithCors(async (req) => {
   try {
     const url    = new URL(req.url)
     const kycId  = url.searchParams.get('id')
-    const { action, rejection_reason } = await req.json()
+    const body = await req.json()
+    const { action, rejection_reason } = body
 
     if (!kycId) return error('KYC application ID required')
     if (!['approve', 'reject'].includes(action)) return error('action must be approve or reject')
@@ -84,8 +85,12 @@ serveWithCors(async (req) => {
       : [kyc.selected_group_id]
 
     const { data: targetGroups } = await supabaseAdmin
-      .from('susu_groups').select('id, name, max_members, current_members')
+      .from('susu_groups').select('id, name, max_members, current_members, cashout_amount')
       .in('id', targetIds)
+
+    // Optional per-group payout dates chosen by the admin at approval time:
+    // body.payout_dates = { "<group_id>": "YYYY-MM-DD", ... }
+    const payoutDates: Record<string, string> = body.payout_dates ?? {}
 
     const openTargets = (targetGroups ?? []).filter(g => g.current_members < g.max_members)
     const fullTargets = (targetGroups ?? []).filter(g => g.current_members >= g.max_members)
@@ -120,7 +125,7 @@ serveWithCors(async (req) => {
     if (memErr) return error(memErr.message, 500)
 
     // Assign next available payout position in each open group
-    const assignments: { group: string; payout_position: number }[] = []
+    const assignments: { group: string; payout_position: number; payout_date?: string | null }[] = []
     for (const g of openTargets) {
       const { data: slots } = await supabaseAdmin
         .from('group_memberships').select('payout_position')
@@ -128,12 +133,24 @@ serveWithCors(async (req) => {
         .order('payout_position', { ascending: false }).limit(1)
 
       const nextPosition = (slots?.[0]?.payout_position ?? 0) + 1
+      const payoutDate   = payoutDates[g.id] || null
+      const payoutAmount = Number(g.cashout_amount ?? 0)
 
-      await supabaseAdmin.from('group_memberships').insert({
+      const { data: gm } = await supabaseAdmin.from('group_memberships').insert({
         member_id: member.id, group_id: g.id,
         payout_position: nextPosition, status: 'active',
-      })
-      assignments.push({ group: g.name, payout_position: nextPosition })
+        payout_date: payoutDate, payout_amount: payoutAmount,
+      }).select('id').single()
+
+      // If a payout date was set, schedule the payout right away
+      if (payoutDate && gm) {
+        await supabaseAdmin.from('payouts').insert({
+          member_id: member.id, group_id: g.id, membership_id: gm.id,
+          total_amount: payoutAmount, scheduled_date: payoutDate,
+          status: 'upcoming', notes: 'Scheduled at KYC approval',
+        })
+      }
+      assignments.push({ group: g.name, payout_position: nextPosition, payout_date: payoutDate })
     }
 
     // Update KYC

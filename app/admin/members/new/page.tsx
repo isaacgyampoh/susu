@@ -26,6 +26,7 @@ export default function AddMemberPage() {
     registration_fee_paid: 'true',
   })
   const [groupIds, setGroupIds] = useState<string[]>([])
+  const [payoutDates, setPayoutDates] = useState<Record<string, string>>({})
 
   const toggleGroup = (id: string) =>
     setGroupIds(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id])
@@ -45,7 +46,12 @@ export default function AddMemberPage() {
 
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => v && fd.append(k, v))
-    if (groupIds.length) fd.append('group_ids', groupIds.join(','))
+    if (groupIds.length) {
+      fd.append('group_ids', groupIds.join(','))
+      fd.append('group_settings', JSON.stringify(
+        groupIds.map(id => ({ group_id: id, payout_date: payoutDates[id] || undefined }))
+      ))
+    }
     if (frontFile) fd.append('ghana_card_front', frontFile)
     if (backFile)  fd.append('ghana_card_back', backFile)
 
@@ -284,7 +290,17 @@ export default function AddMemberPage() {
                       {' '}{g.current_members}/{g.max_members} members · Reg. fee GHS {g.registration_fee}
                     </span>
                     {checked && (
-                      <span className="block text-xs text-ink mt-1">Payout position: next free slot (~#{g.current_members + 1})</span>
+                      <span className="block mt-2" onClick={e => e.preventDefault()}>
+                        <span className="block text-xs text-ink mb-1.5">Payout position: next free slot (~#{g.current_members + 1})</span>
+                        <span className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-ink-2">Payout date:</span>
+                          <input type="date" value={payoutDates[g.id] ?? ''}
+                            onClick={e => e.stopPropagation()}
+                            onChange={e => setPayoutDates(prev => ({ ...prev, [g.id]: e.target.value }))}
+                            className="px-3 py-1.5 bg-white border border-line text-ink rounded-[8px] text-xs focus:outline-none focus:border-ink" />
+                          <span className="text-[11px] text-ink-3">when they'll receive GHS {Number(g.cashout_amount ?? 0).toLocaleString()}</span>
+                        </span>
+                      </span>
                     )}
                   </span>
                 </label>

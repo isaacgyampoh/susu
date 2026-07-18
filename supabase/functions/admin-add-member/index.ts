@@ -31,6 +31,17 @@ serveWithCors(async (req) => {
     const groupIdsRaw = (formData.get('group_ids') as string) || (formData.get('group_id') as string) || ''
     const groupIds    = groupIdsRaw.split(',').map(s => s.trim()).filter(Boolean)
 
+    // Optional per-group settings: JSON array [{ group_id, payout_date?, payout_position? }]
+    let groupSettings: Record<string, { payout_date?: string; payout_position?: number }> = {}
+    try {
+      const raw = formData.get('group_settings') as string | null
+      if (raw) {
+        for (const gs of JSON.parse(raw)) {
+          if (gs?.group_id) groupSettings[gs.group_id] = gs
+        }
+      }
+    } catch (_) { /* malformed settings are ignored */ }
+
     if (!full_name || !phone || !ghana_card_number) {
       return error('full_name, phone, and ghana_card_number are required')
     }
@@ -103,12 +114,12 @@ serveWithCors(async (req) => {
     if (memErr) return error(memErr.message, 500)
 
     // Assign to one or more groups if provided
-    const assignments: { group_id: string; group_name: string; payout_position: number }[] = []
+    const assignments: { group_id: string; group_name: string; payout_position: number; payout_date?: string | null }[] = []
     const feePaid = formData.get('registration_fee_paid') === 'true'
 
     for (const gid of groupIds) {
       const { data: group } = await supabaseAdmin
-        .from('susu_groups').select('id, name, max_members, current_members, status, registration_fee')
+        .from('susu_groups').select('id, name, max_members, current_members, status, registration_fee, cashout_amount')
         .eq('id', gid).single()
       if (!group) continue
 
@@ -116,20 +127,42 @@ serveWithCors(async (req) => {
         return error(`Group "${group.name}" is full (${group.current_members}/${group.max_members})`, 400)
       }
 
-      const { data: slots } = await supabaseAdmin
+      const settings = groupSettings[gid] ?? {}
+
+      const { data: taken } = await supabaseAdmin
         .from('group_memberships').select('payout_position')
         .eq('group_id', gid)
-        .order('payout_position', { ascending: false }).limit(1)
+      const usedSlots = new Set((taken ?? []).map((r: any) => r.payout_position))
 
-      const position = (slots?.[0]?.payout_position ?? 0) + 1
+      let position = settings.payout_position ? Number(settings.payout_position) : 0
+      if (position && usedSlots.has(position)) {
+        return error(`Payout position #${position} in "${group.name}" is already taken`, 409)
+      }
+      if (!position) {
+        position = 1
+        while (usedSlots.has(position)) position++
+      }
 
-      const { error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
+      const payoutDate   = settings.payout_date || null
+      const payoutAmount = Number(group.cashout_amount ?? 0)
+
+      const { data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
         member_id: member.id, group_id: gid,
         payout_position: position, status: 'active',
-      })
+        payout_date: payoutDate, payout_amount: payoutAmount,
+      }).select('id').single()
       if (gmErr) return error(`Member created but assignment to "${group.name}" failed: ${gmErr.message}`, 500)
 
-      assignments.push({ group_id: gid, group_name: group.name, payout_position: position })
+      // Schedule the payout immediately if a date was chosen
+      if (payoutDate && gm) {
+        await supabaseAdmin.from('payouts').insert({
+          member_id: member.id, group_id: gid, membership_id: gm.id,
+          total_amount: payoutAmount, scheduled_date: payoutDate,
+          status: 'upcoming', notes: 'Scheduled when member was added',
+        })
+      }
+
+      assignments.push({ group_id: gid, group_name: group.name, payout_position: position, payout_date: payoutDate })
 
       // Record registration fee as a transaction if group has one
       if (group.registration_fee > 0 && feePaid) {
