@@ -21,6 +21,9 @@ export default function MembersPage() {
   const [invScope, setInvScope] = useState<'uninvited' | 'all'>('uninvited')
   const [invSending, setInvSending] = useState(false)
   const [invResult, setInvResult]   = useState<any>(null)
+  const [wipeOpen, setWipeOpen]     = useState(false)
+  const [wipeText, setWipeText]     = useState('')
+  const [wiping, setWiping]         = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => load(), search ? 400 : 0)
@@ -175,6 +178,60 @@ export default function MembersPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {total > 0 && (
+        <div className="mt-10 pt-6 border-t border-line">
+          <button onClick={() => { setWipeOpen(true); setWipeText('') }}
+            className="text-xs text-red/70 hover:text-red underline underline-offset-2 transition-colors">
+            Start fresh — delete ALL members from the system
+          </button>
+        </div>
+      )}
+
+      {/* Fresh start modal */}
+      {wipeOpen && (
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => !wiping && setWipeOpen(false)}>
+          <div className="bg-white shadow-xl border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div>
+              <h2 className="font-bold text-red text-lg">Delete ALL members?</h2>
+              <p className="text-ink-2 text-sm mt-1.5 leading-relaxed">
+                This erases <strong className="text-ink">every member</strong> in the system — those who have paid and those who haven't — along with
+                all their contributions, payouts, transactions and messages. <strong className="text-ink">Your groups are kept</strong> and
+                re-opened, ready to be filled again. This cannot be undone.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm text-ink-2 mb-1.5">
+                Type <span className="font-mono font-semibold text-ink">DELETE ALL MEMBERS</span> to confirm
+              </label>
+              <input autoFocus value={wipeText} onChange={e => setWipeText(e.target.value)}
+                placeholder="DELETE ALL MEMBERS"
+                className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] font-mono text-sm focus:outline-none focus:border-red" />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setWipeOpen(false)} disabled={wiping}
+                className="flex-1 py-3 border border-line text-ink font-semibold rounded-[10px] hover:bg-tint transition-colors">Cancel</button>
+              <button
+                onClick={async () => {
+                  setWiping(true)
+                  const token = getAdminToken()
+                  const { data, error } = await callFunction<any>('admin-members?all=true', {
+                    method: 'DELETE', token: token!, body: { confirm: 'DELETE ALL MEMBERS' },
+                  })
+                  setWiping(false)
+                  if (error) { alert(error); return }
+                  setWipeOpen(false)
+                  alert(data?.message ?? 'All members deleted.')
+                  load()
+                }}
+                disabled={wiping || wipeText.trim() !== 'DELETE ALL MEMBERS'}
+                className="flex-1 py-3 bg-red text-white font-semibold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-40">
+                {wiping ? 'Deleting…' : `Delete all ${total}`}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -85,6 +85,52 @@ serveWithCors(async (req) => {
       return json({ message: 'Payout details updated' })
     }
 
+    // DELETE /admin-members?all=true — wipe EVERY member for a fresh start.
+    // Groups survive (and are re-opened); all member records — paid or not —
+    // are erased. Requires the exact confirmation phrase in the body.
+    if (method === 'DELETE' && url.searchParams.get('all') === 'true') {
+      const body = await req.json().catch(() => ({}))
+      if (body.confirm !== 'DELETE ALL MEMBERS') {
+        return error("Confirmation phrase missing. Send { confirm: 'DELETE ALL MEMBERS' } to proceed.", 400)
+      }
+
+      // Counts for the audit trail
+      const [{ count: nMembers }, { count: nContribs }, { count: nPayouts }] = await Promise.all([
+        supabaseAdmin.from('members').select('*', { count: 'exact', head: true }),
+        supabaseAdmin.from('contributions').select('*', { count: 'exact', head: true }),
+        supabaseAdmin.from('payouts').select('*', { count: 'exact', head: true }),
+      ])
+
+      const wipe: [string, () => PromiseLike<{ error: { message: string } | null }>][] = [
+        ['notifications',  () => supabaseAdmin.from('notifications').delete().not('id', 'is', null)],
+        ['transactions',   () => supabaseAdmin.from('transactions').delete().not('id', 'is', null)],
+        ['contributions',  () => supabaseAdmin.from('contributions').delete().not('id', 'is', null)],
+        ['payouts',        () => supabaseAdmin.from('payouts').delete().not('id', 'is', null)],
+        ['kyc links',      () => supabaseAdmin.from('kyc_applications').update({ created_member_id: null }).not('created_member_id', 'is', null)],
+        ['memberships',    () => supabaseAdmin.from('group_memberships').delete().not('id', 'is', null)],
+        ['members',        () => supabaseAdmin.from('members').delete().not('id', 'is', null)],
+        // Active groups with nobody in them go back to open, ready to refill
+        ['groups reset',   () => supabaseAdmin.from('susu_groups')
+            .update({ status: 'open', start_date: null, end_date: null }).eq('status', 'active')],
+      ]
+      for (const [label, run] of wipe) {
+        const { error: stepErr } = await run()
+        if (stepErr) return error(`Reset failed at ${label}: ${stepErr.message}`, 500)
+      }
+
+      await supabaseAdmin.from('audit_log').insert({
+        admin_id: admin.sub, admin_name: (admin as any).full_name ?? (admin as any).email,
+        action: 'members.deleted_all', entity_type: 'member', entity_id: null,
+        entity_label: `FRESH START — wiped ${nMembers ?? 0} members`,
+        details: { members: nMembers ?? 0, contributions: nContribs ?? 0, payouts: nPayouts ?? 0 },
+      })
+
+      return json({
+        message: `Fresh start complete: ${nMembers ?? 0} members and all their records deleted. Groups kept and re-opened.`,
+        deleted: { members: nMembers ?? 0, contributions: nContribs ?? 0, payouts: nPayouts ?? 0 },
+      })
+    }
+
     // DELETE /admin-members?id=xxx — permanently erase a mistakenly created member
     // This is for mistakes (duplicates, wrong entries), not for members leaving —
     // those should be suspended/removed so their money history survives.
