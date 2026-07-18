@@ -33,6 +33,13 @@ export default function MemberDetailPage() {
   const [msgOpen, setMsgOpen]   = useState(false)
   const [msgText, setMsgText]   = useState('')
   const [msgSending, setMsgSending] = useState(false)
+  // Add to group
+  const [addOpen, setAddOpen]     = useState(false)
+  const [allGroups, setAllGroups] = useState<any[]>([])
+  const [addPicked, setAddPicked] = useState<Set<string>>(new Set())
+  const [addSlots, setAddSlots]   = useState<Record<string, number>>({})
+  const [addDates, setAddDates]   = useState<Record<string, string>>({})
+  const [adding, setAdding]       = useState(false)
   // Danger zone
   const [delOpen, setDelOpen]   = useState(false)
   const [delText, setDelText]   = useState('')
@@ -137,6 +144,40 @@ export default function MemberDetailPage() {
     showToast('SMS sent to ' + member.full_name.split(' ')[0])
   }
 
+  async function openAdd() {
+    setAddOpen(true); setAddPicked(new Set()); setAddSlots({}); setAddDates({})
+    if (allGroups.length === 0) {
+      const token = getAdminToken()
+      const { data } = await callFunction<{ groups: any[] }>('groups-create', { token: token! })
+      setAllGroups(data?.groups ?? [])
+    }
+  }
+
+  async function submitAdd() {
+    if (addPicked.size === 0) return
+    setAdding(true)
+    const token = getAdminToken()
+    const today = new Date().toISOString().split('T')[0]
+    const { data, error } = await callFunction<any>('admin-onboard-member', {
+      method: 'POST', token: token!,
+      body: {
+        member_id: id,
+        plans: Array.from(addPicked).map(gid => ({
+          group_id: gid,
+          slots: addSlots[gid] || 1,
+          start_date: today,
+          amount_paid: 0,
+          payout_date: addDates[gid] || undefined,
+        })),
+      },
+    })
+    setAdding(false)
+    if (error) { alert(error); return }
+    setAddOpen(false)
+    showToast(`Added to ${data?.plans?.length ?? addPicked.size} group(s)`)
+    refreshMember()
+  }
+
   async function deleteMember() {
     setDeleting(true)
     const token = getAdminToken()
@@ -217,6 +258,10 @@ export default function MemberDetailPage() {
             <button onClick={openPay}
               className="flex items-center gap-1.5 px-3.5 py-2 bg-ink text-white rounded-[10px] text-sm font-semibold hover:brightness-105 transition-colors">
               Record Payment
+            </button>
+            <button onClick={openAdd}
+              className="flex items-center gap-1.5 px-3 py-2 border border-line text-ink hover:bg-tint rounded-[10px] text-sm font-medium transition-colors">
+              Add to Group
             </button>
             <button onClick={() => setMsgOpen(true)}
               className="flex items-center gap-1.5 px-3 py-2 border border-line text-ink hover:bg-tint rounded-[10px] text-sm font-medium transition-colors">
@@ -345,6 +390,79 @@ export default function MemberDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Add to Group modal */}
+      {addOpen && (
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setAddOpen(false)}>
+          <div className="bg-white shadow-xl border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div>
+              <h2 className="font-bold text-ink text-lg">Add to Group</h2>
+              <p className="text-ink-2 text-sm mt-0.5">{member.full_name} — tick groups, choose slots, optionally set a payout date.</p>
+            </div>
+
+            {allGroups.length === 0 ? (
+              <p className="text-sm text-ink-3 py-6 text-center">Loading groups…</p>
+            ) : (
+              <div className="space-y-2.5">
+                {allGroups.map((g: any) => {
+                  const inGroup = (member.group_memberships ?? []).filter((gm: any) => gm.group_id === g.id && gm.status === 'active').length
+                  const spotsLeft = g.max_members - g.current_members
+                  const checked = addPicked.has(g.id)
+                  return (
+                    <label key={g.id}
+                      className={`block p-3.5 border rounded-[10px] transition-colors ${
+                        spotsLeft <= 0 && !checked ? 'opacity-50' : 'cursor-pointer'} ${checked ? 'border-ink bg-tint' : 'border-line hover:border-ink/40'}`}>
+                      <span className="flex items-start gap-3">
+                        <input type="checkbox" className="w-4 h-4 mt-0.5 accent-green" checked={checked} disabled={spotsLeft <= 0 && !checked}
+                          onChange={() => setAddPicked(p2 => { const n = new Set(p2); n.has(g.id) ? n.delete(g.id) : n.add(g.id); return n })} />
+                        <span className="flex-1 min-w-0">
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-ink">{g.name}</span>
+                            <span className="text-[11px] text-ink-3 shrink-0">
+                              {inGroup > 0 ? `already ${inGroup} slot${inGroup > 1 ? 's' : ''} · ` : ''}{spotsLeft} left
+                            </span>
+                          </span>
+                          <span className="block text-xs text-ink-2 mt-0.5">
+                            GHS {Number(g.contribution_amount).toLocaleString()}/{g.contribution_frequency} · Cashout GHS {Number(g.cashout_amount ?? 0).toLocaleString()}
+                          </span>
+                          {checked && (
+                            <span className="block mt-2 space-y-2" onClick={e => e.preventDefault()}>
+                              <span className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                <span className="text-xs text-ink-2">Slots:</span>
+                                {[1,2,3,4,5].map(n => (
+                                  <button key={n} type="button"
+                                    onClick={() => setAddSlots(prev => ({ ...prev, [g.id]: n }))}
+                                    disabled={n > spotsLeft}
+                                    className={`w-7 h-7 rounded-[8px] text-xs font-bold transition-all disabled:opacity-30 ${
+                                      (addSlots[g.id] || 1) === n ? 'bg-ink text-white' : 'bg-white border border-line text-ink-2'}`}>
+                                    {n}
+                                  </button>
+                                ))}
+                              </span>
+                              <span className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+                                <span className="text-xs text-ink-2">Payout date:</span>
+                                <input type="date" value={addDates[g.id] ?? ''}
+                                  onChange={e => setAddDates(prev => ({ ...prev, [g.id]: e.target.value }))}
+                                  className="px-3 py-1.5 bg-white border border-line text-ink rounded-[8px] text-xs focus:outline-none focus:border-ink" />
+                                <span className="text-[11px] text-ink-3">optional — first slot</span>
+                              </span>
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+
+            <button onClick={submitAdd} disabled={adding || addPicked.size === 0}
+              className="w-full py-3.5 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-all disabled:opacity-50">
+              {adding ? 'Adding…' : addPicked.size === 0 ? 'Tick at least one group' : `Add to ${addPicked.size} group${addPicked.size > 1 ? 's' : ''}`}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Record Payment modal — this member only */}
       {payOpen && (

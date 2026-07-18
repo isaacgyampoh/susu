@@ -1,12 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Member } from '@/types'
 import { format } from 'date-fns'
 type StatusFilter = 'active' | 'pending' | 'suspended' | 'all'
 
 export default function MembersPage() {
+  const router = useRouter()
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState<StatusFilter>('active')
@@ -113,7 +115,8 @@ export default function MembersPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {members.map(m => (
-                <tr key={m.id} className="hover:bg-tint transition-colors">
+                <tr key={m.id} onClick={() => router.push(`/admin/members/${m.id}`)}
+                  className="hover:bg-tint transition-colors cursor-pointer">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-[10px] bg-brand-green flex items-center justify-center shrink-0">
@@ -135,8 +138,10 @@ export default function MembersPage() {
                   <td className="px-5 py-4 text-ink-2 hidden lg:table-cell">{m.created_at ? format(new Date(m.created_at), 'MMM d, yyyy') : '—'}</td>
                   <td className="px-5 py-4">{statusBadge(m.status)}</td>
                   <td className="px-5 py-4">
-                    <Link href={`/admin/members/${m.id}`} className="text-ink-2 hover:text-ink transition-colors">
-                      </Link>
+                    <Link href={`/admin/members/${m.id}`} onClick={e => e.stopPropagation()}
+                      className="text-ink-2 hover:text-ink text-xs font-medium transition-colors whitespace-nowrap">
+                      View →
+                    </Link>
                   </td>
                 </tr>
               ))}

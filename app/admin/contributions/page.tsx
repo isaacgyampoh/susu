@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Contribution, SusuGroup } from '@/types'
@@ -239,7 +240,7 @@ export default function ContributionsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3.5">
-                    <p className="text-ink font-medium text-xs">{(c as any).members?.full_name}</p>
+                    <Link href={`/admin/members/${(c as any).members?.id}`} onClick={e => e.stopPropagation()} className="text-ink font-medium text-xs hover:underline underline-offset-2 block">{(c as any).members?.full_name}</Link>
                     <p className="text-ink-2 text-xs font-mono">{(c as any).members?.member_id}</p>
                   </td>
                   <td className="px-4 py-3.5 text-ink-2 hidden sm:table-cell text-xs">{c.susu_groups?.name}</td>

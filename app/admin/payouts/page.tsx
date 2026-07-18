@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Payout } from '@/types'
@@ -114,7 +115,7 @@ export default function PayoutsPage() {
                 {payouts.map(p => (
                   <tr key={p.id} className="hover:bg-tint transition-colors">
                     <td className="px-5 py-4">
-                      <p className="text-ink font-medium">{p.members?.full_name}</p>
+                      <Link href={`/admin/members/${p.members?.id ?? p.member_id}`} onClick={e => e.stopPropagation()} className="text-ink font-medium hover:underline underline-offset-2">{p.members?.full_name}</Link>
                       <p className="text-ink-2 text-xs font-mono">
                         {p.members?.member_id} · {(p.members as any)?.mobile_money_number ?? 'no MoMo'}
                       </p>

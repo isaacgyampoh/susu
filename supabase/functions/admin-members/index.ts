@@ -163,7 +163,7 @@ serveWithCors(async (req) => {
         .select(`
           *,
           group_memberships!member_id(
-            id, payout_position, payout_date, payout_amount, payout_received, status, joined_at,
+            id, group_id, payout_position, payout_date, payout_amount, payout_received, status, joined_at,
             susu_groups(id, name, contribution_amount, status)
           ),
           contributions(id, amount, due_date, paid_at, status, paystack_ref, susu_groups(name)),
