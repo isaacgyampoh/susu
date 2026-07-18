@@ -19,6 +19,20 @@ export default function MemberDetailPage() {
   const [editTarget, setEditTarget] = useState<any>(null)
   const [editForm, setEditForm] = useState({ payout_position: '', payout_date: '', payout_amount: '' })
   const [savingEdit, setSavingEdit] = useState(false)
+  // Record Payment (this member)
+  const [payOpen, setPayOpen]     = useState(false)
+  const [unpaid, setUnpaid]       = useState<any[]>([])
+  const [unpaidLoading, setUnpaidLoading] = useState(false)
+  const [payPicked, setPayPicked] = useState<Set<string>>(new Set())
+  const [amountIn, setAmountIn]   = useState('')
+  const [payMethod, setPayMethod] = useState<'cash' | 'momo' | 'bank'>('momo')
+  const [payNote, setPayNote]     = useState('')
+  const [paySms, setPaySms]       = useState(true)
+  const [paySaving, setPaySaving] = useState(false)
+  // Send message
+  const [msgOpen, setMsgOpen]   = useState(false)
+  const [msgText, setMsgText]   = useState('')
+  const [msgSending, setMsgSending] = useState(false)
 
   function showToast(m: string) { setToast(m); setTimeout(() => setToast(''), 3000) }
 
@@ -56,6 +70,67 @@ export default function MemberDetailPage() {
     // Refresh the member so the card shows the new details
     const { data } = await callFunction<{ member: any }>(`admin-members?id=${id}`, { token: token! })
     if (data?.member) setMember(data.member)
+  }
+
+  async function refreshMember() {
+    const token = getAdminToken()
+    const { data } = await callFunction<{ member: any }>(`admin-members?id=${id}`, { token: token! })
+    if (data?.member) setMember(data.member)
+  }
+
+  async function openPay() {
+    setPayOpen(true); setPayPicked(new Set()); setAmountIn(''); setPayNote('')
+    setUnpaidLoading(true)
+    const token = getAdminToken()
+    const [{ data: over }, { data: pend }] = await Promise.all([
+      callFunction<{ contributions: any[] }>(`contributions-list?member_id=${id}&status=overdue&sort=asc&page=1`, { token: token! }),
+      callFunction<{ contributions: any[] }>(`contributions-list?member_id=${id}&status=pending&sort=asc&page=1`, { token: token! }),
+    ])
+    const all = [...(over?.contributions ?? []), ...(pend?.contributions ?? [])]
+      .sort((a, b) => a.due_date.localeCompare(b.due_date))
+    setUnpaid(all)
+    setUnpaidLoading(false)
+  }
+
+  // Typing the amount received auto-ticks the member's oldest unpaid days
+  function applyAmount(v: string) {
+    setAmountIn(v)
+    const amt = parseFloat(v)
+    if (isNaN(amt) || amt <= 0) { setPayPicked(new Set()); return }
+    let left = amt
+    const next = new Set<string>()
+    for (const c of unpaid) {
+      const a = Number(c.amount)
+      if (left >= a - 0.001) { next.add(c.id); left -= a } else break
+    }
+    setPayPicked(next)
+  }
+
+  async function submitPay() {
+    setPaySaving(true)
+    const token = getAdminToken()
+    const { data, error } = await callFunction<{ message: string }>('payments-manual', {
+      method: 'POST', token: token!,
+      body: { contribution_ids: Array.from(payPicked), method: payMethod, note: payNote || undefined, no_sms: !paySms },
+    })
+    setPaySaving(false)
+    if (error) { alert(error); return }
+    setPayOpen(false)
+    showToast(data?.message ?? 'Payment recorded')
+    refreshMember()
+  }
+
+  async function sendMessage() {
+    if (!msgText.trim()) return
+    setMsgSending(true)
+    const token = getAdminToken()
+    const { error } = await callFunction<{ message: string }>(`admin-members?id=${id}`, {
+      method: 'PATCH', token: token!, body: { message: msgText.trim() },
+    })
+    setMsgSending(false)
+    if (error) { alert(error); return }
+    setMsgOpen(false); setMsgText('')
+    showToast('SMS sent to ' + member.full_name.split(' ')[0])
   }
 
   async function handleStatusChange(status: string) {
@@ -122,7 +197,19 @@ export default function MemberDetailPage() {
               </span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
+            <button onClick={openPay}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-ink text-white rounded-[10px] text-sm font-semibold hover:brightness-105 transition-colors">
+              Record Payment
+            </button>
+            <button onClick={() => setMsgOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 border border-line text-ink hover:bg-tint rounded-[10px] text-sm font-medium transition-colors">
+              Send SMS
+            </button>
+            <a href={`https://wa.me/${String(member.phone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-2 border border-line text-ink hover:bg-tint rounded-[10px] text-sm font-medium transition-colors">
+              WhatsApp
+            </a>
             {member.status === 'active' && (
               <button onClick={() => setAction('suspend')} className="flex items-center gap-1.5 px-3 py-2 bg-tint text-red hover:bg-tint rounded-[10px] text-sm font-medium transition-colors">
                 Suspend
@@ -242,6 +329,95 @@ export default function MemberDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Record Payment modal — this member only */}
+      {payOpen && (
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setPayOpen(false)}>
+          <div className="bg-white border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div>
+              <h2 className="font-bold text-ink text-lg">Record Payment</h2>
+              <p className="text-ink-2 text-sm mt-0.5">{member.full_name} · {member.member_id}</p>
+            </div>
+
+            {unpaidLoading ? (
+              <p className="text-sm text-ink-3 py-6 text-center">Loading unpaid days…</p>
+            ) : unpaid.length === 0 ? (
+              <p className="text-sm text-ink-2 py-6 text-center">No pending or overdue contributions — fully up to date. 🎉</p>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm text-ink-2 mb-1.5">Amount received (GHS)</label>
+                  <input type="number" min="0" step="0.01" autoFocus value={amountIn} onChange={e => applyAmount(e.target.value)}
+                    placeholder="Type the amount — oldest days tick themselves"
+                    className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:border-ink" />
+                </div>
+
+                <div className="border border-line rounded-[10px] max-h-52 overflow-y-auto divide-y divide-line">
+                  {unpaid.map((c: any) => (
+                    <label key={c.id} className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer hover:bg-tint">
+                      <input type="checkbox" className="w-4 h-4 accent-green" checked={payPicked.has(c.id)}
+                        onChange={() => setPayPicked(p => { const n = new Set(p); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n })} />
+                      <span className="flex-1 text-sm text-ink">{format(new Date(c.due_date), 'EEE, MMM d')}</span>
+                      <span className="text-xs text-ink-2">{c.susu_groups?.name}</span>
+                      {c.status === 'overdue' && <span className="badge-red text-[10px]">Overdue</span>}
+                      <span className="text-sm font-semibold text-ink tnum">GHS {Number(c.amount).toFixed(2)}</span>
+                    </label>
+                  ))}
+                </div>
+
+                <div>
+                  <label className="block text-sm text-ink-2 mb-1.5">How was it paid?</label>
+                  <div className="flex gap-2">
+                    {(['momo', 'cash', 'bank'] as const).map(m => (
+                      <button key={m} type="button" onClick={() => setPayMethod(m)}
+                        className={`flex-1 py-2.5 rounded-[10px] text-sm font-semibold capitalize transition-all ${
+                          payMethod === m ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink border border-line'}`}>
+                        {m === 'momo' ? 'MoMo' : m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <input value={payNote} onChange={e => setPayNote(e.target.value)} placeholder="Reference / note — e.g. MoMo TXN ID (optional)"
+                  className="w-full px-4 py-2.5 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:border-ink" />
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={paySms} onChange={e => setPaySms(e.target.checked)} className="w-4 h-4 accent-green" />
+                  <span className="text-sm text-ink">Send SMS receipt</span>
+                </label>
+
+                <button onClick={submitPay} disabled={paySaving || payPicked.size === 0}
+                  className="w-full py-3.5 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-all disabled:opacity-50">
+                  {paySaving ? 'Saving…'
+                    : payPicked.size === 0 ? 'Tick the days being paid for'
+                    : `Confirm GHS ${unpaid.filter((c: any) => payPicked.has(c.id)).reduce((s: number, c: any) => s + Number(c.amount), 0).toLocaleString()} · ${payPicked.size} day${payPicked.size > 1 ? 's' : ''}`}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Send SMS modal */}
+      {msgOpen && (
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setMsgOpen(false)}>
+          <div className="bg-white border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div>
+              <h2 className="font-bold text-ink text-lg">Send SMS</h2>
+              <p className="text-ink-2 text-sm mt-0.5">To {member.full_name} · {member.phone}</p>
+            </div>
+            <textarea autoFocus rows={4} value={msgText} onChange={e => setMsgText(e.target.value)}
+              placeholder={`Hi ${member.full_name.split(' ')[0]}, …`}
+              className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:border-ink resize-none" />
+            <p className="text-[11px] text-ink-3 -mt-2 text-right">{msgText.length} characters{msgText.length > 160 ? ` · ${Math.ceil(msgText.length / 153)} SMS` : ''}</p>
+            <div className="flex gap-3">
+              <button onClick={() => setMsgOpen(false)} className="flex-1 py-3 border border-line text-ink font-semibold rounded-[10px] hover:bg-tint transition-colors">Cancel</button>
+              <button onClick={sendMessage} disabled={msgSending || !msgText.trim()}
+                className="flex-1 py-3 bg-ink text-white font-semibold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-50">
+                {msgSending ? 'Sending…' : 'Send'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit payout modal */}
       {editTarget && (

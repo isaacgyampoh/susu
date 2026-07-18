@@ -133,9 +133,23 @@ serveWithCors(async (req) => {
       return json({ member })
     }
 
-    // PATCH /admin-members?id=xxx — update member status
+    // PATCH /admin-members?id=xxx — update member status and/or send a message
     if (method === 'PATCH' && id) {
       const { status, message } = await req.json()
+
+      // Message-only: just SMS the member, change nothing
+      if (!status && message) {
+        const { data: member } = await supabaseAdmin
+          .from('members').select('full_name, phone').eq('id', id).single()
+        if (!member) return error('Member not found', 404)
+
+        await sendSMS(member.phone, message)
+        await supabaseAdmin.from('notifications').insert({
+          member_id: id, type: 'sms', message, status: 'sent', sent_at: new Date().toISOString(),
+        })
+        return json({ message: 'Message sent' })
+      }
+
       const allowed = ['active','suspended','removed']
       if (!allowed.includes(status)) return error(`status must be one of: ${allowed.join(', ')}`)
 
