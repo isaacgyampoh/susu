@@ -108,7 +108,7 @@ export default function MessagesPage() {
       {/* Reply modal */}
       {selected && (
         <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto"
+          <div className="bg-white shadow-xl border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
             <div>
               <h2 className="font-bold text-ink text-lg">{selected.subject}</h2>
@@ -138,8 +138,7 @@ export default function MessagesPage() {
 
             <button onClick={sendReply} disabled={sending || !reply.trim()}
               className="w-full flex items-center justify-center gap-2 py-3 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-colors disabled:opacity-50">
-              {sending ? 'Sending…' : 'Send reply'}
-              {selected.reply_text ? 'Update Reply' : 'Send Reply'}
+              {sending ? 'Sending…' : selected.reply_text ? 'Update Reply' : 'Send Reply'}
             </button>
             <button onClick={() => setSelected(null)} className="w-full text-ink-2 text-sm hover:text-ink py-2">Close</button>
           </div>

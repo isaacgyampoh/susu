@@ -156,7 +156,7 @@ export default function KYCPage() {
       {/* Review Modal */}
       {selected && !createdCreds && (
         <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white shadow-xl border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="font-bold text-ink text-lg">Review Application</h2>
             <div className="space-y-2 text-sm">
               {[

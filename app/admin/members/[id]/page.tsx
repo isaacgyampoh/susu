@@ -522,7 +522,7 @@ export default function MemberDetailPage() {
       {/* Forfeit modal */}
       {forfeitTarget && (
         <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setForfeitTarget(null)}>
-          <div className="border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
+          <div className="bg-white shadow-xl border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-[10px] bg-tint flex items-center justify-center">
                 </div>

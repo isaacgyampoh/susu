@@ -149,7 +149,7 @@ export default function PayoutsPage() {
       {/* ── PAYOUT MODAL WITH ELIGIBILITY ── */}
       {selected && (
         <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[92vh] overflow-y-auto"
+          <div className="bg-white shadow-xl border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[92vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
 
             <div>
@@ -246,8 +246,9 @@ export default function PayoutsPage() {
 
                 <button onClick={markPaid} disabled={processing || (!elig.eligible && !override)}
                   className="w-full flex items-center justify-center gap-2 py-3.5 bg-ink text-white font-bold rounded-[10px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                  {processing ? 'Recording…' : 'Confirm payout sent'}
-                  {!elig.eligible && !override ? 'Blocked — tick override to proceed' : `Confirm ${ghs(elig.net_amount)} Sent`}
+                  {processing ? 'Recording…'
+                    : !elig.eligible && !override ? 'Blocked — tick override to proceed'
+                    : `Confirm ${ghs(elig.net_amount)} Sent`}
                 </button>
               </>
             ) : (
