@@ -2,7 +2,8 @@ import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
 import { initializeTransaction } from '../_shared/paystack.ts'
-import { devPaymentsAllowed, paymentsUnavailable } from '../_shared/mode.ts'
+import { requestPayment }        from '../_shared/moolre.ts'
+import { provider, devPaymentsAllowed, paymentsUnavailable } from '../_shared/mode.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') ?? ''
 
@@ -123,11 +124,46 @@ serveWithCors(async (req) => {
       })
     }
 
-    // ── LIVE MODE: one Paystack/MoMo transaction for the lot ──
+    // ── LIVE ──
     const { data: member } = await supabaseAdmin
-      .from('members').select('email, phone, full_name').eq('id', memberId).single()
+      .from('members')
+      .select('email, phone, full_name, mobile_money_number, mobile_money_provider')
+      .eq('id', memberId).single()
 
     const reference = `BULK-${batchId.slice(0, 8)}-${Date.now()}`
+
+    // Moolre: one prompt for the whole batch — the point of paying ahead is
+    // one approval, not thirty.
+    if (provider() === 'moolre') {
+      const momo = member?.mobile_money_number ?? member?.phone
+      if (!momo) return error('No mobile money number on your account. Ask your admin to add one.', 400)
+
+      await supabaseAdmin.from('contributions').update({ batch_id: batchId }).in('id', unpaidIds)
+      await supabaseAdmin.from('transactions').insert({
+        member_id: memberId, type: 'contribution', amount: total,
+        reference, batch_id: batchId, items_count: unpaid.length,
+        description: `Bulk payment — ${unpaid.length} contributions`, status: 'pending',
+      })
+
+      const res = await requestPayment({
+        payer: momo, amount: total,
+        provider: member?.mobile_money_provider ?? 'MTN',
+        externalref: reference,
+        reference: `Susu — ${unpaid.length} days`,
+      })
+
+      if (res.kind === 'prompted' || res.kind === 'duplicate') {
+        return json({ provider: 'moolre', status: 'prompted', reference, count: unpaid.length, total,
+          message: `Approve GHS ${total.toFixed(2)} on ${momo} with your MoMo PIN.` })
+      }
+      if (res.kind === 'otp_required') {
+        return json({ provider: 'moolre', status: 'otp_required', reference, count: unpaid.length, total,
+          message: res.message })
+      }
+      await supabaseAdmin.from('transactions').update({ status: 'failed' }).eq('reference', reference)
+      return error(res.message, 400)
+    }
+
     const email     = member?.email ?? `${member?.phone?.replace('+', '')}@susu.platform`
 
     const paystackRes = await initializeTransaction({

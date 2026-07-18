@@ -29,6 +29,12 @@ jobs:
             FRONTEND_URL="${{ secrets.SUPABASE_FRONTEND_URL }}" \
             MEMBER_URL="${{ secrets.SUPABASE_MEMBER_URL }}" \
             ALLOWED_ORIGINS="${{ secrets.SUPABASE_ALLOWED_ORIGINS }}" \
+            PAYMENT_PROVIDER="${{ secrets.PAYMENT_PROVIDER }}" \
+            MOOLRE_API_USER="${{ secrets.MOOLRE_API_USER }}" \
+            MOOLRE_API_KEY="${{ secrets.MOOLRE_API_KEY }}" \
+            MOOLRE_PUB_KEY="${{ secrets.MOOLRE_PUB_KEY }}" \
+            MOOLRE_ACCOUNT_NUMBER="${{ secrets.MOOLRE_ACCOUNT_NUMBER }}" \
+            MOOLRE_SANDBOX="${{ secrets.MOOLRE_SANDBOX }}" \
             --project-ref "$PROJECT_REF"
           echo "✅ Secrets pushed"
 

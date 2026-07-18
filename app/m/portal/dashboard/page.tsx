@@ -8,12 +8,14 @@ import StampCard from '@/components/susu/stamp-card'
 import Rotation from '@/components/susu/rotation'
 import { useDeadline } from '@/components/susu/deadline'
 import { ghs as n0 } from '@/lib/money'
+import PayPrompt from '@/components/susu/pay-prompt'
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export default function Dashboard() {
   const [d, setD]       = useState<MemberDashboard | null>(null)
   const [loading, setL] = useState(true)
   const [paying, setP]  = useState<string | null>(null)
+  const [pending, setPending] = useState<any>(null)
   const [tab, setTab]   = useState(0)
 
   async function load() {
@@ -29,6 +31,10 @@ export default function Dashboard() {
     setP(null)
     if (error) return alert(error)
     if (data?.dev_mode) return load()
+    // Moolre: the member approves on their phone, so wait here rather than leave
+    if (data?.status === 'prompted' || data?.status === 'otp_required') {
+      setPending({ ...data, amount: data.amount ?? c.amount }); return
+    }
     if (data?.authorization_url) window.location.href = data.authorization_url
   }
 
@@ -192,6 +198,18 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      {pending && (
+        <PayPrompt
+          reference={pending.reference}
+          amount={Number(pending.amount ?? 0)}
+          phone={member?.mobile_money_number ?? member?.phone}
+          initial={pending.status}
+          message={pending.message}
+          onDone={() => { setPending(null); load() }}
+          onClose={() => setPending(null)}
+        />
+      )}
+
     </div>
   )
 }

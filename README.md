@@ -55,7 +55,30 @@ Edge Functions → Manage Secrets:
 | `FRONTEND_URL` | `https://admin.abbiewealthsusu.com` |
 | `MEMBER_URL` | `https://my.abbiewealthsusu.com` |
 | `ALLOWED_ORIGINS` | comma-separated origins allowed to call the API |
-| `PAYSTACK_SECRET_KEY` | **required in production** |
+| `PAYMENT_PROVIDER` | `moolre` |
+| `MOOLRE_API_USER` | your Moolre username |
+| `MOOLRE_API_KEY` | Private API key |
+| `MOOLRE_PUB_KEY` | Public API key |
+| `MOOLRE_ACCOUNT_NUMBER` | your Moolre wallet number |
+| `MOOLRE_SANDBOX` | `true` while testing |
+| `PAYSTACK_SECRET_KEY` | only if using Paystack instead |
+
+### Moolre
+
+Members are **not redirected**. Moolre pushes a USSD prompt to their phone and
+they approve with their MoMo PIN. Some networks insert an SMS code first — that
+is a step, not an error.
+
+**Moolre's callback carries no signature.** Unlike Paystack's HMAC-SHA512, there
+is no documented way to prove a callback came from Moolre. So the callback is
+treated as a rumour: it tells us which reference to look at, and nothing more.
+Every settlement is confirmed by calling Moolre's status endpoint ourselves. Set
+the callback in your Moolre dashboard to:
+
+    https://<project>.supabase.co/functions/v1/moolre-webhook
+
+**Channel codes differ by direction.** MTN is `13` when collecting and `1` when
+paying out. Same network, same provider, two numbers.
 
 > **Payments fail closed.** Without `PAYSTACK_SECRET_KEY`, payment endpoints
 > return 503. To test without Paystack you must set `ALLOW_DEV_PAYMENTS=true`

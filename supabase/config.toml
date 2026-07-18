@@ -112,3 +112,9 @@ verify_jwt = false
 
 [functions.admin-change-password]
 verify_jwt = false
+
+[functions.payments-otp]
+verify_jwt = false
+
+[functions.moolre-webhook]
+verify_jwt = false

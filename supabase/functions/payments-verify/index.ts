@@ -1,13 +1,46 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
-import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
-import { requireMember }           from '../_shared/jwt.ts'
-import { verifyTransaction }       from '../_shared/paystack.ts'
-import { paymentsUnavailable }     from '../_shared/mode.ts'
+import { supabaseAdmin }         from '../_shared/supabase-admin.ts'
+import { requireMember }         from '../_shared/jwt.ts'
+import { paymentStatus }         from '../_shared/moolre.ts'
+import { verifyTransaction }     from '../_shared/paystack.ts'
+import { provider, paymentsUnavailable } from '../_shared/mode.ts'
+
+/**
+ * The member's app polls this after approving a prompt.
+ *
+ * With no trustworthy webhook, this is not a convenience — it is how a payment
+ * gets settled at all. The phone asks "did it land?", we ask Moolre, and the
+ * answer decides.
+ */
+/** A single payment or a whole batch — settle whatever this reference covers. */
+async function settleLocally(reference: string, tx: any, raw: unknown) {
+  if (tx.batch_id) {
+    // Paying ahead: one approval clears every day in the batch
+    await supabaseAdmin.from('contributions')
+      .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: reference })
+      .eq('batch_id', tx.batch_id).neq('status', 'paid')
+    const { data: ids } = await supabaseAdmin
+      .from('contributions').select('id').eq('batch_id', tx.batch_id)
+    if (ids?.length) {
+      await supabaseAdmin.from('payment_penalties')
+        .update({ is_paid: true, paid_at: new Date().toISOString() })
+        .in('contribution_id', ids.map((r: { id: string }) => r.id))
+    }
+  } else if (tx.type === 'contribution' && tx.related_id) {
+    await supabaseAdmin.from('contributions')
+      .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: reference })
+      .eq('id', tx.related_id)
+    await supabaseAdmin.from('payment_penalties')
+      .update({ is_paid: true, paid_at: new Date().toISOString() })
+      .eq('contribution_id', tx.related_id)
+  }
+  await supabaseAdmin.from('transactions')
+    .update({ status: 'success', paystack_data: raw as never }).eq('reference', reference)
+}
 
 serveWithCors(async (req) => {
-  const cors = handleCors(req)
-  if (cors) return cors
-
+  const c = handleCors(req)
+  if (c) return c
   if (req.method !== 'POST') return error('Method not allowed', 405)
 
   const session = await requireMember(req)
@@ -20,61 +53,45 @@ serveWithCors(async (req) => {
     const { reference } = await req.json()
     if (!reference) return error('reference is required')
 
-    // Check if already recorded as success (webhook may have already processed it)
-    const { data: existing } = await supabaseAdmin
+    // Only ever check your own payment
+    const { data: tx } = await supabaseAdmin
       .from('transactions')
-      .select('id, status')
-      .eq('reference', reference)
-      .maybeSingle()
+      .select('reference, status, member_id, related_id, type, amount, batch_id')
+      .eq('reference', reference).eq('member_id', session.sub).maybeSingle()
 
-    if (existing?.status === 'success') {
-      return json({ verified: true, message: 'Payment already confirmed' })
+    if (!tx) return error('Payment not found', 404)
+    if (tx.status === 'success') return json({ status: 'paid', message: 'Payment confirmed' })
+
+    if (provider() === 'moolre') {
+      const s = await paymentStatus(reference)
+      if (!s)        return json({ status: 'pending', message: 'Waiting for confirmation…' })
+      if (s.pending) return json({ status: 'pending', message: 'Waiting for you to approve the prompt…' })
+      if (!s.settled) {
+        await supabaseAdmin.from('transactions').update({ status: 'failed' }).eq('reference', reference)
+        return json({ status: 'failed', message: 'The payment was not completed. You can try again.' })
+      }
+
+      const due = Number(tx.amount)
+      if (s.amount + 0.01 < due) {
+        return json({ status: 'pending', message: 'Partial payment received. Contact your admin.' })
+      }
+
+      await settleLocally(reference, tx, s.raw)
+      return json({ status: 'paid', message: 'Payment confirmed. Thank you.' })
     }
 
-    // Verify with Paystack
-    const paystackRes = await verifyTransaction(reference)
-
-    if (!paystackRes.status || paystackRes.data?.status !== 'success') {
-      return json({ verified: false, message: 'Payment not confirmed yet. Please wait or contact support.' })
+    // Paystack
+    const p = await verifyTransaction(reference)
+    if (!p.status || p.data?.status !== 'success') {
+      return json({ status: 'pending', message: 'Not confirmed yet.' })
     }
-
-    const { metadata, amount } = paystackRes.data
-    const amountGHS = amount / 100
-
-    // Handle contribution payment
-    if (metadata?.type === 'contribution') {
-      const { contribution_id, member_id } = metadata
-
-      // Ensure member can only verify their own payment
-      if (member_id !== session.sub) return error('Forbidden', 403)
-
-      await supabaseAdmin
-        .from('contributions')
+    if (tx.type === 'contribution' && tx.related_id) {
+      await supabaseAdmin.from('contributions')
         .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: reference })
-        .eq('id', contribution_id)
-
-      await supabaseAdmin.from('transactions').upsert({
-        member_id,
-        type:         'contribution',
-        amount:       amountGHS,
-        reference,
-        description:  'Susu daily contribution',
-        status:       'success',
-        paystack_data: paystackRes.data,
-        related_id:   contribution_id,
-      }, { onConflict: 'reference' })
+        .eq('id', tx.related_id)
     }
-
-    // Handle registration fee
-    if (metadata?.type === 'registration_fee') {
-      const kycId = metadata.kyc_id
-      await supabaseAdmin
-        .from('kyc_applications')
-        .update({ registration_fee_paid: true, registration_fee_ref: reference })
-        .eq('id', kycId)
-    }
-
-    return json({ verified: true, message: 'Payment confirmed successfully' })
+    await supabaseAdmin.from('transactions').update({ status: 'success' }).eq('reference', reference)
+    return json({ status: 'paid', message: 'Payment confirmed' })
   } catch (e) {
     console.error(e)
     return error('Internal server error', 500)

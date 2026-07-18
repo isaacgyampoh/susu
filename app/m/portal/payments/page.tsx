@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { Contribution } from '@/types'
 import { format } from 'date-fns'
+import PayPrompt from '@/components/susu/pay-prompt'
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const PRESETS = [7, 14, 30]
 
@@ -11,6 +12,7 @@ export default function Payments() {
   const [loading, setL]   = useState(true)
   const [filter, setF]    = useState<'all' | 'pending' | 'paid'>('all')
   const [paying, setP]    = useState<string | null>(null)
+  const [pending, setPending] = useState<any>(null)
 
   const [sheet, setSheet] = useState(false)
   const [days, setDays]   = useState(7)
@@ -40,6 +42,10 @@ export default function Payments() {
     setP(null)
     if (error) return alert(error)
     if (data?.dev_mode) return load()
+    // Moolre: the member approves on their phone, so wait here rather than leave
+    if (data?.status === 'prompted' || data?.status === 'otp_required') {
+      setPending({ ...data, amount: data.amount ?? c.amount }); return
+    }
     if (data?.authorization_url) window.location.href = data.authorization_url
   }
 
@@ -182,6 +188,17 @@ export default function Payments() {
           </div>
         </div>
       )}
+      {pending && (
+        <PayPrompt
+          reference={pending.reference}
+          amount={Number(pending.amount ?? 0)}
+          initial={pending.status}
+          message={pending.message}
+          onDone={() => { setPending(null); load() }}
+          onClose={() => setPending(null)}
+        />
+      )}
+
     </div>
   )
 }
