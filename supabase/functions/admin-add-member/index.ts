@@ -187,8 +187,16 @@ serveWithCors(async (req) => {
 
     const assignedPosition = assignments[0]?.payout_position ?? null
 
-    // Send welcome SMS (silently skipped if no AT key)
-    await sendSMS(normPhone, smsTemplates.welcome(full_name, member.member_id, passcode, SIGNIN_URL))
+    // Send welcome SMS only when asked — invites can be held and sent in
+    // bulk later (Members → Send Invites) once the payment system is live.
+    const sendCreds = formData.get('send_credentials') !== 'false'
+    if (sendCreds) {
+      await sendSMS(normPhone, smsTemplates.welcome(full_name, member.member_id, passcode, SIGNIN_URL))
+      await supabaseAdmin.from('members')
+        .update({ credentials_sent_at: new Date().toISOString() })
+        .eq('id', member.id)
+        .then(({ error: e }) => { if (e) console.log('credentials_sent_at skipped:', e.message) })
+    }
 
     return json({
       message:   'Member created successfully',
@@ -199,6 +207,7 @@ serveWithCors(async (req) => {
         phone:     member.phone,
       },
       passcode,
+      credentials_sent: sendCreds,
       payout_position: assignedPosition,   // kept for old clients
       assignments,                          // one entry per group joined
       portal_url: SIGNIN_URL,

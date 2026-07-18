@@ -9,6 +9,7 @@ export default function KYCPage() {
   const [loading, setLoading]   = useState(true)
   const [filter, setFilter]     = useState<'pending' | 'approved' | 'rejected'>('pending')
   const [payoutDates, setPayoutDates] = useState<Record<string, string>>({})
+  const [sendCreds, setSendCreds]     = useState(false)
   const [selected, setSelected] = useState<KYCApplication | null>(null)
   const [reason, setReason]     = useState('')
   const [processing, setProcessing] = useState(false)
@@ -50,7 +51,7 @@ export default function KYCPage() {
     const token = getAdminToken()
     const { data, error } = await callFunction<{ message: string; member_id?: string; passcode?: string }>(
       `kyc-review?id=${selected.id}`,
-      { method: 'POST', body: { action, rejection_reason: reason, payout_dates: payoutDates }, token: token! }
+      { method: 'POST', body: { action, rejection_reason: reason, payout_dates: payoutDates, send_credentials: sendCreds }, token: token! }
     )
     setProcessing(false)
     if (error) { alert(error); return }
@@ -195,6 +196,13 @@ export default function KYCPage() {
                   ))}
                   <p className="text-xs text-ink-3">When the member will receive their payout in each group. Leave blank to set later on the member's page.</p>
                 </div>
+                <label className="flex items-start gap-2 cursor-pointer p-3 bg-tint border border-line rounded-[10px]">
+                  <input type="checkbox" checked={sendCreds} onChange={e => setSendCreds(e.target.checked)} className="w-4 h-4 mt-0.5 accent-green" />
+                  <span className="text-sm text-ink">
+                    Send sign-in SMS on approval
+                    <span className="block text-xs text-ink-3 mt-0.5">Unticked = approve silently and invite later from Members → Send Invites.</span>
+                  </span>
+                </label>
                 <div>
                   <label className="block text-sm text-ink-2 mb-1.5">Rejection Reason (required if rejecting)</label>
                   <textarea className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:ring-0 focus:border-ink resize-none"

@@ -28,6 +28,7 @@ export default function AddMemberPage() {
   const [groupIds, setGroupIds] = useState<string[]>([])
   const [payoutDates, setPayoutDates] = useState<Record<string, string>>({})
   const [slotCounts, setSlotCounts]   = useState<Record<string, number>>({})
+  const [sendNow, setSendNow]         = useState(false)
 
   const toggleGroup = (id: string) =>
     setGroupIds(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id])
@@ -53,6 +54,7 @@ export default function AddMemberPage() {
         groupIds.map(id => ({ group_id: id, payout_date: payoutDates[id] || undefined, slots: slotCounts[id] || 1 }))
       ))
     }
+    fd.append('send_credentials', sendNow ? 'true' : 'false')
     if (frontFile) fd.append('ghana_card_front', frontFile)
     if (backFile)  fd.append('ghana_card_back', backFile)
 
@@ -336,6 +338,14 @@ export default function AddMemberPage() {
             </label>
           )}
         </div>
+
+        <label className="flex items-start gap-2 cursor-pointer p-3 bg-tint border border-line rounded-[10px]">
+          <input type="checkbox" checked={sendNow} onChange={e => setSendNow(e.target.checked)} className="w-4 h-4 mt-0.5 accent-green" />
+          <span className="text-sm text-ink">
+            Send portal invite SMS now (sign-in link + passcode)
+            <span className="block text-xs text-ink-3 mt-0.5">Leave unticked to hold — you can invite everyone in one go later from Members → Send Invites, once the payment system is ready. The passcode still shows on the next screen either way.</span>
+          </span>
+        </label>
 
         <button type="submit" disabled={loading}
           className="w-full py-3.5 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">

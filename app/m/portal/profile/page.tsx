@@ -21,6 +21,29 @@ export default function Profile() {
   const [loading, setL]   = useState(true)
   const [open, setOpen]   = useState(false)
   const [subj, setSubj]   = useState('')
+  // Change passcode
+  const [pcOpen, setPcOpen]   = useState(false)
+  const [pcCur, setPcCur]     = useState('')
+  const [pcNew, setPcNew]     = useState('')
+  const [pcNew2, setPcNew2]   = useState('')
+  const [pcBusy, setPcBusy]   = useState(false)
+  const [pcMsg, setPcMsg]     = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function changePasscode(e: React.FormEvent) {
+    e.preventDefault()
+    setPcMsg(null)
+    if (!/^\d{6}$/.test(pcNew)) { setPcMsg({ ok: false, text: 'Your new passcode must be exactly 6 digits.' }); return }
+    if (pcNew !== pcNew2)        { setPcMsg({ ok: false, text: 'The two new passcodes do not match.' }); return }
+    setPcBusy(true)
+    const { data, error } = await callFunction<{ message: string }>('member-change-passcode', {
+      method: 'POST', token: getMemberToken()!,
+      body: { current_passcode: pcCur, new_passcode: pcNew },
+    })
+    setPcBusy(false)
+    if (error) { setPcMsg({ ok: false, text: error }); return }
+    setPcMsg({ ok: true, text: data?.message ?? 'Passcode changed.' })
+    setPcCur(''); setPcNew(''); setPcNew2('')
+  }
   const [msg, setMsg]     = useState('')
   const [busy, setBusy]   = useState(false)
   const [sent, setSent]   = useState(false)
@@ -105,6 +128,34 @@ export default function Profile() {
           </tbody>
         </table>
         <p className="t-meta mt-3">To change anything, message your collector below.</p>
+      </section>
+
+      <section className="py-8 border-t border-line">
+        <button onClick={() => setPcOpen(!pcOpen)} className="w-full flex items-baseline justify-between group">
+          <div className="text-left">
+            <p className="text-[15px] font-bold group-hover:underline underline-offset-4">Change your passcode</p>
+            <p className="t-meta mt-0.5">Replace the passcode you were given with your own private PIN</p>
+          </div>
+          <span className="t-label">{pcOpen ? 'Close' : 'Open'}</span>
+        </button>
+
+        {pcOpen && (
+          <form onSubmit={changePasscode} className="mt-5 space-y-3 animate-fade-in">
+            {pcMsg && (
+              <p className={`text-[13px] font-medium ${pcMsg.ok ? 'text-ink' : 'text-red'}`}>{pcMsg.text}</p>
+            )}
+            <input className="in tnum" type="password" inputMode="numeric" maxLength={6} required
+              value={pcCur} onChange={e => setPcCur(e.target.value.replace(/\D/g, ''))} placeholder="Current passcode" />
+            <input className="in tnum" type="password" inputMode="numeric" maxLength={6} required
+              value={pcNew} onChange={e => setPcNew(e.target.value.replace(/\D/g, ''))} placeholder="New 6-digit passcode" />
+            <input className="in tnum" type="password" inputMode="numeric" maxLength={6} required
+              value={pcNew2} onChange={e => setPcNew2(e.target.value.replace(/\D/g, ''))} placeholder="Repeat new passcode" />
+            <button type="submit" disabled={pcBusy} className="act-primary w-full">
+              {pcBusy ? '…' : 'Change passcode'}
+            </button>
+            <p className="t-meta">Keep it private — never share it, not even with your collector.</p>
+          </form>
+        )}
       </section>
 
       <section className="py-8 border-t border-line">

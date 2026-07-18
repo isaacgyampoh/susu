@@ -269,9 +269,15 @@ serveWithCors(async (req) => {
       })
     }
 
-    // Welcome SMS only when we created a fresh account
-    if (passcode) {
+    // Welcome SMS only when we created a fresh account AND the admin wants
+    // it sent now; otherwise it waits for the bulk invite.
+    const sendCreds = body.send_credentials !== false
+    if (passcode && sendCreds) {
       await sendSMS(member.phone, smsTemplates.welcome(member.full_name, member.member_id, passcode, SIGNIN_URL))
+      await supabaseAdmin.from('members')
+        .update({ credentials_sent_at: new Date().toISOString() })
+        .eq('id', member.id)
+        .then(({ error: e }) => { if (e) console.log('credentials_sent_at skipped:', e.message) })
     }
 
     return json({

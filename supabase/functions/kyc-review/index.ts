@@ -170,10 +170,17 @@ serveWithCors(async (req) => {
       .eq('id', kycId)
 
     // Send welcome SMS (skipped silently if no AT key)
-    await sendSMS(kyc.phone, smsTemplates.applicationApproved(kyc.full_name, member.member_id, passcode, SIGNIN_URL))
+    const sendCreds = body.send_credentials !== false
+    if (sendCreds) {
+      await sendSMS(kyc.phone, smsTemplates.applicationApproved(kyc.full_name, member.member_id, passcode, SIGNIN_URL))
+      await supabaseAdmin.from('members')
+        .update({ credentials_sent_at: new Date().toISOString() })
+        .eq('id', member.id)
+        .then(({ error: e }) => { if (e) console.log('credentials_sent_at skipped:', e.message) })
+    }
 
     return json({
-      message:    'Member approved and credentials sent via SMS',
+      message:    sendCreds ? 'Member approved and credentials sent via SMS' : 'Member approved — credentials NOT sent (held for bulk invite)',
       member_id:  member.member_id,
       passcode,   // also returned in response so admin can share manually if no SMS
       portal_url: SIGNIN_URL,

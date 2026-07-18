@@ -16,6 +16,11 @@ export default function MembersPage() {
   const [page, setPage]       = useState(1)
   const [total, setTotal]     = useState(0)
   const [apiError, setApiError] = useState('')
+  const [invOpen, setInvOpen]   = useState(false)
+  const [invCounts, setInvCounts] = useState<{ total_active: number; uninvited: number } | null>(null)
+  const [invScope, setInvScope] = useState<'uninvited' | 'all'>('uninvited')
+  const [invSending, setInvSending] = useState(false)
+  const [invResult, setInvResult]   = useState<any>(null)
 
   useEffect(() => {
     const t = setTimeout(() => load(), search ? 400 : 0)
@@ -54,7 +59,17 @@ export default function MembersPage() {
           <h1 className="text-2xl font-extrabold text-ink">Members</h1>
           <p className="text-ink-2 text-sm mt-1">{total} total members</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={async () => {
+              setInvOpen(true); setInvResult(null); setInvCounts(null); setInvScope('uninvited')
+              const token = getAdminToken()
+              const { data, error } = await callFunction<{ total_active: number; uninvited: number }>('admin-send-invites', { token: token! })
+              if (error) { setApiError(error); setInvOpen(false); return }
+              setInvCounts(data!)
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 border border-line text-ink font-semibold rounded-[10px] text-sm hover:bg-tint transition-colors">
+            Send Invites
+          </button>
           <Link href="/admin/members/onboard"
             className="flex items-center gap-2 px-4 py-2.5 border border-line text-ink font-semibold rounded-[10px] text-sm hover:bg-tint transition-colors">
             Onboard Existing
@@ -160,6 +175,73 @@ export default function MembersPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Send Invites modal */}
+      {invOpen && (
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => !invSending && setInvOpen(false)}>
+          <div className="bg-white shadow-xl border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div>
+              <h2 className="font-bold text-ink text-lg">Send portal invites</h2>
+              <p className="text-ink-2 text-sm mt-1">
+                Each invite issues a fresh passcode and texts the member their sign-in link, member ID and passcode. They can change it to their own PIN inside the portal.
+              </p>
+            </div>
+
+            {invResult ? (
+              <>
+                <div className="p-3 bg-tint border border-line rounded-[10px] text-sm">
+                  <p className="font-semibold text-ink">{invResult.message}</p>
+                  {invResult.failed?.map((f: any, i: number) => (
+                    <p key={i} className="text-xs text-red mt-1">{f.member}: {f.reason}</p>
+                  ))}
+                </div>
+                <button onClick={() => { setInvOpen(false); load() }}
+                  className="w-full py-3 bg-ink text-white font-semibold rounded-[10px]">Done</button>
+              </>
+            ) : !invCounts ? (
+              <p className="text-sm text-ink-3 py-4 text-center">Loading…</p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <label className={`flex items-start gap-2.5 p-3 border rounded-[10px] cursor-pointer ${invScope === 'uninvited' ? 'border-ink bg-tint' : 'border-line'}`}>
+                    <input type="radio" name="invscope" checked={invScope === 'uninvited'} onChange={() => setInvScope('uninvited')} className="mt-1 accent-green" />
+                    <span className="text-sm text-ink">
+                      <strong>Members not yet invited ({invCounts.uninvited})</strong>
+                      <span className="block text-xs text-ink-3 mt-0.5">The normal choice — sends to everyone still waiting.</span>
+                    </span>
+                  </label>
+                  <label className={`flex items-start gap-2.5 p-3 border rounded-[10px] cursor-pointer ${invScope === 'all' ? 'border-ink bg-tint' : 'border-line'}`}>
+                    <input type="radio" name="invscope" checked={invScope === 'all'} onChange={() => setInvScope('all')} className="mt-1 accent-green" />
+                    <span className="text-sm text-ink">
+                      <strong>All active members ({invCounts.total_active})</strong>
+                      <span className="block text-xs text-red mt-0.5">Re-issues a NEW passcode for everyone — anyone's current passcode (including PINs they set themselves) stops working.</span>
+                    </span>
+                  </label>
+                </div>
+                <button
+                  onClick={async () => {
+                    setInvSending(true)
+                    const token = getAdminToken()
+                    const { data, error } = await callFunction<any>('admin-send-invites', {
+                      method: 'POST', token: token!, body: { scope: invScope },
+                    })
+                    setInvSending(false)
+                    if (error) { alert(error); return }
+                    setInvResult(data)
+                  }}
+                  disabled={invSending || (invScope === 'uninvited' && invCounts.uninvited === 0)}
+                  className="w-full py-3.5 bg-ink text-white font-bold rounded-[10px] disabled:opacity-50">
+                  {invSending ? 'Sending…'
+                    : invScope === 'uninvited'
+                      ? (invCounts.uninvited === 0 ? 'Everyone is already invited' : `Send ${invCounts.uninvited} invite${invCounts.uninvited === 1 ? '' : 's'}`)
+                      : `Re-issue & send to all ${invCounts.total_active}`}
+                </button>
+                <button onClick={() => setInvOpen(false)} className="w-full text-ink-2 text-sm hover:text-ink py-1">Cancel</button>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

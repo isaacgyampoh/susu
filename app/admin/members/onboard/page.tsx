@@ -37,6 +37,7 @@ export default function OnboardMemberPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
   const [copied, setCopied]   = useState(false)
+  const [sendNow, setSendNow] = useState(false)
 
   // Existing-member search
   const [search, setSearch]       = useState('')
@@ -112,6 +113,7 @@ export default function OnboardMemberPage() {
         payout_received: p.payout_received,
       })),
     }
+    body.send_credentials = sendNow
     if (mode === 'existing') body.member_id = selected.id
     else body.new_member = newMember
 
@@ -388,6 +390,16 @@ export default function OnboardMemberPage() {
           className="w-full py-3 border-2 border-dashed border-line rounded-[10px] text-sm font-semibold text-ink-2 hover:border-ink hover:text-ink transition-colors">
           + Add another group for this member
         </button>
+
+        {mode === 'new' && (
+          <label className="flex items-start gap-2 cursor-pointer p-3 bg-tint border border-line rounded-[10px]">
+            <input type="checkbox" checked={sendNow} onChange={e => setSendNow(e.target.checked)} className="w-4 h-4 mt-0.5 accent-green" />
+            <span className="text-sm text-ink">
+              Send portal invite SMS now (sign-in link + passcode)
+              <span className="block text-xs text-ink-3 mt-0.5">Leave unticked to hold — invite everyone later from Members → Send Invites. The passcode still shows on the success screen.</span>
+            </span>
+          </label>
+        )}
 
         <button type="submit" disabled={loading}
           className="w-full py-3.5 bg-ink text-white font-bold rounded-[10px] hover:brightness-105 transition-all active:scale-95 disabled:opacity-50">
