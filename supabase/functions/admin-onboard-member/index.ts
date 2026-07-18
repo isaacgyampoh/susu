@@ -151,18 +151,23 @@ serveWithCors(async (req) => {
       const payout_received = !!plan.payout_received
 
       // ── Membership, joined_at backdated to when they actually started ──
-      const { data: membership, error: gmErr } = await supabaseAdmin
-        .from('group_memberships')
-        .insert({
-          member_id: member.id, group_id,
-          payout_position: position,
-          payout_date, payout_amount, payout_received,
-          status: 'active',
-          joined_at: `${start_date}T00:00:00Z`,
-          onboarded_existing: true,
-        })
-        .select('id').single()
-      if (gmErr) return error(`Membership failed for "${group.name}": ${gmErr.message}`, 500)
+      const gmRow: Record<string, unknown> = {
+        member_id: member.id, group_id,
+        payout_position: position,
+        payout_date, payout_amount, payout_received,
+        status: 'active',
+        joined_at: `${start_date}T00:00:00Z`,
+        onboarded_existing: true,
+      }
+      let { data: membership, error: gmErr } = await supabaseAdmin
+        .from('group_memberships').insert(gmRow).select('id').single()
+      if (gmErr && /onboarded_existing/.test(gmErr.message)) {
+        // v9 migration not applied yet — the marker is nice-to-have, not load-bearing
+        delete gmRow.onboarded_existing
+        ;({ data: membership, error: gmErr } = await supabaseAdmin
+          .from('group_memberships').insert(gmRow).select('id').single())
+      }
+      if (gmErr || !membership) return error(`Membership failed for "${group.name}": ${gmErr?.message}`, 500)
 
       // ── Backfill PAID contributions from start_date, daily ──
       const daily = Number(group.contribution_amount)
@@ -208,7 +213,12 @@ serveWithCors(async (req) => {
 
       // Insert in chunks — long histories can be hundreds of rows
       for (let i = 0; i < rows.length; i += 400) {
-        const { error: cErr } = await supabaseAdmin.from('contributions').insert(rows.slice(i, i + 400))
+        let chunk = rows.slice(i, i + 400)
+        let { error: cErr } = await supabaseAdmin.from('contributions').insert(chunk)
+        if (cErr && /is_backfilled/.test(cErr.message)) {
+          chunk = chunk.map(({ is_backfilled: _drop, ...rest }) => rest)
+          ;({ error: cErr } = await supabaseAdmin.from('contributions').insert(chunk))
+        }
         if (cErr) return error(`Contribution backfill failed for "${group.name}": ${cErr.message}`, 500)
       }
 

@@ -87,9 +87,7 @@ serveWithCors(async (req) => {
     }
 
     // Create KYC record
-    const { data: kyc, error: kycErr } = await supabaseAdmin
-      .from('kyc_applications')
-      .insert({
+    const kycRow: Record<string, unknown> = ({
         full_name, phone: normPhone,
         email:               formData.get('email') as string | null,
         date_of_birth:       formData.get('date_of_birth') as string | null,
@@ -108,10 +106,15 @@ serveWithCors(async (req) => {
         registration_fee_paid: devPaymentsAllowed() || group.registration_fee === 0,
         status: 'pending',
       })
-      .select('id')
-      .single()
-
-    if (kycErr) return error(kycErr.message, 500)
+    let { data: kyc, error: kycErr } = await supabaseAdmin
+      .from('kyc_applications').insert(kycRow).select('id').single()
+    if (kycErr && /selected_group_ids/.test(kycErr.message)) {
+      // v9 migration not applied — keep the first choice, drop the array
+      delete kycRow.selected_group_ids
+      ;({ data: kyc, error: kycErr } = await supabaseAdmin
+        .from('kyc_applications').insert(kycRow).select('id').single())
+    }
+    if (kycErr || !kyc) return error(kycErr?.message ?? 'Could not save application', 500)
 
     // Initialize Paystack payment (if enabled and fee > 0)
     let paystackData = null

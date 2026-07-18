@@ -13,6 +13,7 @@ export default function MembersPage() {
   const [search, setSearch]   = useState('')
   const [page, setPage]       = useState(1)
   const [total, setTotal]     = useState(0)
+  const [apiError, setApiError] = useState('')
 
   useEffect(() => {
     const t = setTimeout(() => load(), search ? 400 : 0)
@@ -27,9 +28,11 @@ export default function MembersPage() {
       page:   String(page),
       ...(search ? { search } : {}),
     })
-    const { data } = await callFunction<{ members: Member[]; total: number }>(
+    const { data, error } = await callFunction<{ members: Member[]; total: number }>(
       `admin-members?${params}`, { token: token! }
     )
+    // Never hide a failure behind "No members found" — say what broke
+    setApiError(error ?? '')
     setMembers(data?.members ?? [])
     setTotal(data?.total ?? 0)
     setLoading(false)
@@ -80,6 +83,12 @@ export default function MembersPage() {
         </div>
       </div>
 
+      {apiError && (
+        <div className="p-3 mb-4 bg-tint border border-red/40 rounded-[10px] text-red text-sm">
+          Could not load members: {apiError}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-20">Loading…</div>
       ) : members.length === 0 ? (
@@ -96,6 +105,7 @@ export default function MembersPage() {
                 <th className="px-5 py-3 text-left font-medium">Member</th>
                 <th className="px-5 py-3 text-left font-medium hidden sm:table-cell">Member ID</th>
                 <th className="px-5 py-3 text-left font-medium hidden md:table-cell">Phone</th>
+                <th className="px-5 py-3 text-left font-medium">Groups</th>
                 <th className="px-5 py-3 text-left font-medium hidden lg:table-cell">Joined</th>
                 <th className="px-5 py-3 text-left font-medium">Status</th>
                 <th className="px-5 py-3 text-left font-medium"></th>
@@ -117,7 +127,12 @@ export default function MembersPage() {
                   </td>
                   <td className="px-5 py-4 text-ink-2 font-mono text-xs hidden sm:table-cell">{m.member_id}</td>
                   <td className="px-5 py-4 text-ink-2 hidden md:table-cell">{m.phone}</td>
-                  <td className="px-5 py-4 text-ink-2 hidden lg:table-cell">{format(new Date(m.created_at), 'MMM d, yyyy')}</td>
+                  <td className="px-5 py-4">
+                    {(((m as any).group_memberships?.[0]?.count) ?? 0) > 0
+                      ? <span className="text-ink-2 text-xs">{(m as any).group_memberships[0].count} group{(m as any).group_memberships[0].count > 1 ? 's' : ''}</span>
+                      : <span className="badge-red text-[10px]">No group</span>}
+                  </td>
+                  <td className="px-5 py-4 text-ink-2 hidden lg:table-cell">{m.created_at ? format(new Date(m.created_at), 'MMM d, yyyy') : '—'}</td>
                   <td className="px-5 py-4">{statusBadge(m.status)}</td>
                   <td className="px-5 py-4">
                     <Link href={`/admin/members/${m.id}`} className="text-ink-2 hover:text-ink transition-colors">

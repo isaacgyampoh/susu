@@ -49,11 +49,19 @@ serveWithCors(async (req) => {
 
     const now = new Date().toISOString()
 
-    const { error: upErr } = await supabaseAdmin
+    let { error: upErr } = await supabaseAdmin
       .from('contributions')
       .update({ status: 'paid', paid_at: now, payment_method: method, payment_note: note })
       .in('id', payable.map(r => r.id))
       .in('status', ['pending', 'overdue'])   // guard against races
+    if (upErr && /payment_method|payment_note/.test(upErr.message)) {
+      // v10 migration not applied — the payment still gets recorded
+      ;({ error: upErr } = await supabaseAdmin
+        .from('contributions')
+        .update({ status: 'paid', paid_at: now })
+        .in('id', payable.map(r => r.id))
+        .in('status', ['pending', 'overdue']))
+    }
     if (upErr) return error(upErr.message, 500)
 
     // One audit transaction + one SMS receipt per member+group batch
