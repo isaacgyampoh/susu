@@ -146,7 +146,7 @@ export default function GroupsPage() {
       {/* Activate modal */}
       {activateTarget && (
         <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setActivateTarget(null)}>
-          <div className="border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
+          <div className="bg-white border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="font-bold text-ink text-lg">{editMode ? 'Change start date' : 'Activate'}: {activateTarget.name}</h2>
             <p className="text-ink-2 text-sm">
               {editMode
