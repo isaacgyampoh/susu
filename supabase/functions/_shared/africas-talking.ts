@@ -1,23 +1,64 @@
+/*
+ * SMS sending — BMS Africa (bms.africa, mNotify API) is the primary provider.
+ *
+ * Configure in Supabase → Edge Functions → Secrets:
+ *   BMS_API_KEY    — from app.bms.africa → Developer section
+ *   BMS_SENDER_ID  — your approved sender ID (defaults to 'AbbieWealth', max 11 chars)
+ *
+ * Africa's Talking remains as a fallback: if BMS_API_KEY isn't set but
+ * AT_API_KEY is, messages go through Africa's Talking unchanged. If neither
+ * is set, sends are skipped gracefully so no flow ever breaks on SMS.
+ *
+ * The file keeps its historical name so the fifteen-odd functions importing
+ * from it don't need to change.
+ */
+
+const BMS_API_KEY   = Deno.env.get('BMS_API_KEY')
+const BMS_SENDER_ID = Deno.env.get('BMS_SENDER_ID') ?? 'AbbieWealth'
+
 const AT_API_KEY   = Deno.env.get('AT_API_KEY')
 const AT_USERNAME  = Deno.env.get('AT_USERNAME') ?? 'sandbox'
 const AT_SENDER_ID = Deno.env.get('AT_SENDER_ID') ?? 'SUSU'
 
-/** Send SMS — silently skips if AT_API_KEY not configured */
-export async function sendSMS(to: string | string[], message: string): Promise<boolean> {
-  if (!AT_API_KEY) {
-    console.log('[SMS SKIPPED — no AT_API_KEY] To:', to, '| Msg:', message)
-    return true // gracefully skip, don't break the flow
-  }
+/** BMS/mNotify wants local Ghana format: +233244123456 → 0244123456 */
+function toLocalGh(n: string): string {
+  const clean = n.trim().replace(/[^0-9+]/g, '')
+  if (clean.startsWith('+233')) return '0' + clean.slice(4)
+  if (clean.startsWith('233'))  return '0' + clean.slice(3)
+  return clean
+}
 
-  const recipients = Array.isArray(to) ? to : [to]
-  const formatted  = recipients
+async function sendViaBMS(recipients: string[], message: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.mnotify.com/api/sms/quick?key=${BMS_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        recipient: recipients.map(toLocalGh),
+        sender: BMS_SENDER_ID,
+        message,
+        is_schedule: false,
+        schedule_date: '',
+      }),
+    })
+    const data = await res.json().catch(() => null)
+    const ok = res.ok && (data?.status === 'success' || data?.code === 2000 || data?.code === '2000')
+    if (!ok) console.error('BMS SMS failed:', res.status, JSON.stringify(data))
+    return ok
+  } catch (e) {
+    console.error('BMS SMS error (non-fatal):', e)
+    return false
+  }
+}
+
+async function sendViaAT(recipients: string[], message: string): Promise<boolean> {
+  const formatted = recipients
     .map(n => n.trim().replace(/^0/, '+233').replace(/^\+?233/, '+233'))
     .join(',')
-
   try {
     const res = await fetch('https://api.africastalking.com/version1/messaging', {
       method: 'POST',
-      headers: { apiKey: AT_API_KEY, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      headers: { apiKey: AT_API_KEY!, 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
       body: new URLSearchParams({ username: AT_USERNAME, to: formatted, message, from: AT_SENDER_ID }).toString(),
     })
     const data = await res.json()
@@ -26,6 +67,18 @@ export async function sendSMS(to: string | string[], message: string): Promise<b
     console.error('SMS error (non-fatal):', e)
     return false
   }
+}
+
+/** Send SMS — BMS Africa first, Africa's Talking fallback, graceful skip if neither configured */
+export async function sendSMS(to: string | string[], message: string): Promise<boolean> {
+  const recipients = (Array.isArray(to) ? to : [to]).filter(Boolean)
+  if (recipients.length === 0) return false
+
+  if (BMS_API_KEY) return sendViaBMS(recipients, message)
+  if (AT_API_KEY)  return sendViaAT(recipients, message)
+
+  console.log('[SMS SKIPPED — no BMS_API_KEY or AT_API_KEY] To:', recipients.join(','), '| Msg:', message)
+  return true // gracefully skip, don't break the flow
 }
 
 export const smsTemplates = {
