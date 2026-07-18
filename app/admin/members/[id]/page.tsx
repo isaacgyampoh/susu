@@ -53,7 +53,9 @@ export default function MemberDetailPage() {
     if (error) { alert(error); return }
     setEditTarget(null)
     showToast('Payout details updated')
-    load()
+    // Refresh the member so the card shows the new details
+    const { data } = await callFunction<{ member: any }>(`admin-members?id=${id}`, { token: token! })
+    if (data?.member) setMember(data.member)
   }
 
   async function handleStatusChange(status: string) {
