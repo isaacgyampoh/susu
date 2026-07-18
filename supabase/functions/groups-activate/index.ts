@@ -15,19 +15,21 @@ serveWithCors(async (req) => {
   if (!admin) return error('Unauthorized', 401)
 
   try {
-    const { group_id, start_date, force } = await req.json()
+    const { group_id, start_date, force, allow_past } = await req.json()
     if (!group_id || !start_date) return error('group_id and start_date are required')
 
-    // Reject a start date in the past — it would back-date everyone as overdue
+    // A past start date is valid for legacy groups that pre-date this system,
+    // but only when the admin explicitly confirms it (allow_past).
     const today = new Date().toISOString().split('T')[0]
-    if (start_date < today && !force) {
-      return error('Start date is in the past. Members would immediately be marked overdue.', 400)
+    if (start_date < today && !allow_past) {
+      return error('Start date is in the past. Confirm backdating for a group that genuinely started earlier.', 400)
     }
 
     const { error: activateErr } = await supabaseAdmin.rpc('activate_group', {
       p_group_id:   group_id,
       p_start_date: start_date,
       p_force:      !!force,
+      p_allow_past: !!allow_past,
     })
 
     // The DB guards against rebuilding a schedule members have paid into

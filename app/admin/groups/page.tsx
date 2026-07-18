@@ -9,6 +9,7 @@ export default function GroupsPage() {
   const [loading, setLoading] = useState(true)
   const [activating, setActivating] = useState<string | null>(null)
   const [activateErr, setActivateErr] = useState('')
+  const [allowPast, setAllowPast]     = useState(false)
   const [startDate, setStartDate]   = useState('')
   const [activateTarget, setActivateTarget] = useState<SusuGroup | null>(null)
   const [toast, setToast]     = useState('')
@@ -27,11 +28,13 @@ export default function GroupsPage() {
 
   async function activateGroup(force = false) {
     if (!activateTarget || !startDate) { setActivateErr('Please set a start date'); return }
+    const isPast = startDate < new Date().toISOString().split('T')[0]
+    if (isPast && !allowPast) { setActivateErr('This date is in the past — tick the backdating confirmation below to continue.'); return }
     setActivating(activateTarget.id)
     setActivateErr('')
     const token = getAdminToken()
     const { error } = await callFunction('groups-activate', {
-      method: 'POST', body: { group_id: activateTarget.id, start_date: startDate, force }, token: token!,
+      method: 'POST', body: { group_id: activateTarget.id, start_date: startDate, force, allow_past: allowPast }, token: token!,
     })
     setActivating(null)
     if (error) { setActivateErr(error); return }
@@ -114,7 +117,7 @@ export default function GroupsPage() {
 
                 {/* Activate button — only show for full/open groups */}
                 {(g.status === 'full' || g.status === 'open') && g.current_members > 0 && (
-                  <button onClick={() => { setActivateTarget(g); setStartDate(''); setActivateErr('') }}
+                  <button onClick={() => { setActivateTarget(g); setStartDate(''); setActivateErr(''); setAllowPast(false) }}
                     className="flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm transition-colors">
                     Activate Group
                   </button>
@@ -145,12 +148,28 @@ export default function GroupsPage() {
               <label className="block text-sm text-ink-2 mb-1.5">Start Date *</label>
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                 className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
-                min={new Date().toISOString().split('T')[0]}
               />
+              <p className="text-xs text-ink-3 mt-1.5">The day the group actually started — past dates are allowed for groups that were already running before this system.</p>
             </div>
             {startDate && (
               <div className="p-3 bg-tint border border-line rounded-[10px] text-sm text-ink-2">
                 Group runs from <strong>{format(new Date(startDate), 'MMM d')}</strong> to <strong>{format(new Date(new Date(startDate).getTime() + activateTarget.max_members * activateTarget.cycle_days * 86400000), 'MMM d, yyyy')}</strong>
+              </div>
+            )}
+            {startDate && startDate < new Date().toISOString().split('T')[0] && (
+              <div className="p-3 bg-tint border border-gold/50 rounded-[10px] space-y-2">
+                <p className="text-sm font-semibold text-ink">Backdating to {format(new Date(startDate), 'MMM d, yyyy')}</p>
+                <p className="text-xs text-ink-2 leading-relaxed">
+                  Each member's schedule starts from the later of this date and the day they joined.
+                  Days already recorded as paid (from onboarding) are kept. Unpaid past days become arrears.
+                  Payout dates you've already set on members are preserved.
+                  Onboard existing members' history <strong>before</strong> activating, so they aren't shown owing days they already paid.
+                </p>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={allowPast} onChange={e => setAllowPast(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 accent-green" />
+                  <span className="text-xs font-medium text-ink">This group genuinely started on this date — generate the schedule from then</span>
+                </label>
               </div>
             )}
             {activateErr && (
