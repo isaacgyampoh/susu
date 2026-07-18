@@ -26,8 +26,6 @@ export default function JoinPage() {
     date_of_birth: '', occupation: '', residential_address: '',
     mobile_money_number: '', mobile_money_provider: 'MTN',
   })
-  const [frontFile, setFrontFile] = useState<File | null>(null)
-  const [backFile,  setBackFile]  = useState<File | null>(null)
 
   useEffect(() => {
     callFunction<{ groups: SusuGroup[] }>('groups-public')
@@ -58,8 +56,6 @@ export default function JoinPage() {
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => v && fd.append(k, v))
     fd.append('selected_group_ids', Array.from(picked).join(','))
-    if (frontFile) fd.append('ghana_card_front', frontFile)
-    if (backFile)  fd.append('ghana_card_back', backFile)
 
     const { data, error: err } = await callFunction<{
       kyc_id: string; fee: number; fee_paid: boolean
@@ -212,25 +208,6 @@ export default function JoinPage() {
                 <label className="block text-sm text-ink-2 mb-1.5">MoMo Number</label>
                 <input type="tel" className={field} value={form.mobile_money_number} onChange={e => set('mobile_money_number', e.target.value)} placeholder="0244XXXXXX" />
               </div>
-            </div>
-          </div>
-
-          {/* ── Ghana Card photos ── */}
-          <div className="border border-line rounded-[10px] p-4 sm:p-5">
-            <h2 className="font-semibold text-ink text-sm mb-1">Ghana Card photos</h2>
-            <p className="text-xs text-ink-3 mb-3">Clear photos help us approve you faster.</p>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {([['Front', frontFile, setFrontFile], ['Back', backFile, setBackFile]] as const).map(([label, file, setFile]) => (
-                <div key={label}>
-                  <label className="block text-sm text-ink-2 mb-1.5">{label} of card</label>
-                  <label className={`flex items-center justify-center px-4 py-6 border-2 border-dashed rounded-[10px] cursor-pointer text-sm transition-colors ${
-                    file ? 'border-green text-ink' : 'border-line text-ink-3 hover:border-ink hover:text-ink'}`}>
-                    {file ? `✓ ${file.name.slice(0, 22)}${file.name.length > 22 ? '…' : ''}` : 'Tap to upload photo'}
-                    <input type="file" accept="image/*" className="hidden"
-                      onChange={e => setFile(e.target.files?.[0] ?? null)} />
-                  </label>
-                </div>
-              ))}
             </div>
           </div>
 
