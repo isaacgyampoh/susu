@@ -38,18 +38,23 @@ serveWithCors(async (req) => {
     // For each membership build balance summary
     const plansWithBalance = await Promise.all(
       (memberships ?? []).map(async (m: any) => {
-        const { data: bal } = await supabaseAdmin.rpc('get_member_plan_balance', {
-          p_member_id: memberId,
-          p_group_id:  m.susu_groups.id,
+        // Per-slot balance; fall back to the group-wide figure if the
+        // per-membership function isn't in the database yet
+        let { data: bal, error: balErr } = await supabaseAdmin.rpc('get_membership_balance', {
+          p_membership_id: m.id,
         })
+        if (balErr) {
+          ;({ data: bal } = await supabaseAdmin.rpc('get_member_plan_balance', {
+            p_member_id: memberId, p_group_id: m.susu_groups.id,
+          }))
+        }
         const balance = bal?.[0] ?? {}
 
         // Next pending contribution for this group
         const { data: nextContrib } = await supabaseAdmin
           .from('contributions')
           .select('id, amount, due_date, status, is_late, is_flagged, penalty_due')
-          .eq('member_id', memberId)
-          .eq('group_id', m.susu_groups.id)
+          .eq('membership_id', m.id)
           .in('status', ['pending', 'overdue'])
           .order('due_date', { ascending: true })
           .limit(1)

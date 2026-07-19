@@ -3,6 +3,15 @@ import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { initializeTransaction } from '../_shared/paystack.ts'
 import { paystackConfigured, devPaymentsAllowed } from '../_shared/mode.ts'
 
+
+/** Validate an uploaded image when present (absent files are fine). */
+function checkImage(file: File | null, label: string): string | null {
+  if (!file || typeof file === 'string' || file.size === 0) return null
+  if (!file.type?.startsWith('image/')) return `${label} must be an image file`
+  if (file.size > 5 * 1024 * 1024)      return `${label} must be under 5MB`
+  return null
+}
+
 serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors

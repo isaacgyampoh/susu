@@ -306,130 +306,115 @@ ALTER TABLE kyc_applications
 ALTER TABLE members
   ADD COLUMN IF NOT EXISTS credentials_sent_at TIMESTAMPTZ;
 -- ============================================================
--- V15 — QUARTER, HALF AND FULL SLOTS
+-- V14 — SLOT-ACCURATE MONEY MATHS
 -- ============================================================
--- A slot no longer has to be whole. A half slot pays half the daily
--- contribution and collects half the cashout on its turn; a quarter slot,
--- a quarter. Every slot — whatever its size — still owns its own payout
--- position in the rotation.
+-- With multiple slots per member in one group (v13), anything that
+-- aggregates contributions by member+group mixes the slots together:
+-- each plan card would show the combined balance of all slots, and one
+-- slot's unpaid days would be deducted from EVERY slot's payout —
+-- double-counting arrears. Contributions therefore aggregate per
+-- MEMBERSHIP (per slot).
+--
+-- Penalties stay member+group scoped: the release flow marks them paid
+-- on the first payout, so they cannot double-deduct.
 
-ALTER TABLE group_memberships
-  ADD COLUMN IF NOT EXISTS slot_fraction NUMERIC(3,2) NOT NULL DEFAULT 1
-  CHECK (slot_fraction IN (0.25, 0.5, 1));
+-- ── Per-slot payout eligibility ──
+DROP FUNCTION IF EXISTS check_payout_eligibility(UUID);
 
--- The schedule generator must honour fractions: daily amounts and payout
--- amounts scale with slot_fraction.
-DROP FUNCTION IF EXISTS activate_group(UUID, DATE, BOOLEAN, BOOLEAN, BOOLEAN);
-
-CREATE OR REPLACE FUNCTION activate_group(
-  p_group_id          UUID,
-  p_start_date        DATE,
-  p_force             BOOLEAN DEFAULT false,
-  p_allow_past        BOOLEAN DEFAULT false,
-  p_recompute_payouts BOOLEAN DEFAULT NULL
-)
-RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER AS $$
+CREATE FUNCTION check_payout_eligibility(p_payout_id UUID)
+RETURNS TABLE (
+  eligible            BOOLEAN,
+  reason              TEXT,
+  gross_amount        DECIMAL,
+  outstanding_contrib DECIMAL,
+  outstanding_penalty DECIMAL,
+  registration_fee    DECIMAL,   -- reported for the record, never added
+  net_amount          DECIMAL,
+  contributions_paid  INTEGER,
+  contributions_due   INTEGER
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
-  v_group        susu_groups%ROWTYPE;
-  v_mem          group_memberships%ROWTYPE;
-  v_cashout      DECIMAL(10,2);
-  v_total_days   INTEGER;
-  v_paid_count   INTEGER;
-  v_end_date     DATE;
-  v_mem_start    DATE;
-  v_offset       INTEGER;
-  v_payout_date  DATE;
-  v_payout_amt   DECIMAL(10,2);
-  v_recompute    BOOLEAN;
-  v_frac         NUMERIC(3,2);
+  v_payout   payouts%ROWTYPE;
+  v_group    susu_groups%ROWTYPE;
+  v_out_c    DECIMAL := 0;
+  v_out_p    DECIMAL := 0;
+  v_paid     INTEGER := 0;
+  v_due      INTEGER := 0;
+  v_net      DECIMAL := 0;
+  v_eligible BOOLEAN := true;
+  v_reason   TEXT := 'Member is eligible for payout';
 BEGIN
-  SELECT * INTO v_group FROM susu_groups WHERE id = p_group_id;
-  IF v_group.id IS NULL THEN RAISE EXCEPTION 'Group not found'; END IF;
-
-  IF v_group.status = 'completed' THEN
-    RAISE EXCEPTION 'This group has completed and cannot be re-activated';
+  SELECT * INTO v_payout FROM payouts WHERE id = p_payout_id;
+  IF v_payout.id IS NULL THEN
+    RETURN QUERY SELECT false, 'Payout not found'::TEXT, 0::DECIMAL, 0::DECIMAL, 0::DECIMAL, 0::DECIMAL, 0::DECIMAL, 0, 0;
+    RETURN;
   END IF;
 
-  IF p_start_date < CURRENT_DATE AND NOT p_allow_past THEN
-    RAISE EXCEPTION 'Start date is in the past. Tick the confirmation to backdate a group that genuinely started on %.', p_start_date;
+  SELECT * INTO v_group FROM susu_groups WHERE id = v_payout.group_id;
+
+  -- Contributions for THIS slot only (fall back to member+group for any
+  -- legacy payout row without a membership link)
+  SELECT
+    COALESCE(SUM(CASE WHEN status IN ('pending','overdue') THEN amount ELSE 0 END), 0),
+    COUNT(CASE WHEN status = 'paid' THEN 1 END),
+    COUNT(*)
+  INTO v_out_c, v_paid, v_due
+  FROM contributions
+  WHERE (
+      (v_payout.membership_id IS NOT NULL AND membership_id = v_payout.membership_id)
+      OR
+      (v_payout.membership_id IS NULL AND member_id = v_payout.member_id AND group_id = v_payout.group_id)
+    )
+    AND due_date <= v_payout.scheduled_date;
+
+  -- Penalties: member+group; the release flow settles them so they only
+  -- ever deduct once, on the first payout
+  SELECT COALESCE(SUM(amount), 0) INTO v_out_p
+  FROM payment_penalties
+  WHERE member_id = v_payout.member_id
+    AND group_id  = v_payout.group_id
+    AND NOT is_paid;
+
+  -- The registration fee is commission. It is NOT added here.
+  v_net := v_payout.total_amount - v_out_c - v_out_p;
+
+  IF v_out_c > 0 THEN
+    v_eligible := false;
+    v_reason := 'This slot has GHS ' || v_out_c::TEXT || ' in unpaid contributions due before its payout date';
+  ELSIF v_out_p > 0 THEN
+    v_eligible := true;
+    v_reason := 'Eligible — GHS ' || v_out_p::TEXT || ' in penalties will be deducted';
   END IF;
 
-  IF v_group.status = 'active' AND NOT p_force THEN
-    SELECT COUNT(*) INTO v_paid_count
-    FROM contributions WHERE group_id = p_group_id AND status = 'paid';
-    IF v_paid_count > 0 THEN
-      RAISE EXCEPTION 'Group is already active with % paid contributions. Re-activating would rebuild the schedule and move collection dates.', v_paid_count;
-    END IF;
-  END IF;
-
-  IF (SELECT COUNT(*) FROM group_memberships WHERE group_id = p_group_id AND status = 'active') = 0 THEN
-    RAISE EXCEPTION 'Cannot activate a group with no active members';
-  END IF;
-
-  v_cashout    := COALESCE(v_group.cashout_amount,
-                    v_group.contribution_amount * v_group.max_members * v_group.cycle_days);
-  v_total_days := v_group.max_members * v_group.cycle_days;
-  v_end_date   := p_start_date + v_total_days;
-  v_recompute  := COALESCE(p_recompute_payouts, p_force);
-
-  UPDATE susu_groups
-  SET start_date = p_start_date, end_date = v_end_date, status = 'active'
-  WHERE id = p_group_id;
-
-  DELETE FROM contributions WHERE group_id = p_group_id AND status IN ('pending','overdue');
-  DELETE FROM payouts       WHERE group_id = p_group_id AND status = 'upcoming';
-
-  FOR v_mem IN
-    SELECT * FROM group_memberships
-    WHERE group_id = p_group_id AND status = 'active'
-    ORDER BY payout_position
-  LOOP
-    v_mem_start := GREATEST(p_start_date, COALESCE(v_mem.joined_at::DATE, p_start_date));
-    v_frac      := COALESCE(v_mem.slot_fraction, 1);
-
-    IF v_recompute THEN
-      v_payout_date := p_start_date + (v_mem.payout_position * v_group.cycle_days);
-      v_payout_amt  := ROUND(v_cashout * v_frac, 2);
-    ELSE
-      v_payout_date := COALESCE(v_mem.payout_date,
-                         p_start_date + (v_mem.payout_position * v_group.cycle_days));
-      v_payout_amt  := COALESCE(v_mem.payout_amount, ROUND(v_cashout * v_frac, 2));
-    END IF;
-
-    UPDATE group_memberships
-    SET payout_date = v_payout_date, payout_amount = v_payout_amt
-    WHERE id = v_mem.id;
-
-    IF NOT COALESCE(v_mem.payout_received, false) THEN
-      INSERT INTO payouts (member_id, group_id, membership_id, total_amount, scheduled_date, status)
-      VALUES (v_mem.member_id, p_group_id, v_mem.id, v_payout_amt, v_payout_date, 'upcoming');
-    END IF;
-
-    v_offset := v_mem_start - p_start_date;
-    FOR i IN v_offset..(v_total_days - 1) LOOP
-      IF NOT EXISTS (
-        SELECT 1 FROM contributions
-        WHERE membership_id = v_mem.id AND due_date = p_start_date + i
-      ) THEN
-        INSERT INTO contributions (member_id, group_id, membership_id, amount, due_date, status, cycle_number)
-        VALUES (v_mem.member_id, p_group_id, v_mem.id,
-                ROUND(v_group.contribution_amount * v_frac, 2),
-                p_start_date + i, 'pending', FLOOR(i::FLOAT / v_group.cycle_days) + 1);
-      END IF;
-    END LOOP;
-  END LOOP;
+  RETURN QUERY SELECT
+    v_eligible, v_reason, v_payout.total_amount, v_out_c, v_out_p,
+    COALESCE(v_group.registration_fee, 0),
+    v_net, v_paid, v_due;
 END;
 $$;
--- ============================================================
--- V16 — SHARED PAYOUT TURNS
--- ============================================================
--- Two (or more) fractional slots can share one turn: memberships that
--- carry the same shared_slot_key are partners. They keep their own daily
--- schedules and their own fraction of the cashout, but their payout dates
--- move together — change one, all partners follow.
 
-ALTER TABLE group_memberships
-  ADD COLUMN IF NOT EXISTS shared_slot_key UUID;
-
-CREATE INDEX IF NOT EXISTS idx_gm_shared_slot
-  ON group_memberships(shared_slot_key) WHERE shared_slot_key IS NOT NULL;
+-- ── Per-slot balance for the member portal ──
+CREATE OR REPLACE FUNCTION get_membership_balance(p_membership_id UUID)
+RETURNS TABLE (
+  total_paid          DECIMAL,
+  total_remaining     DECIMAL,
+  total_overdue       DECIMAL,
+  penalty_balance     DECIMAL,
+  contributions_paid  INTEGER,
+  contributions_total INTEGER
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(CASE WHEN c.status = 'paid'    THEN c.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN c.status IN ('pending','overdue') THEN c.amount ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN c.status = 'overdue' THEN c.amount ELSE 0 END), 0),
+    COALESCE((SELECT SUM(p.amount) FROM payment_penalties p
+              JOIN contributions pc ON pc.id = p.contribution_id
+              WHERE pc.membership_id = p_membership_id AND NOT p.is_paid), 0),
+    COUNT(CASE WHEN c.status = 'paid' THEN 1 END)::INTEGER,
+    COUNT(*)::INTEGER
+  FROM contributions c
+  WHERE c.membership_id = p_membership_id;
+END;
+$$;
