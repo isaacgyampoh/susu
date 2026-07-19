@@ -55,7 +55,15 @@ serveWithCors(async (req) => {
           .order('due_date', { ascending: true })
           .limit(1000)
         if (dbErr) return error(dbErr.message, 500)
-        return json({ contributions: data ?? [] })
+
+        // Their plans too — so an empty list can explain itself
+        const { data: plans } = await supabaseAdmin
+          .from('group_memberships')
+          .select('id, payout_position, status, susu_groups(id, name, status, start_date)')
+          .eq('member_id', url.searchParams.get('member_id'))
+          .eq('status', 'active')
+
+        return json({ contributions: data ?? [], plans: plans ?? [] })
       }
 
       const member_id = url.searchParams.get('member_id')

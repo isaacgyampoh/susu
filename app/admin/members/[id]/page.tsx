@@ -26,6 +26,7 @@ export default function MemberDetailPage() {
   // Record Payment (this member)
   const [payOpen, setPayOpen]     = useState(false)
   const [unpaid, setUnpaid]       = useState<any[]>([])
+  const [payPlans, setPayPlans]   = useState<any[]>([])
   const [unpaidLoading, setUnpaidLoading] = useState(false)
   const [payPicked, setPayPicked] = useState<Set<string>>(new Set())
   const [amountIn, setAmountIn]   = useState('')
@@ -138,9 +139,10 @@ export default function MemberDetailPage() {
     setUnpaidLoading(true)
     const token = getAdminToken()
     // Collection mode: everything owed, across every group and slot
-    const { data } = await callFunction<{ contributions: any[] }>(
+    const { data } = await callFunction<{ contributions: any[]; plans: any[] }>(
       `contributions-list?member_id=${id}&collection=1`, { token: token! })
     setUnpaid(data?.contributions ?? [])
+    setPayPlans(data?.plans ?? [])
     setUnpaidLoading(false)
   }
 
@@ -560,7 +562,46 @@ export default function MemberDetailPage() {
             {unpaidLoading ? (
               <p className="text-sm text-ink-3 py-6 text-center">Loading unpaid days…</p>
             ) : unpaid.length === 0 ? (
-              <p className="text-sm text-ink-2 py-6 text-center">No pending or overdue contributions — fully up to date. 🎉</p>
+              <div className="py-4 space-y-3">
+                {payPlans.length === 0 ? (
+                  <p className="text-sm text-ink-2 text-center">Not in any group yet — use Add to Group first.</p>
+                ) : (
+                  <>
+                    <p className="text-sm text-ink-2 text-center">No payment days found. Here's why, per plan:</p>
+                    {payPlans.map((pl: any) => (
+                      <div key={pl.id} className="border border-line rounded-[10px] p-3.5">
+                        <p className="text-sm font-semibold text-ink">
+                          {pl.susu_groups?.name} — slot #{pl.payout_position}
+                        </p>
+                        {pl.susu_groups?.status !== 'active' ? (
+                          <p className="text-xs text-gold mt-1.5">
+                            This group is not activated yet ({pl.susu_groups?.status}). Payment days only exist once the group
+                            is activated — set its start date and activate it on the Groups page, then come back here.
+                          </p>
+                        ) : (
+                          <>
+                            <p className="text-xs text-ink-2 mt-1.5">
+                              The group is running but this slot has no payment days yet.
+                            </p>
+                            <button onClick={async () => {
+                                const token = getAdminToken()
+                                const { data, error } = await callFunction<{ message: string }>(
+                                  `admin-members?membership_id=${pl.id}`,
+                                  { method: 'PATCH', token: token!, body: { regenerate: true } })
+                                if (error) { alert(error); return }
+                                alert(data?.message ?? 'Done')
+                                openPay()
+                              }}
+                              className="mt-2 px-3 py-1.5 bg-ink text-white text-xs font-semibold rounded-[8px] hover:brightness-105 transition-colors">
+                              Generate payment days
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
             ) : (
               <>
                 <div>

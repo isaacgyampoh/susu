@@ -108,7 +108,14 @@ serveWithCors(async (req) => {
         return json({ message: 'Slot unpaired — its payout date now moves independently' })
       }
 
-      if (Object.keys(updates).length === 0) return error('Nothing to update')
+      if (Object.keys(updates).length === 0 && !body.regenerate) return error('Nothing to update')
+
+      if (Object.keys(updates).length === 0 && body.regenerate) {
+        const { data: inserted, error: gErr } = await supabaseAdmin
+          .rpc('generate_membership_schedule', { p_membership_id: membershipId })
+        if (gErr) return error(`Could not generate schedule: ${gErr.message}. Run the pending migrations (v18) first.`, 500)
+        return json({ message: `${inserted ?? 0} payment day${inserted === 1 ? '' : 's'} generated` })
+      }
 
       const { error: upErr } = await supabaseAdmin
         .from('group_memberships').update(updates).eq('id', membershipId)
