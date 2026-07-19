@@ -125,9 +125,17 @@ export default function GroupsPage() {
                     Activate Group
                   </button>
                 )}
+                {(g.status === 'full' || g.status === 'open') && g.current_members > 0 && (
+                  <p className="text-[11px] text-ink-3 text-center mt-1.5">
+                    Started before this system? You can pick a past date when activating.
+                  </p>
+                )}
                 <Link href={`/admin/groups/${g.id}/edit`}
                   className="btn-line btn-sm w-full mb-2">Edit group</Link>
 
+                {g.status === 'completed' && (
+                  <p className="text-[11px] text-ink-3 text-center py-2">Completed — schedule and dates are locked.</p>
+                )}
                 {g.status === 'active' && (
                   <div className="flex items-center justify-center gap-2 text-ink text-sm py-2">
                     Running since {g.start_date ? format(new Date(g.start_date), 'MMM d, yyyy') : '—'}
@@ -210,9 +218,11 @@ export default function GroupsPage() {
               </div>
             )}
 
-            <button onClick={() => activateGroup(false)} disabled={!!activating || !startDate}
+            <button onClick={() => activateGroup(false)} disabled={!!activating || !startDate || (startDate < new Date().toISOString().split('T')[0] && !allowPast)}
               className="w-full flex items-center justify-center gap-2 py-3.5 bg-ink text-white font-bold rounded-[10px] transition-colors disabled:opacity-50">
               {activating ? (editMode ? 'Rebuilding…' : 'Activating…')
+                : (startDate && startDate < new Date().toISOString().split('T')[0] && !allowPast)
+                  ? 'Tick the backdating confirmation above to continue'
                 : editMode ? 'Change start date & rebuild schedule' : 'Activate & Notify Members'}
             </button>
             <button onClick={() => setActivateTarget(null)} className="w-full text-ink-2 text-sm hover:text-ink transition-colors py-2">Cancel</button>
