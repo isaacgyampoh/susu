@@ -19,6 +19,9 @@ export default function MemberDetailPage() {
   const [editTarget, setEditTarget] = useState<any>(null)
   const [editForm, setEditForm] = useState({ payout_position: '', payout_date: '', payout_amount: '' })
   const [savingEdit, setSavingEdit] = useState(false)
+  const [pairCands, setPairCands]   = useState<any[] | null>(null)
+  const [pairPicked, setPairPicked] = useState<Set<string>>(new Set())
+  const [pairing, setPairing]       = useState(false)
   // Record Payment (this member)
   const [payOpen, setPayOpen]     = useState(false)
   const [unpaid, setUnpaid]       = useState<any[]>([])
@@ -57,11 +60,46 @@ export default function MemberDetailPage() {
 
   function openEdit(gm: any) {
     setEditTarget(gm)
+    setPairCands(null); setPairPicked(new Set())
+    const token = getAdminToken()
+    callFunction<{ candidates: any[] }>(`admin-members?membership_id=${gm.id}`, { token: token! })
+      .then(({ data }) => setPairCands(data?.candidates ?? []))
     setEditForm({
       payout_position: gm.payout_position ? String(gm.payout_position) : '',
       payout_date:     gm.payout_date ?? '',
       payout_amount:   gm.payout_amount != null ? String(gm.payout_amount) : '',
     })
+  }
+
+  async function savePair() {
+    if (!editTarget || pairPicked.size === 0) return
+    setPairing(true)
+    const token = getAdminToken()
+    const { data, error } = await callFunction<{ message: string }>(
+      `admin-members?membership_id=${editTarget.id}`,
+      { method: 'PATCH', token: token!, body: {
+        pair_with: Array.from(pairPicked),
+        payout_date: editForm.payout_date || undefined,
+      }})
+    setPairing(false)
+    if (error) { alert(error); return }
+    setEditTarget(null)
+    showToast(data?.message ?? 'Slots paired')
+    refreshMember()
+  }
+
+  async function unpair() {
+    if (!editTarget) return
+    setPairing(true)
+    const token = getAdminToken()
+    const { error } = await callFunction<{ message: string }>(
+      `admin-members?membership_id=${editTarget.id}`,
+      { method: 'PATCH', token: token!, body: { unpair: true } })
+    setPairing(false)
+    if (error) { alert(error); return }
+    setEditTarget(null)
+    showToast('Slot unpaired')
+    refreshMember()
   }
 
   async function saveEdit() {
@@ -373,6 +411,9 @@ export default function MemberDetailPage() {
                     {gm.status === 'active' && !gm.payout_received && !gm.payout_date && (
                       <p className="text-[11px] text-gold mt-1.5">No payout date set yet</p>
                     )}
+                    {(gm.shared_with?.length ?? 0) > 0 && (
+                      <p className="text-[11px] text-ink mt-1">🤝 Shared turn with {gm.shared_with.join(', ')} — dates move together</p>
+                    )}
                     {Number(gm.slot_fraction ?? 1) < 1 && (
                       <p className="text-[11px] text-ink-2 mt-1">{Number(gm.slot_fraction) === 0.25 ? 'Quarter' : 'Half'} slot — pays and collects {Number(gm.slot_fraction) === 0.25 ? '¼' : '½'} of the group amounts</p>
                     )}
@@ -594,6 +635,48 @@ export default function MemberDetailPage() {
                 <input type="number" min="0" step="0.01" value={editForm.payout_amount}
                   onChange={e => setEditForm(p => ({ ...p, payout_amount: e.target.value }))}
                   className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:border-ink" />
+              </div>
+
+              {/* Shared payout turn */}
+              <div className="border-t border-line pt-3">
+                <p className="text-sm font-semibold text-ink">Share this payout turn</p>
+                {editTarget.shared_slot_key ? (
+                  <div className="mt-1.5">
+                    <p className="text-xs text-ink-2">
+                      Shared with {editTarget.shared_with?.join(', ') || 'other slot(s)'} — dates move together.
+                    </p>
+                    <button type="button" onClick={unpair} disabled={pairing}
+                      className="mt-2 text-xs text-red hover:underline underline-offset-2 disabled:opacity-50">
+                      {pairing ? '…' : 'Unpair this slot'}
+                    </button>
+                  </div>
+                ) : pairCands === null ? (
+                  <p className="text-xs text-ink-3 mt-1.5">Loading partners…</p>
+                ) : pairCands.length === 0 ? (
+                  <p className="text-xs text-ink-3 mt-1.5">No other members hold slots in this group yet.</p>
+                ) : (
+                  <>
+                    <p className="text-xs text-ink-3 mt-1">Tick who shares this turn — everyone gets the same payout date, each collecting their own fraction.</p>
+                    <div className="mt-2 max-h-36 overflow-y-auto border border-line rounded-[10px] divide-y divide-line">
+                      {pairCands.map((c: any) => (
+                        <label key={c.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-tint">
+                          <input type="checkbox" className="w-4 h-4 accent-green" checked={pairPicked.has(c.id)}
+                            onChange={() => setPairPicked(p => { const n = new Set(p); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n })} />
+                          <span className="flex-1 text-sm text-ink">{c.full_name}</span>
+                          <span className="text-[11px] text-ink-3">
+                            #{c.payout_position}{Number(c.slot_fraction) < 1 ? ` · ${Number(c.slot_fraction) === 0.25 ? '¼' : '½'}` : ''}{c.payout_date ? ` · ${c.payout_date}` : ''}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {pairPicked.size > 0 && (
+                      <button type="button" onClick={savePair} disabled={pairing}
+                        className="mt-2 w-full py-2.5 border border-ink text-ink text-sm font-semibold rounded-[10px] hover:bg-tint transition-colors disabled:opacity-50">
+                        {pairing ? 'Pairing…' : `Pair with ${pairPicked.size} slot${pairPicked.size > 1 ? 's' : ''}${editForm.payout_date ? ` on ${editForm.payout_date}` : ''}`}
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
             <div className="flex gap-3">

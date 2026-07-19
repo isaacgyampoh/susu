@@ -16,13 +16,44 @@ serveWithCors(async (req) => {
   const membershipId = url.searchParams.get('membership_id')
 
   try {
+    // GET /admin-members?membership_id=xxx — this membership + same-group
+    // memberships of OTHER members it could share a payout turn with
+    if (method === 'GET' && membershipId) {
+      const { data: gm } = await supabaseAdmin
+        .from('group_memberships')
+        .select('id, member_id, group_id, payout_position, payout_date, slot_fraction, shared_slot_key')
+        .eq('id', membershipId).single()
+      if (!gm) return error('Membership not found', 404)
+
+      const { data: others } = await supabaseAdmin
+        .from('group_memberships')
+        .select('id, payout_position, payout_date, slot_fraction, shared_slot_key, payout_received, members!member_id(full_name, member_id)')
+        .eq('group_id', gm.group_id).eq('status', 'active')
+        .neq('member_id', gm.member_id)
+
+      return json({
+        membership: gm,
+        candidates: (others ?? [])
+          .filter((o: any) => !o.payout_received)
+          .map((o: any) => ({
+            id: o.id,
+            full_name: o.members?.full_name,
+            member_code: o.members?.member_id,
+            payout_position: o.payout_position,
+            payout_date: o.payout_date,
+            slot_fraction: Number(o.slot_fraction ?? 1),
+            already_paired: !!o.shared_slot_key && o.shared_slot_key === gm.shared_slot_key,
+          })),
+      })
+    }
+
     // PATCH /admin-members?membership_id=xxx — edit payout details on a plan
     if (method === 'PATCH' && membershipId) {
       const body = await req.json()
 
       const { data: gm } = await supabaseAdmin
         .from('group_memberships')
-        .select('id, member_id, group_id, payout_position, payout_received, susu_groups(name)')
+        .select('id, member_id, group_id, payout_position, payout_received, payout_date, shared_slot_key, susu_groups(name)')
         .eq('id', membershipId).single()
       if (!gm) return error('Membership not found', 404)
       if (gm.payout_received) return error('This payout has already been received and cannot be edited', 400)
@@ -48,11 +79,55 @@ serveWithCors(async (req) => {
         updates.payout_amount = amt
       }
 
+      // Pairing: link this slot's payout turn with partner memberships
+      if (Array.isArray(body.pair_with)) {
+        const partnerIds: string[] = body.pair_with.filter(Boolean)
+        const key = crypto.randomUUID()
+        const pairDate = (typeof updates.payout_date === 'string' ? updates.payout_date : null)
+          ?? (gm as any).payout_date ?? null
+
+        const allIds = [membershipId, ...partnerIds]
+        const patch: Record<string, unknown> = { shared_slot_key: key }
+        if (pairDate) patch.payout_date = pairDate
+
+        const { error: pairErr } = await supabaseAdmin
+          .from('group_memberships').update(patch)
+          .in('id', allIds).eq('group_id', gm.group_id)
+        if (pairErr) return error(pairErr.message, 500)
+
+        if (pairDate) {
+          await supabaseAdmin.from('payouts').update({ scheduled_date: pairDate })
+            .in('membership_id', allIds).eq('status', 'upcoming')
+        }
+        return json({ message: `Payout turn shared across ${allIds.length} slots${pairDate ? ` on ${pairDate}` : ''}` })
+      }
+
+      if (body.unpair === true) {
+        await supabaseAdmin.from('group_memberships')
+          .update({ shared_slot_key: null }).eq('id', membershipId)
+        return json({ message: 'Slot unpaired — its payout date now moves independently' })
+      }
+
       if (Object.keys(updates).length === 0) return error('Nothing to update')
 
       const { error: upErr } = await supabaseAdmin
         .from('group_memberships').update(updates).eq('id', membershipId)
       if (upErr) return error(upErr.message, 500)
+
+      // Partners share the turn: a date change moves everyone together
+      if ((gm as any).shared_slot_key && typeof updates.payout_date === 'string') {
+        const { data: partners } = await supabaseAdmin
+          .from('group_memberships').select('id')
+          .eq('shared_slot_key', (gm as any).shared_slot_key).neq('id', membershipId)
+        const pids = (partners ?? []).map((r: any) => r.id)
+        if (pids.length) {
+          await supabaseAdmin.from('group_memberships')
+            .update({ payout_date: updates.payout_date }).in('id', pids)
+          await supabaseAdmin.from('payouts')
+            .update({ scheduled_date: updates.payout_date })
+            .in('membership_id', pids).eq('status', 'upcoming')
+        }
+      }
 
       // Keep the payouts schedule in step with the membership
       const { data: upcoming } = await supabaseAdmin
@@ -209,7 +284,7 @@ serveWithCors(async (req) => {
         .select(`
           *,
           group_memberships!member_id(
-            id, group_id, slot_fraction, payout_position, payout_date, payout_amount, payout_received, status, joined_at,
+            id, group_id, slot_fraction, shared_slot_key, payout_position, payout_date, payout_amount, payout_received, status, joined_at,
             susu_groups(id, name, contribution_amount, status)
           ),
           contributions(id, amount, due_date, paid_at, status, paystack_ref, susu_groups(name)),
@@ -220,6 +295,26 @@ serveWithCors(async (req) => {
         .single()
 
       if (dbErr) return error('Member not found', 404)
+
+      // Name the partners on any shared payout turns
+      const keys = [...new Set(((member as any).group_memberships ?? [])
+        .map((gm: any) => gm.shared_slot_key).filter(Boolean))]
+      if (keys.length > 0) {
+        const { data: partners } = await supabaseAdmin
+          .from('group_memberships')
+          .select('shared_slot_key, slot_fraction, member_id, members!member_id(full_name)')
+          .in('shared_slot_key', keys).neq('member_id', id)
+        const byKey: Record<string, string[]> = {}
+        for (const p of partners ?? []) {
+          const f = Number((p as any).slot_fraction ?? 1)
+          const lbl = `${(p as any).members?.full_name}${f < 1 ? ` (${f === 0.25 ? '¼' : '½'})` : ''}`
+          ;(byKey[(p as any).shared_slot_key] ??= []).push(lbl)
+        }
+        for (const gm of (member as any).group_memberships ?? []) {
+          if (gm.shared_slot_key) gm.shared_with = byKey[gm.shared_slot_key] ?? []
+        }
+      }
+
       return json({ member })
     }
 
