@@ -9,6 +9,7 @@ export default function MemberDetailPage() {
   const router            = useRouter()
   const [member, setMember] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [loadErr, setLoadErr] = useState('')
   const [action, setAction]   = useState<'suspend' | 'activate' | null>(null)
   const [forfeitTarget, setForfeitTarget] = useState<any>(null)
   const [forfeitReason, setForfeitReason] = useState('')
@@ -54,7 +55,8 @@ export default function MemberDetailPage() {
   useEffect(() => {
     const token = getAdminToken()
     callFunction<{ member: any }>(`admin-members?id=${id}`, { token: token! })
-      .then(({ data }) => setMember(data?.member))
+      .then(({ data }) => setLoadErr(error ?? '')
+      setMember(data?.member))
       .finally(() => setLoading(false))
   }, [id])
 
@@ -265,7 +267,7 @@ export default function MemberDetailPage() {
   )
 
   if (!member) return (
-    <div className="p-8 text-center text-ink-2">Member not found. <Link href="/admin/members" className="text-ink underline">Back to members</Link></div>
+    <div className="p-8 text-center text-ink-2">{loadErr ? `Could not load member: ${loadErr}` : 'Member not found.'} <Link href="/admin/members" className="text-ink underline">Back to members</Link></div>
   )
 
   const paid    = member.contributions?.filter((c: any) => c.status === 'paid').length ?? 0
