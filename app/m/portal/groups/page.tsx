@@ -16,6 +16,7 @@ export default function BrowseGroups() {
   const [mine, setMine]       = useState<Set<string>>(new Set())
   const [picked, setPicked]   = useState<Set<string>>(new Set())
   const [slotsFor, setSlotsFor] = useState<Record<string, number>>({})
+  const [fracFor, setFracFor]   = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
   const [error, setError]     = useState('')
@@ -43,7 +44,7 @@ export default function BrowseGroups() {
   async function join() {
     setJoining(true); setError('')
     const { data, error: err } = await callFunction<any>('member-join-group', {
-      method: 'POST', body: { selections: Array.from(picked).map(id => ({ group_id: id, slots: slotsFor[id] || 1 })) }, token: getMemberToken()!,
+      method: 'POST', body: { selections: Array.from(picked).map(id => ({ group_id: id, slots: slotsFor[id] || 1, fraction: fracFor[id] ?? 1 })) }, token: getMemberToken()!,
     })
     setJoining(false)
     if (err) { setError(err); return }
@@ -55,7 +56,7 @@ export default function BrowseGroups() {
   if (loading) return <div className="grid place-items-center h-[70vh]">Loading…</div>
 
   const pickedGroups = groups.filter(g => picked.has(g.id))
-  const totalFees    = pickedGroups.reduce((s, g) => s + Number(g.registration_fee || 0) * (slotsFor[g.id] || 1), 0)
+  const totalFees    = pickedGroups.reduce((s, g) => s + Number(g.registration_fee || 0) * (slotsFor[g.id] || 1) * (fracFor[g.id] ?? 1), 0)
   const totalSlots   = pickedGroups.reduce((s, g) => s + (slotsFor[g.id] || 1), 0)
 
   return (
@@ -108,6 +109,11 @@ export default function BrowseGroups() {
                   </div>
                   <p className="text-[12.5px] text-ink-2 mt-1">
                     GHS {n0(g.contribution_amount)} {g.contribution_frequency} · Cashout GHS {n0(g.cashout_amount)}
+                    {checked && (fracFor[g.id] ?? 1) < 1 && (
+                      <span className="block text-[11.5px] text-ink-3 mt-0.5">
+                        Your {(fracFor[g.id] === 0.25 ? 'quarter' : 'half')} slot: pay GHS {n0(Number(g.contribution_amount) * (fracFor[g.id] ?? 1))} {g.contribution_frequency}, collect GHS {n0(Number(g.cashout_amount ?? 0) * (fracFor[g.id] ?? 1))}
+                      </span>
+                    )}
                   </p>
                   <p className="text-[12px] text-ink-3 mt-0.5">
                     {g.current_members}/{g.max_members} members
@@ -115,8 +121,17 @@ export default function BrowseGroups() {
                   </p>
                   {g.description && <p className="text-[12px] text-ink-3 mt-1.5">{g.description}</p>}
                   {checked && (
-                    <span className="flex items-center gap-2 mt-2" onClick={e => e.preventDefault()}>
-                      <span className="text-[12px] text-ink-2">Slots:</span>
+                    <span className="flex items-center gap-2 mt-2 flex-wrap" onClick={e => e.preventDefault()}>
+                      <span className="text-[12px] text-ink-2">Size:</span>
+                      {([[0.25,'¼'],[0.5,'½'],[1,'Full']] as [number,string][]).map(([f, lbl]) => (
+                        <button key={f} type="button"
+                          onClick={e => { e.stopPropagation(); setFracFor(prev => ({ ...prev, [g.id]: f })) }}
+                          className={`px-2.5 h-8 rounded-[9px] text-[12px] font-bold transition-all ${
+                            (fracFor[g.id] ?? 1) === f ? 'bg-ink text-white' : 'bg-white border border-line text-ink-2'}`}>
+                          {lbl}
+                        </button>
+                      ))}
+                      <span className="text-[12px] text-ink-2 ml-1">Slots:</span>
                       {[1,2,3,4,5].map(n => (
                         <button key={n} type="button"
                           onClick={e => { e.stopPropagation(); setSlotsFor(prev => ({ ...prev, [g.id]: n })) }}

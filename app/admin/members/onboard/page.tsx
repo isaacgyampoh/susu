@@ -17,6 +17,7 @@ import type { SusuGroup } from '@/types'
 type PlanForm = {
   group_id: string
   slots: string
+  fraction: string
   start_date: string
   amount_paid: string
   payout_position: string
@@ -26,7 +27,7 @@ type PlanForm = {
 }
 
 const emptyPlan = (): PlanForm => ({
-  group_id: '', slots: '1', start_date: '', amount_paid: '',
+  group_id: '', slots: '1', fraction: '1', start_date: '', amount_paid: '',
   payout_position: '', payout_date: '', payout_amount: '', payout_received: false,
 })
 
@@ -82,8 +83,9 @@ export default function OnboardMemberPage() {
   function daysPaid(plan: PlanForm): number | null {
     const g = groupFor(plan.group_id)
     const amt = parseFloat(plan.amount_paid)
+    const frac = parseFloat(plan.fraction || '1') || 1
     if (!g || !g.contribution_amount || isNaN(amt)) return null
-    return Math.floor(amt / g.contribution_amount)
+    return Math.floor(amt / (g.contribution_amount * frac * Math.max(1, parseInt(plan.slots || '1'))))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -105,6 +107,7 @@ export default function OnboardMemberPage() {
       plans: plans.map(p => ({
         group_id: p.group_id,
         slots: Math.max(1, parseInt(p.slots || '1')),
+        fraction: parseFloat(p.fraction || '1'),
         start_date: p.start_date,
         amount_paid: parseFloat(p.amount_paid || '0'),
         payout_position: p.payout_position ? parseInt(p.payout_position) : undefined,
@@ -324,6 +327,15 @@ export default function OnboardMemberPage() {
                           {gr.name} — GHS {gr.contribution_amount}/{gr.contribution_frequency} · {gr.current_members}/{gr.max_members} members
                         </option>
                       ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-ink-2 mb-1.5">Slot size</label>
+                  <select className={field} value={plan.fraction} onChange={e => setPlan(i, { fraction: e.target.value })}>
+                    <option value="1">Full slot</option>
+                    <option value="0.5">Half slot (½ daily, ½ cashout)</option>
+                    <option value="0.25">Quarter slot (¼ daily, ¼ cashout)</option>
                   </select>
                 </div>
 

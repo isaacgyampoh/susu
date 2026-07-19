@@ -46,7 +46,8 @@ serveWithCors(async (req) => {
         .map((id: string) => ({
           id,
           name: nameMap[id] ?? a.susu_groups?.name ?? '—',
-          slots: Math.max(1, Number(a.selected_slots?.[id] ?? 1)),
+          slots: Math.max(1, Number(a.selected_slots?.[id]?.count ?? a.selected_slots?.[id] ?? 1)),
+          fraction: Number(a.selected_slots?.[id]?.fraction ?? 1),
         })),
     }))
     return json(enriched)
@@ -96,7 +97,8 @@ serveWithCors(async (req) => {
     // body.payout_dates = { "<group_id>": "YYYY-MM-DD", ... }
     const payoutDates: Record<string, string> = body.payout_dates ?? {}
 
-    const slotWanted = (gid: string) => Math.max(1, Math.min(10, Number(kyc.selected_slots?.[gid] ?? 1)))
+    const slotWanted = (gid: string) => Math.max(1, Math.min(10, Number(kyc.selected_slots?.[gid]?.count ?? kyc.selected_slots?.[gid] ?? 1)))
+    const fracWanted = (gid: string) => [0.25, 0.5, 1].includes(Number(kyc.selected_slots?.[gid]?.fraction)) ? Number(kyc.selected_slots[gid].fraction) : 1
     const openTargets = (targetGroups ?? []).filter(g => g.current_members + slotWanted(g.id) <= g.max_members)
     const fullTargets = (targetGroups ?? []).filter(g => g.current_members + slotWanted(g.id) > g.max_members)
     if (openTargets.length === 0) return error('All selected groups are now full', 400)
@@ -138,7 +140,8 @@ serveWithCors(async (req) => {
         .eq('group_id', g.id)
       const used = new Set((taken ?? []).map((r: any) => r.payout_position))
 
-      const payoutAmount = Number(g.cashout_amount ?? 0)
+      const fraction = fracWanted(g.id)
+      const payoutAmount = Math.round(Number(g.cashout_amount ?? 0) * fraction * 100) / 100
       for (let i = 0; i < wanted; i++) {
         let nextPosition = 1
         while (used.has(nextPosition)) nextPosition++
@@ -147,11 +150,17 @@ serveWithCors(async (req) => {
         // Admin-chosen payout date applies to the first slot only
         const payoutDate = i === 0 ? (payoutDates[g.id] || null) : null
 
-        const { data: gm } = await supabaseAdmin.from('group_memberships').insert({
+        const gmRow: Record<string, unknown> = {
           member_id: member.id, group_id: g.id,
           payout_position: nextPosition, status: 'active',
           payout_date: payoutDate, payout_amount: payoutAmount,
-        }).select('id').single()
+          slot_fraction: fraction,
+        }
+        let { data: gm, error: gmE } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single()
+        if (gmE && /slot_fraction/.test(gmE.message)) {
+          delete gmRow.slot_fraction
+          ;({ data: gm } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single())
+        }
 
         if (payoutDate && gm) {
           await supabaseAdmin.from('payouts').insert({

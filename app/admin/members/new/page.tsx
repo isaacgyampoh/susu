@@ -28,6 +28,7 @@ export default function AddMemberPage() {
   const [groupIds, setGroupIds] = useState<string[]>([])
   const [payoutDates, setPayoutDates] = useState<Record<string, string>>({})
   const [slotCounts, setSlotCounts]   = useState<Record<string, number>>({})
+  const [slotFracs, setSlotFracs]     = useState<Record<string, number>>({})
   const [sendNow, setSendNow]         = useState(false)
 
   const toggleGroup = (id: string) =>
@@ -51,7 +52,7 @@ export default function AddMemberPage() {
     if (groupIds.length) {
       fd.append('group_ids', groupIds.join(','))
       fd.append('group_settings', JSON.stringify(
-        groupIds.map(id => ({ group_id: id, payout_date: payoutDates[id] || undefined, slots: slotCounts[id] || 1 }))
+        groupIds.map(id => ({ group_id: id, payout_date: payoutDates[id] || undefined, slots: slotCounts[id] || 1, fraction: slotFracs[id] ?? 1 }))
       ))
     }
     fd.append('send_credentials', sendNow ? 'true' : 'false')
@@ -79,7 +80,7 @@ export default function AddMemberPage() {
   }
 
   const selectedGroups = groups.filter(g => groupIds.includes(g.id))
-  const totalRegFee    = selectedGroups.reduce((s, g) => s + Number(g.registration_fee || 0) * (slotCounts[g.id] || 1), 0)
+  const totalRegFee    = selectedGroups.reduce((s, g) => s + Number(g.registration_fee || 0) * (slotCounts[g.id] || 1) * (slotFracs[g.id] ?? 1), 0)
 
   // Success screen
   const portalUrl = memberSignInUrl()
@@ -294,7 +295,18 @@ export default function AddMemberPage() {
                     </span>
                     {checked && (
                       <span className="block mt-2" onClick={e => e.preventDefault()}>
-                        <span className="flex items-center gap-2 mb-1.5" onClick={e => e.stopPropagation()}>
+<span className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                          <span className="text-xs text-ink-2">Slot size:</span>
+                          {([[0.25,'¼'],[0.5,'½'],[1,'Full']] as [number,string][]).map(([f, lbl]) => (
+                            <button key={f} type="button"
+                              onClick={() => setSlotFracs(prev => ({ ...prev, [g.id]: f }))}
+                              className={`w-9 h-7 rounded-[8px] text-[11px] font-bold transition-all ${
+                                (slotFracs[g.id] ?? 1) === f ? 'bg-ink text-white' : 'bg-white border border-line text-ink-2 hover:text-ink'}`}>
+                              {lbl}
+                            </button>
+                          ))}
+                        </span>
+                        <span className="flex items-center gap-2 mb-1.5 mt-1.5" onClick={e => e.stopPropagation()}>
                           <span className="text-xs text-ink-2">Slots:</span>
                           {[1,2,3,4,5].map(n => (
                             <button key={n} type="button"
@@ -306,7 +318,7 @@ export default function AddMemberPage() {
                             </button>
                           ))}
                           {(slotCounts[g.id] || 1) > 1 && (
-                            <span className="text-[11px] text-ink-3">= pays GHS {(Number(g.contribution_amount) * (slotCounts[g.id] || 1)).toLocaleString()}/day, {slotCounts[g.id]} payouts</span>
+                            <span className="text-[11px] text-ink-3">= pays GHS {(Number(g.contribution_amount) * (slotCounts[g.id] || 1) * (slotFracs[g.id] ?? 1)).toLocaleString()}/day, {slotCounts[g.id]} payouts</span>
                           )}
                         </span>
                         <span className="block text-xs text-ink mb-1.5">Payout position: next free slot (~#{g.current_members + 1}){(slotCounts[g.id] || 1) > 1 ? ' — extra slots take the following free positions' : ''}</span>

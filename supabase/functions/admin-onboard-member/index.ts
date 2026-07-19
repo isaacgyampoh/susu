@@ -116,6 +116,8 @@ serveWithCors(async (req) => {
       if (amount_paid < 0)          return error('amount_paid cannot be negative')
 
       const slots = Math.max(1, Math.min(10, Number(plan.slots ?? 1)))
+      const FRACS = [0.25, 0.5, 1]
+      const fraction = FRACS.includes(Number(plan.fraction)) ? Number(plan.fraction) : 1
 
       const { data: group } = await supabaseAdmin
         .from('susu_groups')
@@ -151,7 +153,7 @@ serveWithCors(async (req) => {
         }
         usedSlots.add(position)
 
-        const payout_amount   = plan.payout_amount != null ? Number(plan.payout_amount) : Number(group.cashout_amount ?? 0)
+        const payout_amount   = plan.payout_amount != null ? Number(plan.payout_amount) : Math.round(Number(group.cashout_amount ?? 0) * fraction * 100) / 100
         // Payout date/received apply to the FIRST slot; set the others
         // per-slot afterwards from the member's page.
         const payout_date     = sIdx === 0 ? (plan.payout_date || null) : null
@@ -169,9 +171,15 @@ serveWithCors(async (req) => {
           status: 'active',
           joined_at: `${start_date}T00:00:00Z`,
           onboarded_existing: true,
+          slot_fraction: fraction,
         }
         let { data: membership, error: gmErr } = await supabaseAdmin
           .from('group_memberships').insert(gmRow).select('id').single()
+        if (gmErr && /slot_fraction/.test(gmErr.message)) {
+          delete gmRow.slot_fraction
+          ;({ data: membership, error: gmErr } = await supabaseAdmin
+            .from('group_memberships').insert(gmRow).select('id').single())
+        }
         if (gmErr && /onboarded_existing/.test(gmErr.message)) {
           delete gmRow.onboarded_existing
           ;({ data: membership, error: gmErr } = await supabaseAdmin
@@ -180,7 +188,7 @@ serveWithCors(async (req) => {
         if (gmErr || !membership) return error(`Membership failed for "${group.name}": ${gmErr?.message}`, 500)
 
         // ── Backfill PAID contributions for this slot, daily from start ──
-        const daily = Number(group.contribution_amount)
+        const daily = Math.round(Number(group.contribution_amount) * fraction * 100) / 100
         const fullDays  = daily > 0 ? Math.floor(slotAmount / daily) : 0
         const remainder = daily > 0 ? Math.round((slotAmount - fullDays * daily) * 100) / 100 : 0
 
@@ -262,7 +270,8 @@ serveWithCors(async (req) => {
         slot_details: slotResults,
         payout_position: slotResults[0]?.payout_position,
         payout_date: slotResults[0]?.payout_date ?? null,
-        payout_amount: plan.payout_amount != null ? Number(plan.payout_amount) : Number(group.cashout_amount ?? 0),
+        payout_amount: plan.payout_amount != null ? Number(plan.payout_amount) : Math.round(Number(group.cashout_amount ?? 0) * fraction * 100) / 100,
+        fraction,
         payout_received: !!plan.payout_received,
         contributions_backfilled: backfilledTotal,
         amount_recorded: amount_paid,

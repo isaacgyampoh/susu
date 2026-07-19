@@ -18,11 +18,12 @@ serveWithCors(async (req) => {
     // An applicant may select several groups at once. 'selected_group_ids'
     // is comma-separated; the old single 'selected_group_id' still works.
     // Preferred: selected_groups JSON [{ id, slots }]; legacy: comma ids
-    let slotMap: Record<string, number> = {}
+    const FRACS = [0.25, 0.5, 1]
+    let slotMap: Record<string, { count: number; fraction: number }> = {}
     try {
       const rawSel = formData.get('selected_groups') as string | null
       if (rawSel) for (const g of JSON.parse(rawSel)) {
-        if (g?.id) slotMap[g.id] = Math.max(1, Math.min(10, Number(g.slots ?? 1)))
+        if (g?.id) slotMap[g.id] = { count: Math.max(1, Math.min(10, Number(g.slots ?? 1))), fraction: FRACS.includes(Number(g.fraction)) ? Number(g.fraction) : 1 }
       }
     } catch (_) { /* fall through to ids */ }
 
@@ -31,7 +32,7 @@ serveWithCors(async (req) => {
     const selectedGroupIds = Object.keys(slotMap).length > 0
       ? Object.keys(slotMap)
       : [...new Set(rawIds.split(',').map(s => s.trim()).filter(Boolean))]
-    if (Object.keys(slotMap).length === 0) for (const id of selectedGroupIds) slotMap[id] = 1
+    if (Object.keys(slotMap).length === 0) for (const id of selectedGroupIds) slotMap[id] = { count: 1, fraction: 1 }
     const selected_group_id = selectedGroupIds[0]
 
     if (!full_name || !phone || !ghana_card_number || selectedGroupIds.length === 0) {
@@ -57,14 +58,14 @@ serveWithCors(async (req) => {
 
     if (!groupsData || groupsData.length !== selectedGroupIds.length) return error('One or more selected groups were not found', 404)
     for (const g of groupsData) {
-      const want = slotMap[g.id] ?? 1
+      const want = slotMap[g.id]?.count ?? 1
       if (!['open', 'full'].includes(g.status) || g.current_members + want > g.max_members) {
         return error(`"${g.name}" cannot take ${want} slot(s) — only ${Math.max(0, g.max_members - g.current_members)} left`, 400)
       }
     }
 
     // Total registration fee: fee × slots, across all selected groups
-    const totalFee = groupsData.reduce((s, g) => s + Number(g.registration_fee || 0) * (slotMap[g.id] ?? 1), 0)
+    const totalFee = Math.round(groupsData.reduce((s, g) => s + Number(g.registration_fee || 0) * (slotMap[g.id]?.count ?? 1) * (slotMap[g.id]?.fraction ?? 1), 0) * 100) / 100
     const group = { registration_fee: totalFee }
 
     // Upload Ghana Card images

@@ -38,6 +38,7 @@ export default function MemberDetailPage() {
   const [allGroups, setAllGroups] = useState<any[]>([])
   const [addPicked, setAddPicked] = useState<Set<string>>(new Set())
   const [addSlots, setAddSlots]   = useState<Record<string, number>>({})
+  const [addFracs, setAddFracs]   = useState<Record<string, number>>({})
   const [addDates, setAddDates]   = useState<Record<string, string>>({})
   const [adding, setAdding]       = useState(false)
   // Danger zone
@@ -165,6 +166,7 @@ export default function MemberDetailPage() {
         plans: Array.from(addPicked).map(gid => ({
           group_id: gid,
           slots: addSlots[gid] || 1,
+          fraction: addFracs[gid] ?? 1,
           start_date: today,
           amount_paid: 0,
           payout_date: addDates[gid] || undefined,
@@ -371,6 +373,9 @@ export default function MemberDetailPage() {
                     {gm.status === 'active' && !gm.payout_received && !gm.payout_date && (
                       <p className="text-[11px] text-gold mt-1.5">No payout date set yet</p>
                     )}
+                    {Number(gm.slot_fraction ?? 1) < 1 && (
+                      <p className="text-[11px] text-ink-2 mt-1">{Number(gm.slot_fraction) === 0.25 ? 'Quarter' : 'Half'} slot — pays and collects {Number(gm.slot_fraction) === 0.25 ? '¼' : '½'} of the group amounts</p>
+                    )}
                     {gm.status === 'active' && !gm.payout_received && (
                       <button onClick={() => openEdit(gm)}
                         className="mt-2 pt-2 border-t border-line w-full flex items-center justify-center gap-1.5 text-xs text-ink-2 hover:text-ink transition-colors">
@@ -428,7 +433,16 @@ export default function MemberDetailPage() {
                           {checked && (
                             <span className="block mt-2 space-y-2" onClick={e => e.preventDefault()}>
                               <span className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                                <span className="text-xs text-ink-2">Slots:</span>
+                                <span className="text-xs text-ink-2">Size:</span>
+                                {([[0.25,'¼'],[0.5,'½'],[1,'Full']] as [number,string][]).map(([f, lbl]) => (
+                                  <button key={f} type="button"
+                                    onClick={() => setAddFracs(prev => ({ ...prev, [g.id]: f }))}
+                                    className={`px-2 h-7 rounded-[8px] text-[11px] font-bold transition-all ${
+                                      (addFracs[g.id] ?? 1) === f ? 'bg-ink text-white' : 'bg-white border border-line text-ink-2'}`}>
+                                    {lbl}
+                                  </button>
+                                ))}
+                                <span className="text-xs text-ink-2 ml-1">Slots:</span>
                                 {[1,2,3,4,5].map(n => (
                                   <button key={n} type="button"
                                     onClick={() => setAddSlots(prev => ({ ...prev, [g.id]: n }))}

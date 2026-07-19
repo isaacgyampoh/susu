@@ -32,7 +32,8 @@ serveWithCors(async (req) => {
     const groupIds    = groupIdsRaw.split(',').map(s => s.trim()).filter(Boolean)
 
     // Optional per-group settings: JSON array [{ group_id, payout_date?, payout_position? }]
-    let groupSettings: Record<string, { payout_date?: string; payout_position?: number; slots?: number }> = {}
+    const FRACS = [0.25, 0.5, 1]
+    let groupSettings: Record<string, { payout_date?: string; payout_position?: number; slots?: number; fraction?: number }> = {}
     try {
       const raw = formData.get('group_settings') as string | null
       if (raw) {
@@ -129,6 +130,7 @@ serveWithCors(async (req) => {
 
       const settings = groupSettings[gid] ?? {}
       const slots    = Math.max(1, Math.min(10, Number(settings.slots ?? 1)))
+      const fraction = FRACS.includes(Number(settings.fraction)) ? Number(settings.fraction) : 1
 
       if (group.current_members + slots > group.max_members) {
         return error(`Group "${group.name}" only has ${group.max_members - group.current_members} slot(s) left — cannot take ${slots}`, 400)
@@ -153,13 +155,19 @@ serveWithCors(async (req) => {
         usedSlots.add(position)
 
         const payoutDate   = sIdx === 0 ? (settings.payout_date || null) : null
-        const payoutAmount = Number(group.cashout_amount ?? 0)
+        const payoutAmount = Math.round(Number(group.cashout_amount ?? 0) * fraction * 100) / 100
 
-        const { data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert({
+        const gmRow: Record<string, unknown> = {
           member_id: member.id, group_id: gid,
           payout_position: position, status: 'active',
           payout_date: payoutDate, payout_amount: payoutAmount,
-        }).select('id').single()
+          slot_fraction: fraction,
+        }
+        let { data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single()
+        if (gmErr && /slot_fraction/.test(gmErr.message)) {
+          delete gmRow.slot_fraction
+          ;({ data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single())
+        }
         if (gmErr) return error(`Member created but assignment to "${group.name}" failed: ${gmErr.message}`, 500)
 
         if (payoutDate && gm) {
@@ -170,14 +178,14 @@ serveWithCors(async (req) => {
           })
         }
 
-        assignments.push({ group_id: gid, group_name: group.name, payout_position: position, payout_date: payoutDate })
+        assignments.push({ group_id: gid, group_name: group.name, payout_position: position, payout_date: payoutDate, fraction })
       }
 
       // Record registration fee as a transaction if group has one
       if (group.registration_fee > 0 && feePaid) {
         await supabaseAdmin.from('transactions').insert({
           member_id: member.id, type: 'registration_fee',
-          amount: group.registration_fee * slots,
+          amount: Math.round(group.registration_fee * slots * fraction * 100) / 100,
           reference: `REG-${member.id}-${gid.slice(0, 8)}-${ts}`,
           description: `Registration fee for "${group.name}"${slots > 1 ? ` × ${slots} slots` : ''} (recorded by admin)`,
           status: 'success',
