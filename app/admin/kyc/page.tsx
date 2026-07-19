@@ -132,7 +132,8 @@ export default function KYCPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {apps.map(app => (
-                <tr key={app.id} className="hover:bg-tint transition-colors">
+                <tr key={app.id} onClick={() => { setPayoutDates({}); setSelected(app) }}
+                  className="hover:bg-tint transition-colors cursor-pointer">
                   <td className="px-5 py-4 text-ink font-medium">{app.full_name}</td>
                   <td className="px-5 py-4 text-ink-2 hidden sm:table-cell">{app.phone}</td>
                   <td className="px-5 py-4 text-ink-2 hidden md:table-cell">{((app as any).selected_groups?.map((g: any) => g.slots > 1 ? `${g.name} ×${g.slots}` : g.name).join(', ')) ?? (app as any).susu_groups?.name}</td>
@@ -143,8 +144,10 @@ export default function KYCPage() {
                   </td>
                   <td className="px-5 py-4 text-ink-2">{format(new Date(app.submitted_at), 'MMM d, yyyy')}</td>
                   <td className="px-5 py-4">
-                    <button onClick={() => setSelected(app)} className="p-1.5 text-ink-2 hover:text-ink transition-colors">
-                      </button>
+                    <button onClick={e => { e.stopPropagation(); setPayoutDates({}); setSelected(app) }}
+                      className="px-3 py-1.5 border border-line text-ink text-xs font-semibold rounded-[8px] hover:bg-ink hover:text-white transition-colors whitespace-nowrap">
+                      Review
+                    </button>
                   </td>
                 </tr>
               ))}
