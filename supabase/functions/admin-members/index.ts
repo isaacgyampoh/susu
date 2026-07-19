@@ -157,6 +157,11 @@ serveWithCors(async (req) => {
         })
       }
 
+      // Repair path: if this slot never got its schedule (joined an active
+      // group before v18), editing it fills the schedule in — idempotent.
+      await supabaseAdmin.rpc('generate_membership_schedule', { p_membership_id: membershipId })
+        .then(({ error: sErr }) => { if (sErr) console.log('schedule gen skipped:', sErr.message) })
+
       return json({ message: 'Payout details updated' })
     }
 

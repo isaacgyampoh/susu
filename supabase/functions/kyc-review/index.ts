@@ -65,7 +65,7 @@ serveWithCors(async (req) => {
     const { action, rejection_reason } = body
 
     if (!kycId) return error('KYC application ID required')
-    if (!['approve', 'reject'].includes(action)) return error('action must be approve or reject')
+    if (!['approve', 'reject', 'mark_fee_paid'].includes(action)) return error('action must be approve, reject or mark_fee_paid')
 
     const { data: kyc } = await supabaseAdmin
       .from('kyc_applications')
@@ -75,6 +75,28 @@ serveWithCors(async (req) => {
 
     if (!kyc) return error('KYC application not found', 404)
     if (kyc.status !== 'pending') return error('Application already reviewed')
+
+    if (action === 'mark_fee_paid') {
+      if (kyc.registration_fee_paid) return error('Registration fee is already marked paid', 400)
+
+      await supabaseAdmin.from('kyc_applications')
+        .update({ registration_fee_paid: true })
+        .eq('id', kycId)
+
+      // If they're already a member (approved), put it on their money record
+      const feeAmount = Number(kyc.registration_fee_amount ?? 0)
+      if (kyc.created_member_id && feeAmount > 0) {
+        await supabaseAdmin.from('transactions').insert({
+          member_id: kyc.created_member_id, type: 'registration_fee',
+          amount: feeAmount,
+          reference: `REG-MANUAL-${String(kycId).slice(0, 8)}-${Date.now()}`,
+          description: `Registration fee received manually (marked by admin)`,
+          status: 'success',
+        })
+      }
+      await sendSMS(kyc.phone, `Hi ${kyc.full_name.split(' ')[0]}, we received your registration fee of GHS ${feeAmount.toLocaleString()}. Thank you!`)
+      return json({ message: 'Registration fee marked as paid' })
+    }
 
     if (action === 'reject') {
       await supabaseAdmin.from('kyc_applications')
@@ -192,6 +214,10 @@ serveWithCors(async (req) => {
             status: 'upcoming', notes: 'Scheduled at KYC approval',
           })
         }
+        // Joining a RUNNING group: give this slot its payment schedule
+        if (gm?.id) await supabaseAdmin.rpc('generate_membership_schedule', { p_membership_id: gm.id })
+          .then(({ error: sErr }) => { if (sErr) console.log('schedule gen skipped:', sErr.message) })
+
         assignments.push({ group: g.name, payout_position: nextPosition, payout_date: payoutDate, slot: i + 1, of_slots: wanted })
       }
     }

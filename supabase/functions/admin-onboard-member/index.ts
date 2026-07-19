@@ -251,6 +251,11 @@ serveWithCors(async (req) => {
           })
         }
 
+        // If the group is already active, extend the pending schedule to
+        // its end (skips days that exist; no-op for not-yet-active groups)
+        await supabaseAdmin.rpc('generate_membership_schedule', { p_membership_id: membership.id })
+          .then(({ error: sErr }) => { if (sErr) console.log('schedule gen skipped:', sErr.message) })
+
         backfilledTotal += fullDays + (remainder > 0 ? 1 : 0)
         slotResults.push({ payout_position: position, payout_date, amount: slotAmount })
       }

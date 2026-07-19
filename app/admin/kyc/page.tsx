@@ -138,9 +138,25 @@ export default function KYCPage() {
                   <td className="px-5 py-4 text-ink-2 hidden sm:table-cell">{app.phone}</td>
                   <td className="px-5 py-4 text-ink-2 hidden md:table-cell">{((app as any).selected_groups?.map((g: any) => g.slots > 1 ? `${g.name} ×${g.slots}` : g.name).join(', ')) ?? (app as any).susu_groups?.name}</td>
                   <td className="px-5 py-4">
-                    <span className={app.registration_fee_paid ? 'badge-green' : 'badge-gold'}>
-                      {app.registration_fee_paid ? 'Paid' : 'Pending'}
-                    </span>
+                    {app.registration_fee_paid ? (
+                      <span className="badge-green">Paid</span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <span className="badge-gold">Pending</span>
+                        <button onClick={async e => {
+                            e.stopPropagation()
+                            if (!confirm(`Mark ${app.full_name}'s registration fee of GHS ${Number((app as any).registration_fee_amount ?? 0).toLocaleString()} as received?`)) return
+                            const token = getAdminToken()
+                            const { error } = await callFunction(`kyc-review?id=${app.id}`, {
+                              method: 'POST', token: token!, body: { action: 'mark_fee_paid' } })
+                            if (error) { alert(error); return }
+                            load()
+                          }}
+                          className="text-[11px] font-semibold text-ink underline underline-offset-2 hover:text-green whitespace-nowrap">
+                          Mark paid
+                        </button>
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-4 text-ink-2">{format(new Date(app.submitted_at), 'MMM d, yyyy')}</td>
                   <td className="px-5 py-4">

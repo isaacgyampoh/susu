@@ -177,6 +177,10 @@ serveWithCors(async (req) => {
             status: 'upcoming', notes: 'Scheduled when member was added',
           })
         }
+        // Joining a RUNNING group: give this slot its payment schedule
+        if (gm?.id) await supabaseAdmin.rpc('generate_membership_schedule', { p_membership_id: gm.id })
+          .then(({ error: sErr }) => { if (sErr) console.log('schedule gen skipped:', sErr.message) })
+
 
         assignments.push({ group_id: gid, group_name: group.name, payout_position: position, payout_date: payoutDate, fraction })
       }
