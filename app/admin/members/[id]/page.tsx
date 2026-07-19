@@ -55,8 +55,10 @@ export default function MemberDetailPage() {
   useEffect(() => {
     const token = getAdminToken()
     callFunction<{ member: any }>(`admin-members?id=${id}`, { token: token! })
-      .then(({ data }) => setLoadErr(error ?? '')
-      setMember(data?.member))
+      .then(({ data, error }) => {
+        setLoadErr(error ?? '')
+        setMember(data?.member ?? null)
+      })
       .finally(() => setLoading(false))
   }, [id])
 
