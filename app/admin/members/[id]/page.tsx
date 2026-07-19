@@ -29,6 +29,7 @@ export default function MemberDetailPage() {
   const [unpaidLoading, setUnpaidLoading] = useState(false)
   const [payPicked, setPayPicked] = useState<Set<string>>(new Set())
   const [amountIn, setAmountIn]   = useState('')
+  const [payFilter, setPayFilter] = useState<string>('all')   // membership_id or 'all'
   const [payMethod, setPayMethod] = useState<'cash' | 'momo' | 'bank'>('momo')
   const [payNote, setPayNote]     = useState('')
   const [paySms, setPaySms]       = useState(true)
@@ -133,27 +134,47 @@ export default function MemberDetailPage() {
   }
 
   async function openPay() {
-    setPayOpen(true); setPayPicked(new Set()); setAmountIn(''); setPayNote('')
+    setPayOpen(true); setPayPicked(new Set()); setAmountIn(''); setPayNote(''); setPayFilter('all')
     setUnpaidLoading(true)
     const token = getAdminToken()
-    const [{ data: over }, { data: pend }] = await Promise.all([
-      callFunction<{ contributions: any[] }>(`contributions-list?member_id=${id}&status=overdue&sort=asc&page=1`, { token: token! }),
-      callFunction<{ contributions: any[] }>(`contributions-list?member_id=${id}&status=pending&sort=asc&page=1`, { token: token! }),
-    ])
-    const all = [...(over?.contributions ?? []), ...(pend?.contributions ?? [])]
-      .sort((a, b) => a.due_date.localeCompare(b.due_date))
-    setUnpaid(all)
+    // Collection mode: everything owed, across every group and slot
+    const { data } = await callFunction<{ contributions: any[] }>(
+      `contributions-list?member_id=${id}&collection=1`, { token: token! })
+    setUnpaid(data?.contributions ?? [])
     setUnpaidLoading(false)
   }
 
-  // Typing the amount received auto-ticks the member's oldest unpaid days
-  function applyAmount(v: string) {
+  // One section per membership (per slot), in a stable order
+  const paySections = (() => {
+    const map = new Map<string, { key: string; label: string; freq: string; rows: any[] }>()
+    for (const c of unpaid) {
+      const key = c.membership_id
+      if (!map.has(key)) {
+        const pos = c.group_memberships?.payout_position
+        map.set(key, {
+          key,
+          label: `${c.susu_groups?.name ?? 'Group'}${pos ? ` — slot #${pos}` : ''}`,
+          freq: c.susu_groups?.contribution_frequency ?? 'daily',
+          rows: [],
+        })
+      }
+      map.get(key)!.rows.push(c)
+    }
+    return Array.from(map.values())
+  })()
+  const visibleUnpaid = payFilter === 'all' ? unpaid : unpaid.filter(c => c.membership_id === payFilter)
+
+  // Typing the amount received auto-ticks the oldest unpaid days —
+  // within the chosen group/slot when one is selected
+  function applyAmount(v: string, filterOverride?: string) {
     setAmountIn(v)
+    const f = filterOverride ?? payFilter
+    const pool = f === 'all' ? unpaid : unpaid.filter(c => c.membership_id === f)
     const amt = parseFloat(v)
     if (isNaN(amt) || amt <= 0) { setPayPicked(new Set()); return }
     let left = amt
     const next = new Set<string>()
-    for (const c of unpaid) {
+    for (const c of pool) {
       const a = Number(c.amount)
       if (left >= a - 0.001) { next.add(c.id); left -= a } else break
     }
@@ -543,22 +564,45 @@ export default function MemberDetailPage() {
             ) : (
               <>
                 <div>
+                  <label className="block text-sm text-ink-2 mb-1.5">Which plan is this payment for?</label>
+                  <select value={payFilter}
+                    onChange={e => { setPayFilter(e.target.value); setPayPicked(new Set()); if (amountIn) applyAmount(amountIn, e.target.value) }}
+                    className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:border-ink">
+                    <option value="all">All groups & slots ({unpaid.length} unpaid days)</option>
+                    {paySections.map(sec => (
+                      <option key={sec.key} value={sec.key}>
+                        {sec.label} · {sec.freq} · {sec.rows.length} unpaid — GHS {sec.rows.reduce((t: number, r: any) => t + Number(r.amount), 0).toLocaleString()} owed
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-sm text-ink-2 mb-1.5">Amount received (GHS)</label>
                   <input type="number" min="0" step="0.01" autoFocus value={amountIn} onChange={e => applyAmount(e.target.value)}
                     placeholder="Type the amount — oldest days tick themselves"
                     className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:border-ink" />
                 </div>
 
-                <div className="border border-line rounded-[10px] max-h-52 overflow-y-auto divide-y divide-line">
-                  {unpaid.map((c: any) => (
-                    <label key={c.id} className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer hover:bg-tint">
-                      <input type="checkbox" className="w-4 h-4 accent-green" checked={payPicked.has(c.id)}
-                        onChange={() => setPayPicked(p => { const n = new Set(p); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n })} />
-                      <span className="flex-1 text-sm text-ink">{format(new Date(c.due_date), 'EEE, MMM d')}</span>
-                      <span className="text-xs text-ink-2">{c.susu_groups?.name}</span>
-                      {c.status === 'overdue' && <span className="badge-red text-[10px]">Overdue</span>}
-                      <span className="text-sm font-semibold text-ink tnum">GHS {Number(c.amount).toFixed(2)}</span>
-                    </label>
+                <div className="border border-line rounded-[10px] max-h-60 overflow-y-auto">
+                  {paySections.filter(sec => payFilter === 'all' || sec.key === payFilter).map(sec => (
+                    <div key={sec.key}>
+                      <div className="sticky top-0 bg-tint px-3.5 py-2 border-b border-line flex items-center justify-between">
+                        <span className="text-xs font-bold text-ink">{sec.label}</span>
+                        <span className="text-[11px] text-ink-2">{sec.freq} · {sec.rows.length} unpaid</span>
+                      </div>
+                      <div className="divide-y divide-line">
+                        {sec.rows.map((c: any) => (
+                          <label key={c.id} className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer hover:bg-tint">
+                            <input type="checkbox" className="w-4 h-4 accent-green" checked={payPicked.has(c.id)}
+                              onChange={() => setPayPicked(p => { const n = new Set(p); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n })} />
+                            <span className="flex-1 text-sm text-ink">{format(new Date(c.due_date), 'EEE, MMM d')}</span>
+                            {c.status === 'overdue' && <span className="badge-red text-[10px]">Overdue</span>}
+                            <span className="text-sm font-semibold text-ink tnum">GHS {Number(c.amount).toFixed(2)}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
 

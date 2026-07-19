@@ -39,6 +39,25 @@ serveWithCors(async (req) => {
     if (admin) {
       const status    = url.searchParams.get('status')
       const group_id  = url.searchParams.get('group_id')
+      // Collection mode: EVERYTHING a member owes, across all groups and
+      // slots, grouped for the Record Payment screen. No 30-row page cap —
+      // a member in a daily group plus a Friday group must see both.
+      if (url.searchParams.get('collection') === '1' && url.searchParams.get('member_id')) {
+        const { data, error: dbErr } = await supabaseAdmin
+          .from('contributions')
+          .select(`
+            id, amount, due_date, status, cycle_number, membership_id,
+            susu_groups(id, name, contribution_frequency),
+            group_memberships(payout_position)
+          `)
+          .eq('member_id', url.searchParams.get('member_id'))
+          .in('status', ['pending', 'overdue'])
+          .order('due_date', { ascending: true })
+          .limit(1000)
+        if (dbErr) return error(dbErr.message, 500)
+        return json({ contributions: data ?? [] })
+      }
+
       const member_id = url.searchParams.get('member_id')
       const sortAsc   = url.searchParams.get('sort') === 'asc'   // oldest first, for collection
       const page      = parseInt(url.searchParams.get('page') ?? '1')
