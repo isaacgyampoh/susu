@@ -93,9 +93,13 @@ serveWithCors(async (req) => {
       .from('susu_groups').select('id, name, max_members, current_members, cashout_amount')
       .in('id', targetIds)
 
-    // Optional per-group payout dates chosen by the admin at approval time:
-    // body.payout_dates = { "<group_id>": "YYYY-MM-DD", ... }
-    const payoutDates: Record<string, string> = body.payout_dates ?? {}
+    // Payout dates chosen by the admin at approval time. Preferred shape is
+    // per slot — body.payout_dates_slots = { "<group_id>": ["d1","d2",...] } —
+    // with the older per-group shape kept as slot 1's date.
+    const legacyDates: Record<string, string> = body.payout_dates ?? {}
+    const slotDates: Record<string, string[]> = body.payout_dates_slots ?? {}
+    const dateForSlot = (gid: string, i: number): string | null =>
+      slotDates[gid]?.[i] || (i === 0 ? (legacyDates[gid] || null) : null)
 
     const slotWanted = (gid: string) => Math.max(1, Math.min(10, Number(kyc.selected_slots?.[gid]?.count ?? kyc.selected_slots?.[gid] ?? 1)))
     const fracWanted = (gid: string) => [0.25, 0.5, 1].includes(Number(kyc.selected_slots?.[gid]?.fraction)) ? Number(kyc.selected_slots[gid].fraction) : 1
@@ -103,13 +107,31 @@ serveWithCors(async (req) => {
     const fullTargets = (targetGroups ?? []).filter(g => g.current_members + slotWanted(g.id) > g.max_members)
     if (openTargets.length === 0) return error('All selected groups are now full', 400)
 
-    const passcode = generatePasscode()
+    // An applicant may already be a member (added manually, or applying for
+    // MORE groups from the website). Reuse their account instead of tripping
+    // the unique-phone constraint.
+    const normPhone = String(kyc.phone ?? '').trim().replace(/^0/, '+233').replace(/^\+?233/, '+233')
+    const { data: existingMember } = await supabaseAdmin
+      .from('members').select('id, member_id, full_name, status')
+      .in('phone', [kyc.phone, normPhone].filter(Boolean))
+      .maybeSingle()
+
+    let member: { id: string; member_id: string }
+    let passcode: string | null = null
+
+    if (existingMember) {
+      if (existingMember.status !== 'active') {
+        return error(`${existingMember.full_name} (${existingMember.member_id}) already exists but is ${existingMember.status}. Reactivate them on their member page, then approve.`, 409)
+      }
+      member = existingMember
+    } else {
+    passcode = generatePasscode()
 
     // Hash the passcode using Postgres
     const { data: hashData } = await supabaseAdmin.rpc('hash_passcode', { p_passcode: passcode })
 
     // Create member
-    const { data: member, error: memErr } = await supabaseAdmin
+    const { data: created, error: memErr } = await supabaseAdmin
       .from('members')
       .insert({
         full_name: kyc.full_name, phone: kyc.phone, email: kyc.email,
@@ -129,7 +151,9 @@ serveWithCors(async (req) => {
       .select('id, member_id')
       .single()
 
-    if (memErr) return error(memErr.message, 500)
+    if (memErr || !created) return error(memErr?.message ?? 'Could not create member', 500)
+    member = created
+    }
 
     // Assign next available payout position in each open group
     const assignments: { group: string; payout_position: number; payout_date?: string | null }[] = []
@@ -147,8 +171,7 @@ serveWithCors(async (req) => {
         while (used.has(nextPosition)) nextPosition++
         used.add(nextPosition)
 
-        // Admin-chosen payout date applies to the first slot only
-        const payoutDate = i === 0 ? (payoutDates[g.id] || null) : null
+        const payoutDate = dateForSlot(g.id, i)
 
         const gmRow: Record<string, unknown> = {
           member_id: member.id, group_id: g.id,
@@ -181,8 +204,13 @@ serveWithCors(async (req) => {
     // Send welcome SMS (skipped silently if no AT key)
     const sendCreds = body.send_credentials !== false
     if (sendCreds) {
-      await sendSMS(kyc.phone, smsTemplates.applicationApproved(kyc.full_name, member.member_id, passcode, SIGNIN_URL))
-      await supabaseAdmin.from('members')
+      if (passcode) {
+        await sendSMS(kyc.phone, smsTemplates.applicationApproved(kyc.full_name, member.member_id, passcode, SIGNIN_URL))
+      } else {
+        const names = assignments.map(a => a.group).filter((v, i, arr) => arr.indexOf(v) === i).join(', ')
+        await sendSMS(kyc.phone, `Hi ${kyc.full_name.split(' ')[0]}, your application is approved — you've been added to ${names}. Sign in as usual: ${SIGNIN_URL}`)
+      }
+      if (passcode) await supabaseAdmin.from('members')
         .update({ credentials_sent_at: new Date().toISOString() })
         .eq('id', member.id)
         .then(({ error: e }) => { if (e) console.log('credentials_sent_at skipped:', e.message) })
@@ -191,6 +219,7 @@ serveWithCors(async (req) => {
     return json({
       message:    sendCreds ? 'Member approved and credentials sent via SMS' : 'Member approved — credentials NOT sent (held for bulk invite)',
       member_id:  member.member_id,
+      existing_member: !passcode,
       passcode,   // also returned in response so admin can share manually if no SMS
       portal_url: SIGNIN_URL,
       assignments,

@@ -43,7 +43,7 @@ export default function MemberDetailPage() {
   const [addPicked, setAddPicked] = useState<Set<string>>(new Set())
   const [addSlots, setAddSlots]   = useState<Record<string, number>>({})
   const [addFracs, setAddFracs]   = useState<Record<string, number>>({})
-  const [addDates, setAddDates]   = useState<Record<string, string>>({})
+  const [addDates, setAddDates]   = useState<Record<string, string>>({})   // key `${groupId}:${slotIndex}`
   const [adding, setAdding]       = useState(false)
   // Danger zone
   const [delOpen, setDelOpen]   = useState(false)
@@ -498,13 +498,17 @@ export default function MemberDetailPage() {
                                   </button>
                                 ))}
                               </span>
-                              <span className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
-                                <span className="text-xs text-ink-2">Payout date:</span>
-                                <input type="date" value={addDates[g.id] ?? ''}
-                                  onChange={e => setAddDates(prev => ({ ...prev, [g.id]: e.target.value }))}
-                                  className="px-3 py-1.5 bg-white border border-line text-ink rounded-[8px] text-xs focus:outline-none focus:border-ink" />
-                                <span className="text-[11px] text-ink-3">optional — first slot</span>
-                              </span>
+                              {Array.from({ length: addSlots[g.id] || 1 }, (_, i) => (
+                                <span key={i} className="flex items-center gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+                                  <span className="text-xs text-ink-2 w-28">
+                                    {(addSlots[g.id] || 1) > 1 ? `Slot ${i + 1} payout:` : 'Payout date:'}
+                                  </span>
+                                  <input type="date" value={addDates[`${g.id}:${i}`] ?? ''}
+                                    onChange={e => setAddDates(prev => ({ ...prev, [`${g.id}:${i}`]: e.target.value }))}
+                                    className="px-3 py-1.5 bg-white border border-line text-ink rounded-[8px] text-xs focus:outline-none focus:border-ink" />
+                                  <span className="text-[11px] text-ink-3">optional</span>
+                                </span>
+                              ))}
                             </span>
                           )}
                         </span>

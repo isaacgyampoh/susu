@@ -8,7 +8,7 @@ export default function KYCPage() {
   const [apps, setApps]         = useState<KYCApplication[]>([])
   const [loading, setLoading]   = useState(true)
   const [filter, setFilter]     = useState<'pending' | 'approved' | 'rejected'>('pending')
-  const [payoutDates, setPayoutDates] = useState<Record<string, string>>({})
+  const [payoutDates, setPayoutDates] = useState<Record<string, string>>({})   // key `${groupId}:${slotIndex}`
   const [sendCreds, setSendCreds]     = useState(false)
   const [selected, setSelected] = useState<KYCApplication | null>(null)
   const [reason, setReason]     = useState('')
@@ -186,15 +186,19 @@ export default function KYCPage() {
               <>
                 <div className="border border-line rounded-[10px] p-3 space-y-2.5">
                   <p className="text-sm font-semibold text-ink">Payout date{(((selected as any).selected_groups?.length ?? 1) > 1) ? 's' : ''} <span className="text-ink-3 font-normal">(when approving)</span></p>
-                  {(((selected as any).selected_groups) ?? [{ id: (selected as any).selected_group_id, name: (selected as any).susu_groups?.name ?? 'Group' }]).map((g: any) => (
-                    <div key={g.id} className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-ink-2 flex-1 truncate">{g.name}</span>
-                      <input type="date" value={payoutDates[g.id] ?? ''}
-                        onChange={e => setPayoutDates(prev => ({ ...prev, [g.id]: e.target.value }))}
-                        className="px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:border-ink" />
-                    </div>
-                  ))}
-                  <p className="text-xs text-ink-3">When the member will receive their payout in each group. Leave blank to set later on the member's page.</p>
+                  {(((selected as any).selected_groups) ?? [{ id: (selected as any).selected_group_id, name: (selected as any).susu_groups?.name ?? 'Group', slots: 1 }]).map((g: any) =>
+                    Array.from({ length: Math.max(1, g.slots ?? 1) }, (_, i) => (
+                      <div key={`${g.id}:${i}`} className="flex items-center justify-between gap-3">
+                        <span className="text-sm text-ink-2 flex-1 truncate">
+                          {g.name}{(g.slots ?? 1) > 1 ? ` — slot ${i + 1} of ${g.slots}` : ''}
+                        </span>
+                        <input type="date" value={payoutDates[`${g.id}:${i}`] ?? ''}
+                          onChange={e => setPayoutDates(prev => ({ ...prev, [`${g.id}:${i}`]: e.target.value }))}
+                          className="px-3 py-2 bg-tint border border-line text-ink rounded-[10px] text-sm focus:outline-none focus:border-ink" />
+                      </div>
+                    ))
+                  )}
+                  <p className="text-xs text-ink-3">Each slot is its own payout turn — give every slot its own date. Blank ones can be set later on the member's page.</p>
                 </div>
                 <label className="flex items-start gap-2 cursor-pointer p-3 bg-tint border border-line rounded-[10px]">
                   <input type="checkbox" checked={sendCreds} onChange={e => setSendCreds(e.target.checked)} className="w-4 h-4 mt-0.5 accent-green" />

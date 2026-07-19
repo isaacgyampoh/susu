@@ -156,7 +156,8 @@ serveWithCors(async (req) => {
         const payout_amount   = plan.payout_amount != null ? Number(plan.payout_amount) : Math.round(Number(group.cashout_amount ?? 0) * fraction * 100) / 100
         // Payout date/received apply to the FIRST slot; set the others
         // per-slot afterwards from the member's page.
-        const payout_date     = sIdx === 0 ? (plan.payout_date || null) : null
+        const slotDates: string[] = Array.isArray(plan.payout_dates) ? plan.payout_dates : []
+        const payout_date     = slotDates[sIdx] || (sIdx === 0 ? (plan.payout_date || null) : null)
         const payout_received = sIdx === 0 ? !!plan.payout_received : false
 
         const slotAmount = sIdx === slots - 1
