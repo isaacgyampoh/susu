@@ -79,6 +79,15 @@ serveWithCors(async (req) => {
       for (const k of ['contribution_amount','cycle_days','max_members','registration_fee','cashout_amount','penalty_per_late_day']) {
         if (k in patch && patch[k] !== null && patch[k] !== '') patch[k] = Number(patch[k])
       }
+      // The true start date may be recorded any time before activation;
+      // once the group is running, dates change via activate (rebuild).
+      if ('start_date' in body && body.start_date !== undefined) {
+        if (existing.status === 'active') {
+          return error("This group is running — use 'change date' on the Groups page so the schedule is rebuilt correctly.")
+        }
+        patch.start_date = body.start_date || null
+      }
+
       if (Object.keys(patch).length === 0) return error('Nothing to update')
 
       if ('cashout_amount' in patch && (!patch.cashout_amount || Number(patch.cashout_amount) <= 0)) {

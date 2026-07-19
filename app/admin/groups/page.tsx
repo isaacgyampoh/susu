@@ -120,14 +120,16 @@ export default function GroupsPage() {
 
                 {/* Activate button — only show for full/open groups */}
                 {(g.status === 'full' || g.status === 'open') && g.current_members > 0 && (
-                  <button onClick={() => { setActivateTarget(g); setEditMode(false); setStartDate(''); setActivateErr(''); setAllowPast(false); setRecompute(true); setNotifySms(true) }}
+                  <button onClick={() => { setActivateTarget(g); setEditMode(false); setStartDate((g as any).start_date ?? ''); setActivateErr(''); setAllowPast(false); setRecompute(true); setNotifySms(true) }}
                     className="flex items-center justify-center gap-2 w-full py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm transition-colors">
                     Activate Group
                   </button>
                 )}
-                {(g.status === 'full' || g.status === 'open') && g.current_members > 0 && (
+                {(g.status === 'full' || g.status === 'open') && (
                   <p className="text-[11px] text-ink-3 text-center mt-1.5">
-                    Started before this system? You can pick a past date when activating.
+                    {g.current_members > 0
+                      ? 'Started before this system? You can pick a past date when activating.'
+                      : 'Set the real start date (past is fine) in Edit group — then add members and activate.'}
                   </p>
                 )}
                 <Link href={`/admin/groups/${g.id}/edit`}

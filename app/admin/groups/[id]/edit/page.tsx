@@ -37,6 +37,7 @@ export default function EditGroup() {
           registration_fee: String(x.registration_fee ?? ''),
           cashout_amount: String(x.cashout_amount ?? ''),
           payment_deadline: (x.payment_deadline ?? '18:00').slice(0, 5),
+          start_date: (x as any).start_date ?? '',
           penalty_per_late_day: String(x.penalty_per_late_day ?? ''),
           rules: (x as any).rules ?? '',
           admin_notes: (x as any).admin_notes ?? '',
@@ -57,7 +58,7 @@ export default function EditGroup() {
     e.preventDefault()
     setBusy(true); setErr(''); setNote('')
     const { error } = await callFunction(`groups-create?id=${id}`, {
-      method: 'PATCH', body: { ...f, force }, token: getAdminToken()!,
+      method: 'PATCH', body: { ...f, start_date: running ? undefined : (f.start_date || null), force }, token: getAdminToken()!,
     })
     setBusy(false)
     if (error) { setErr(error); return }
@@ -148,6 +149,26 @@ export default function EditGroup() {
             <label className="in-lbl">Deadline</label>
             <input className="in" type="time" value={f.payment_deadline}
               onChange={e => set('payment_deadline', e.target.value)} />
+          </div>
+          <div>
+            <label className="in-lbl">Start date {running && <span className="font-normal text-ink-3">— locked while running</span>}</label>
+            {running ? (
+              <>
+                <input className="in opacity-60" type="date" value={f.start_date} disabled />
+                <p className="text-[11.5px] text-ink-3 mt-1.5">
+                  This group is running — use <strong>change date</strong> on the Groups page so the schedule is rebuilt correctly.
+                </p>
+              </>
+            ) : (
+              <>
+                <input className="in" type="date" value={f.start_date}
+                  onChange={e => set('start_date', e.target.value)} />
+                <p className="text-[11.5px] text-ink-3 mt-1.5">
+                  The day this group actually began — past dates welcome for groups from your books.
+                  The schedule itself is generated when you activate; this date is pre-filled there.
+                </p>
+              </>
+            )}
           </div>
           <div>
             <label className="in-lbl">Late penalty per day (GHS)</label>
