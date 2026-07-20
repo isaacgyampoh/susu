@@ -18,6 +18,7 @@ export interface Member {
 }
 
 export interface SusuGroup {
+  show_on_website?: boolean
   id: string; name: string; description?: string
   contribution_amount: number; contribution_frequency: ContributionFreq
   cycle_days: number; max_members: number; current_members: number
