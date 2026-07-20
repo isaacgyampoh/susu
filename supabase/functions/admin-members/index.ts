@@ -56,7 +56,6 @@ serveWithCors(async (req) => {
         .select('id, member_id, group_id, payout_position, payout_received, payout_date, shared_slot_key, susu_groups(name)')
         .eq('id', membershipId).single()
       if (!gm) return error('Membership not found', 404)
-      if (gm.payout_received) return error('This payout has already been received and cannot be edited', 400)
 
       const updates: Record<string, unknown> = {}
 
@@ -78,6 +77,7 @@ serveWithCors(async (req) => {
         if (isNaN(amt) || amt < 0) return error('payout_amount must be a positive number')
         updates.payout_amount = amt
       }
+      if (typeof body.payout_received === 'boolean') updates.payout_received = body.payout_received
 
       // Pairing: link this slot's payout turn with partner memberships
       if (Array.isArray(body.pair_with)) {
@@ -136,32 +136,45 @@ serveWithCors(async (req) => {
         }
       }
 
-      // Keep the payouts schedule in step with the membership
-      const { data: upcoming } = await supabaseAdmin
-        .from('payouts').select('id')
-        .eq('membership_id', membershipId).eq('status', 'upcoming')
-        .maybeSingle()
-
-      const newDate   = updates.payout_date !== undefined ? updates.payout_date : undefined
-      const newAmount = updates.payout_amount
-
-      if (newDate === null && upcoming) {
-        // Date cleared — remove the scheduled payout
-        await supabaseAdmin.from('payouts').delete().eq('id', upcoming.id)
-      } else if (upcoming) {
-        const patch: Record<string, unknown> = {}
-        if (typeof newDate === 'string') patch.scheduled_date = newDate
-        if (newAmount !== undefined)     patch.total_amount   = newAmount
-        if (Object.keys(patch).length) await supabaseAdmin.from('payouts').update(patch).eq('id', upcoming.id)
-      } else if (typeof newDate === 'string') {
-        // Date newly set and no scheduled payout yet — create one
+      // Reconcile the payouts record with whatever the membership now says.
+      // Received ⇒ a 'paid' row; a date but not received ⇒ an 'upcoming' row;
+      // neither ⇒ no scheduled row at all.
+      {
         const { data: fresh } = await supabaseAdmin
-          .from('group_memberships').select('payout_amount').eq('id', membershipId).single()
-        await supabaseAdmin.from('payouts').insert({
-          member_id: gm.member_id, group_id: gm.group_id, membership_id: membershipId,
-          total_amount: fresh?.payout_amount ?? 0, scheduled_date: newDate,
-          status: 'upcoming', notes: 'Scheduled by admin edit',
-        })
+          .from('group_memberships')
+          .select('payout_date, payout_amount, payout_received')
+          .eq('id', membershipId).single()
+
+        const { data: rows } = await supabaseAdmin
+          .from('payouts').select('id, status, paid_at')
+          .eq('membership_id', membershipId)
+          .order('created_at', { ascending: false }).limit(1)
+        const row = rows?.[0]
+
+        if (fresh?.payout_received) {
+          const patch = {
+            status: 'paid', paid_at: row?.paid_at ?? new Date().toISOString(),
+            scheduled_date: fresh.payout_date ?? new Date().toISOString().split('T')[0],
+            total_amount: fresh.payout_amount ?? 0,
+          }
+          if (row) await supabaseAdmin.from('payouts').update(patch).eq('id', row.id)
+          else await supabaseAdmin.from('payouts').insert({
+            member_id: gm.member_id, group_id: gm.group_id, membership_id: membershipId,
+            ...patch, notes: 'Marked received by admin edit',
+          })
+        } else if (fresh?.payout_date) {
+          const patch = {
+            status: 'upcoming', paid_at: null,
+            scheduled_date: fresh.payout_date, total_amount: fresh.payout_amount ?? 0,
+          }
+          if (row) await supabaseAdmin.from('payouts').update(patch).eq('id', row.id)
+          else await supabaseAdmin.from('payouts').insert({
+            member_id: gm.member_id, group_id: gm.group_id, membership_id: membershipId,
+            ...patch, notes: 'Scheduled by admin edit',
+          })
+        } else if (row && row.status === 'upcoming') {
+          await supabaseAdmin.from('payouts').delete().eq('id', row.id)
+        }
       }
 
       // Repair path: if this slot never got its schedule (joined an active

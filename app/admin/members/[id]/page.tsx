@@ -18,7 +18,7 @@ export default function MemberDetailPage() {
   const [processing, setProcessing] = useState(false)
   const [toast, setToast]     = useState('')
   const [editTarget, setEditTarget] = useState<any>(null)
-  const [editForm, setEditForm] = useState({ payout_position: '', payout_date: '', payout_amount: '' })
+  const [editForm, setEditForm] = useState({ payout_position: '', payout_date: '', payout_amount: '', payout_received: false })
   const [savingEdit, setSavingEdit] = useState(false)
   const [pairCands, setPairCands]   = useState<any[] | null>(null)
   const [pairPicked, setPairPicked] = useState<Set<string>>(new Set())
@@ -74,6 +74,7 @@ export default function MemberDetailPage() {
       payout_position: gm.payout_position ? String(gm.payout_position) : '',
       payout_date:     gm.payout_date ?? '',
       payout_amount:   gm.payout_amount != null ? String(gm.payout_amount) : '',
+      payout_received: !!gm.payout_received,
     })
   }
 
@@ -118,6 +119,7 @@ export default function MemberDetailPage() {
         payout_position: editForm.payout_position || undefined,
         payout_date:     editForm.payout_date,           // '' clears the date
         payout_amount:   editForm.payout_amount || undefined,
+        payout_received: editForm.payout_received,
       }})
     setSavingEdit(false)
     if (error) { alert(error); return }
@@ -444,7 +446,7 @@ export default function MemberDetailPage() {
                     {Number(gm.slot_fraction ?? 1) < 1 && (
                       <p className="text-[11px] text-ink-2 mt-1">{Number(gm.slot_fraction) === 0.25 ? 'Quarter' : 'Half'} slot — pays and collects {Number(gm.slot_fraction) === 0.25 ? '¼' : '½'} of the group amounts</p>
                     )}
-                    {gm.status === 'active' && !gm.payout_received && (
+                    {gm.status === 'active' && (
                       <button onClick={() => openEdit(gm)}
                         className="mt-2 pt-2 border-t border-line w-full flex items-center justify-center gap-1.5 text-xs text-ink-2 hover:text-ink transition-colors">
                         Edit payout date / position / amount
