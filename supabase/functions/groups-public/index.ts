@@ -44,11 +44,12 @@ serveWithCors(async (req) => {
         .not('cashout_amount', 'is', null)
         .order('created_at', { ascending: true })
       if (retry.error) return error(retry.error.message, 500)
-      return json({ groups: retry.data })
+      return json({ groups: (retry.data ?? []).filter((g: any) => g.current_members < g.max_members) })
     }
     if (dbErr) return error(dbErr.message, 500)
 
-    return json({ groups })
+    // A group with no spots left leaves the website automatically
+    return json({ groups: (groups ?? []).filter((g: any) => g.current_members < g.max_members) })
   } catch (e) {
     console.error(e)
     return error('Internal server error', 500)
