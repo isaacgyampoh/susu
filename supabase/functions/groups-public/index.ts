@@ -29,11 +29,23 @@ serveWithCors(async (req) => {
         'status', 'start_date', 'rules', 'image_url',
       ].join(', '))
       .in('status', ['open', 'full', 'active'])
+      .neq('show_on_website', false)   // admin's visibility toggle (v19)
       // No decided payout, no listing. A group whose cashout has not been set
       // is not finished, and anything shown for it would be a guess.
       .not('cashout_amount', 'is', null)
       .order('created_at', { ascending: true })
 
+    if (dbErr && /show_on_website/.test(dbErr.message)) {
+      // v19 not applied yet — list without the toggle
+      const retry = await supabaseAdmin
+        .from('susu_groups')
+        .select('id, name, description, contribution_amount, contribution_frequency, cycle_days, max_members, current_members, registration_fee, cashout_amount, payment_deadline, penalty_per_late_day, status, start_date, rules, image_url')
+        .in('status', ['open', 'full', 'active'])
+        .not('cashout_amount', 'is', null)
+        .order('created_at', { ascending: true })
+      if (retry.error) return error(retry.error.message, 500)
+      return json({ groups: retry.data })
+    }
     if (dbErr) return error(dbErr.message, 500)
 
     return json({ groups })

@@ -13,6 +13,19 @@ export default function GroupsPage() {
   const [editMode, setEditMode]       = useState(false)      // correcting an active group's date
   const [recompute, setRecompute]     = useState(true)
   const [notifySms, setNotifySms]     = useState(true)
+  const [togglingId, setTogglingId]   = useState<string | null>(null)
+
+  async function toggleWebsite(g: any) {
+    setTogglingId(g.id)
+    const token = getAdminToken()
+    const next = !(g.show_on_website !== false)
+    const { error } = await callFunction(`groups-create?id=${g.id}`, {
+      method: 'PATCH', token: token!, body: { show_on_website: next },
+    })
+    setTogglingId(null)
+    if (error) { alert(error); return }
+    load()
+  }
   const [startDate, setStartDate]   = useState('')
   const [activateTarget, setActivateTarget] = useState<SusuGroup | null>(null)
   const [toast, setToast]     = useState('')
@@ -132,6 +145,14 @@ export default function GroupsPage() {
                       : 'Set the real start date (past is fine) in Edit group — then add members and activate.'}
                   </p>
                 )}
+                <button onClick={() => toggleWebsite(g)} disabled={togglingId === g.id}
+                  className={`w-full py-2 mb-2 rounded-[10px] text-xs font-semibold border transition-colors disabled:opacity-50 ${
+                    g.show_on_website !== false
+                      ? 'border-green/50 text-green hover:bg-green hover:text-white'
+                      : 'border-line text-ink-3 hover:text-ink hover:border-ink'}`}>
+                  {togglingId === g.id ? 'Saving…'
+                    : g.show_on_website !== false ? '● Shown on website — tap to hide' : '○ Hidden from website — tap to show'}
+                </button>
                 <Link href={`/admin/groups/${g.id}/edit`}
                   className="btn-line btn-sm w-full mb-2">Edit group</Link>
 

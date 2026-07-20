@@ -47,6 +47,19 @@ export default function EditGroup() {
   }, [id])
 
   const running = g?.status === 'active'
+  const [delText, setDelText]   = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  async function deleteGroup() {
+    setDeleting(true)
+    const { data, error } = await callFunction<{ message: string }>(`groups-create?id=${id}`, {
+      method: 'DELETE', token: getAdminToken()!,
+    })
+    setDeleting(false)
+    if (error) { alert(error); return }
+    alert(data?.message ?? 'Group deleted')
+    router.push('/admin/groups')
+  }
 
   /* One turn: everyone pays for its length, one member collects at the end. */
   const members    = Number(f.max_members) || 0
@@ -209,6 +222,26 @@ export default function EditGroup() {
           <Link href="/admin/groups" className="btn-line">Cancel</Link>
         </div>
       </form>
+
+      {/* Danger zone */}
+      <div className="border border-red/40 rounded-xl p-5 mt-8">
+        <h2 className="font-bold text-red text-sm">Danger zone</h2>
+        <p className="t-body text-xs mt-1.5 leading-relaxed">
+          Delete this group and its schedule permanently. Members in it lose these slots (their accounts and
+          other groups are untouched); old applications are kept but detached. Groups where money has already
+          been paid in or out <strong>cannot</strong> be deleted — that history must survive.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2 mt-3">
+          <input value={delText} onChange={e => setDelText(e.target.value)}
+            placeholder={`Type ${g?.name ?? 'the group name'} to confirm`}
+            className="in flex-1" />
+          <button type="button" onClick={deleteGroup}
+            disabled={deleting || !g || delText.trim() !== g.name}
+            className="px-4 py-2.5 border border-red/50 text-red text-sm font-semibold rounded-[10px] hover:bg-red hover:text-white transition-colors disabled:opacity-40 whitespace-nowrap">
+            {deleting ? 'Deleting…' : 'Delete this group'}
+          </button>
+        </div>
+      </div>
       </div>
 
       {/* Aside: what the numbers being typed actually mean, and the danger zone.
