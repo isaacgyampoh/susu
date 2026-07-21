@@ -1,7 +1,7 @@
 import { handleCors, json, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }         from '../_shared/supabase-admin.ts'
 import { paymentStatus, parseCallback } from '../_shared/nalo.ts'
-import { sendSMS, smsTemplates } from '../_shared/africas-talking.ts'
+import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 
 /**
  * Nalo payment callback.
@@ -88,5 +88,6 @@ async function settle(orderId: string) {
     }
     await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
       m.full_name.split(' ')[0], tx.amount.toFixed(2), group, days))
+    await notifyAdmins(smsTemplates.adminPaymentReceived(m.full_name, tx.amount.toFixed(2), group))
   }
 }

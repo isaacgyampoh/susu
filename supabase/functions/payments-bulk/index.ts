@@ -4,7 +4,7 @@ import { requireMember }           from '../_shared/jwt.ts'
 import { initializeTransaction } from '../_shared/paystack.ts'
 import { requestPayment }        from '../_shared/moolre.ts'
 import { requestPayment as naloRequest } from '../_shared/nalo.ts'
-import { provider, devPaymentsAllowed, paymentsUnavailable } from '../_shared/mode.ts'
+import { provider, devPaymentsAllowed, paymentsUnavailable, withServiceCharge } from '../_shared/mode.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') ?? ''
 
@@ -95,6 +95,7 @@ serveWithCors(async (req) => {
     const subtotal  = unpaid.reduce((s: number, c: any) => s + Number(c.amount), 0)
     const penalties = unpaid.reduce((s: number, c: any) => s + Number(c.penalty_due ?? 0), 0)
     const total     = subtotal + penalties
+    const { charged: chargedTotal, fee: chargeFee } = withServiceCharge(total)
 
     const batchId   = crypto.randomUUID()
     const unpaidIds = unpaid.map((c: any) => c.id)
@@ -155,7 +156,7 @@ serveWithCors(async (req) => {
       })
 
       const res = await doRequest({
-        payer: momo, amount: total,
+        payer: momo, amount: chargedTotal,
         provider: net,
         externalref: providerRef,
         reference: `Susu — ${unpaid.length} days`,
@@ -171,8 +172,8 @@ serveWithCors(async (req) => {
         return json({ provider: prov, status: 'prompted', reference, count: unpaid.length, total,
           ussd: res.ussd,
           message: res.ussd
-            ? `Dial ${res.ussd} on ${momo} to approve GHS ${total.toFixed(2)}.`
-            : `Approve GHS ${total.toFixed(2)} on ${momo} with your MoMo PIN.` })
+            ? `Dial ${res.ussd} on ${momo} to approve GHS ${chargedTotal.toFixed(2)} (incl. GHS ${chargeFee.toFixed(2)} fee).`
+            : `Approve GHS ${chargedTotal.toFixed(2)} on ${momo} (incl. GHS ${chargeFee.toFixed(2)} fee).` })
       }
       if (res.kind === 'duplicate') {
         return json({ provider: prov, status: 'prompted', reference, count: unpaid.length, total,

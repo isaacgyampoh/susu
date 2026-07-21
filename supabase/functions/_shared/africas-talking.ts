@@ -82,6 +82,14 @@ export async function sendSMS(to: string | string[], message: string): Promise<b
 }
 
 export const smsTemplates = {
+  adminPaymentReceived: (memberName: string, amount: string, group: string) =>
+    `Abbie Wealth: ${memberName} just paid GHS ${amount} for ${group}.`,
+  adminDailyDigest: (count: number, total: string, date: string) =>
+    `Abbie Wealth daily summary (${date}): ${count} payment${count === 1 ? '' : 's'} received, GHS ${total} total.`,
+  adminPayoutDue: (memberName: string, amount: string, date: string, group: string) =>
+    `Abbie Wealth reminder: payout of GHS ${amount} to ${memberName} (${group}) is due ${date}. Please prepare funds.`,
+  payoutStandby: (name: string, amount: string, date: string, group: string) =>
+    `Hi ${name}, great news — your Abbie Wealth Susu payout of GHS ${amount} for ${group} is due ${date}. Please be on standby to receive it. Thank you for saving with us!`,
   welcome: (name: string, memberId: string, passcode: string, portalUrl: string) =>
     `Hello ${name}, your Abbie Wealth Susu account is ready. ID: ${memberId} | Passcode: ${passcode} | Sign in: ${portalUrl} | Pay before 6:00 PM daily. Keep your passcode private.`,
   paymentReminder: (name: string, amount: string, dueDate: string, portalUrl: string) =>
@@ -98,4 +106,17 @@ export const smsTemplates = {
     `Hello ${name}, your Abbie Wealth Susu application is approved. ID: ${memberId} | Passcode: ${passcode} | Sign in: ${portalUrl} | Keep your passcode private.`,
   applicationRejected: (name: string, reason: string) =>
     `Hi ${name}, your Abbie Wealth Susu application was not approved. Reason: ${reason}. Contact us on 0550302322.`,
+}
+
+/** Admin notification numbers, comma-separated in ADMIN_SMS_NUMBERS. */
+export function adminNumbers(): string[] {
+  return (Deno.env.get('ADMIN_SMS_NUMBERS') ?? '')
+    .split(',').map(s => s.trim()).filter(Boolean)
+}
+
+/** Send an SMS to every configured admin number (no-op if none set). */
+export async function notifyAdmins(message: string): Promise<void> {
+  const nums = adminNumbers()
+  if (nums.length === 0) return
+  await sendSMS(nums, message)
 }

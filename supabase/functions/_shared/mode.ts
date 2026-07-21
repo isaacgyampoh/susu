@@ -32,3 +32,20 @@ export function paymentsUnavailable(req: Request, error: (m: string, s: number, 
   console.error('payments: no provider configured and ALLOW_DEV_PAYMENTS is not true — refusing')
   return error('Payments are not available right now. Please contact your susu admin.', 503, req)
 }
+
+/**
+ * Service charge passed to the customer. The member's contribution is recorded
+ * at its true value; the amount actually CHARGED via the provider is grossed up
+ * by this percentage so the operator doesn't absorb the MoMo fee.
+ * Configure PAYMENT_SERVICE_CHARGE_PCT (e.g. "1.5"); defaults to 1.5%.
+ */
+export const serviceChargePct = () => {
+  const v = Number(Deno.env.get('PAYMENT_SERVICE_CHARGE_PCT') ?? '1.5')
+  return isNaN(v) || v < 0 ? 0 : v
+}
+
+/** Gross up a contribution amount by the service charge, rounded to 2dp. */
+export function withServiceCharge(amount: number): { charged: number; fee: number } {
+  const fee = Math.round(amount * (serviceChargePct() / 100) * 100) / 100
+  return { charged: Math.round((amount + fee) * 100) / 100, fee }
+}

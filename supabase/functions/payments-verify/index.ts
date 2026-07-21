@@ -5,7 +5,7 @@ import { paymentStatus as moolreStatus } from '../_shared/moolre.ts'
 import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
 import { verifyTransaction }     from '../_shared/paystack.ts'
 import { provider, paymentsUnavailable } from '../_shared/mode.ts'
-import { sendSMS, smsTemplates } from '../_shared/africas-talking.ts'
+import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 
 /**
  * The member's app polls this after approving a prompt.
@@ -106,6 +106,8 @@ serveWithCors(async (req) => {
         }
         await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
           m.full_name.split(' ')[0], Number(tx.amount).toFixed(2), group, days))
+        await notifyAdmins(smsTemplates.adminPaymentReceived(
+          m.full_name, Number(tx.amount).toFixed(2), group))
       }
       return json({ status: 'paid', message: 'Payment confirmed. Thank you.' })
     }

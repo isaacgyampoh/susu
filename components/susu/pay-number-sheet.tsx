@@ -8,14 +8,17 @@ import { useState } from 'react'
  * passed to payments-initialize as pay_number / pay_network.
  */
 export default function PayNumberSheet({
-  defaultNumber, defaultNetwork = 'MTN', amount, onConfirm, onClose,
+  defaultNumber, defaultNetwork = 'MTN', amount, feePct = 1.5, onConfirm, onClose,
 }: {
   defaultNumber?: string
   defaultNetwork?: string
   amount: number
+  feePct?: number
   onConfirm: (payNumber: string, payNetwork: string) => void
   onClose: () => void
 }) {
+  const fee     = Math.round(amount * (feePct / 100) * 100) / 100
+  const charged = Math.round((amount + fee) * 100) / 100
   const [useOther, setUseOther] = useState(false)
   const [number, setNumber]     = useState(defaultNumber ?? '')
   const [network, setNetwork]   = useState(defaultNetwork)
@@ -27,7 +30,12 @@ export default function PayNumberSheet({
     <div className="fixed inset-0 z-50 bg-ink/30 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="bg-surface w-full sm:max-w-[380px] rounded-t-2xl sm:rounded-2xl p-6 animate-fade-in" onClick={e => e.stopPropagation()}>
         <h2 className="text-[19px] font-semibold tracking-[-.02em]">Pay GHS {amount.toFixed(2)}</h2>
-        <p className="text-[13px] text-ink-2 mt-1.5">A prompt will be sent to the number below. Approve it with your MoMo PIN.</p>
+        <div className="mt-2 p-3 rounded-lg bg-bg border border-line text-[12.5px]">
+          <div className="flex justify-between text-ink-2"><span>Contribution</span><span className="tnum">GHS {amount.toFixed(2)}</span></div>
+          <div className="flex justify-between text-ink-2 mt-1"><span>Service charge ({feePct}%)</span><span className="tnum">GHS {fee.toFixed(2)}</span></div>
+          <div className="flex justify-between font-semibold text-ink mt-1.5 pt-1.5 border-t border-line"><span>You'll approve</span><span className="tnum">GHS {charged.toFixed(2)}</span></div>
+        </div>
+        <p className="text-[13px] text-ink-2 mt-3">A prompt will be sent to the number below. Approve it with your MoMo PIN.</p>
 
         <div className="mt-5 space-y-2">
           {defaultNumber && (

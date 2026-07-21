@@ -613,3 +613,11 @@ ALTER TABLE susu_groups
 -- record itself survives.
 ALTER TABLE kyc_applications
   ALTER COLUMN selected_group_id DROP NOT NULL;
+-- ============================================================
+-- V20 — PAYOUT REMINDER STAMP
+-- ============================================================
+-- Lets the scheduled payout-reminder job avoid texting twice if it runs more
+-- than once for the same day.
+
+ALTER TABLE payouts
+  ADD COLUMN IF NOT EXISTS reminded_at TIMESTAMPTZ;

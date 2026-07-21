@@ -4,7 +4,7 @@ import { requireMember }           from '../_shared/jwt.ts'
 import { initializeTransaction }   from '../_shared/paystack.ts'
 import { requestPayment as moolreRequest } from '../_shared/moolre.ts'
 import { requestPayment as naloRequest }   from '../_shared/nalo.ts'
-import { provider, devPaymentsAllowed, paymentsUnavailable } from '../_shared/mode.ts'
+import { provider, devPaymentsAllowed, paymentsUnavailable, withServiceCharge, serviceChargePct } from '../_shared/mode.ts'
 
 const FRONTEND_URL = Deno.env.get('MEMBER_URL') ?? Deno.env.get('FRONTEND_URL') ?? ''
 
@@ -35,6 +35,9 @@ serveWithCors(async (req) => {
 
     const member = contribution.members as any
     const due    = Number(contribution.amount) + Number(contribution.penalty_due ?? 0)
+    // The member is charged the contribution PLUS the service charge; their
+    // contribution record stays at `due`. `charged` is what MoMo debits.
+    const { charged, fee } = withServiceCharge(due)
     const ref    = `CONT-${contribution_id}-${Date.now()}`
     // NaloPay rejects long/complex references ("Invalid reference"), so send it
     // a short alphanumeric one. It's kept only for the provider; we track the
@@ -46,7 +49,7 @@ serveWithCors(async (req) => {
     async function recordIntent() {
       await supabaseAdmin.from('transactions').insert({
         member_id: session!.sub, type: 'contribution', amount: due,
-        reference: ref, description: `Susu contribution for ${contribution.due_date}`,
+        reference: ref, description: `Susu contribution for ${contribution.due_date} (charged GHS ${charged.toFixed(2)} incl. ${serviceChargePct()}% fee)`,
         status: 'pending', related_id: contribution_id,
       })
     }
@@ -80,7 +83,7 @@ serveWithCors(async (req) => {
 
       const res = await requestPayment({
         payer:       momo,
-        amount:      due,
+        amount:      charged,
         provider:    net,
         externalref: prov === 'nalo' ? providerRef : ref,
         reference:   'Susu contribution',
@@ -98,9 +101,10 @@ serveWithCors(async (req) => {
         return json({
           provider: prov, status: 'prompted', reference: ref, amount: due,
           ussd: res.kind === 'prompted' ? res.ussd : undefined,
+          amount_charged: charged, fee,
           message: (res.kind === 'prompted' && res.ussd)
-            ? `Dial ${res.ussd} on ${momo} to approve your GHS ${due.toFixed(2)} payment.`
-            : `Approve the prompt on ${momo} with your MoMo PIN.`,
+            ? `Dial ${res.ussd} on ${momo} to approve GHS ${charged.toFixed(2)} (incl. GHS ${fee.toFixed(2)} fee).`
+            : `Approve GHS ${charged.toFixed(2)} on ${momo} (incl. GHS ${fee.toFixed(2)} charge).`,
         })
       }
       if (res.kind === 'otp_required') {
@@ -122,7 +126,7 @@ serveWithCors(async (req) => {
     // ── PAYSTACK: redirect ──
     const email = member.email ?? `${String(member.phone).replace('+', '')}@susu.platform`
     const pay = await initializeTransaction({
-      email, amount: Math.round(due * 100), reference: ref,
+      email, amount: Math.round(charged * 100), reference: ref,
       callback_url: `${FRONTEND_URL}/m/portal/payments?ref=${ref}`,
       metadata: { type: 'contribution', contribution_id, member_id: session.sub, member_name: member.full_name },
     })
