@@ -42,6 +42,17 @@ export default function TransactionsPage() {
     load(true)
   }
 
+  async function forceSettle() {
+    if (!confirm('Only do this after confirming these payments are SUCCESSFUL in your NaloPay dashboard. It marks all pending payments as received. Continue?')) return
+    setSyncing(true); setSyncMsg('')
+    const { data, error } = await callFunction<any>('admin-reconcile-payments', { method: 'POST', token: getAdminToken()!, body: { force: true } })
+    setSyncing(false)
+    if (error) { setSyncMsg(error); return }
+    setSyncMsg(`Force-settled ${data.settled} payment(s) you confirmed in NaloPay.`)
+    setSyncRaw('')
+    load(true)
+  }
+
   async function load(reset = true) {
     setLoading(true)
     const p = reset ? 1 : page
@@ -63,10 +74,16 @@ export default function TransactionsPage() {
           <h1 className="text-2xl font-extrabold text-ink">Money Received</h1>
           <p className="text-ink-2 text-sm mt-1">Every payment into your susu — reconcile the NaloPay total against your NaloPay dashboard.</p>
         </div>
-        <button onClick={reconcile} disabled={syncing}
-          className="px-4 py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm hover:brightness-105 transition-all disabled:opacity-50 whitespace-nowrap shrink-0">
-          {syncing ? 'Syncing…' : 'Sync from NaloPay'}
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button onClick={reconcile} disabled={syncing}
+            className="px-4 py-2.5 bg-ink text-white font-semibold rounded-[10px] text-sm hover:brightness-105 transition-all disabled:opacity-50 whitespace-nowrap">
+            {syncing ? 'Syncing…' : 'Sync from NaloPay'}
+          </button>
+          <button onClick={forceSettle} disabled={syncing}
+            className="px-4 py-2.5 border border-line text-ink font-semibold rounded-[10px] text-sm hover:bg-tint transition-colors disabled:opacity-50 whitespace-nowrap">
+            Force settle
+          </button>
+        </div>
       </div>
       {syncMsg && (
         <div className="mb-4 p-3 rounded-[10px] bg-tint border border-line text-sm text-ink">{syncMsg}</div>

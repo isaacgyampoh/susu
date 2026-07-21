@@ -24,6 +24,13 @@ serveWithCors(async (req) => {
   if (prov !== 'nalo' && prov !== 'moolre') return error(`Reconcile needs a phone-prompt provider. Active: ${prov}.`, 400)
   const getStatus = prov === 'nalo' ? naloStatus : moolreStatus
 
+  const body = await req.json().catch(() => ({}))
+  // force=true: settle every pending payment the operator has confirmed in the
+  // NaloPay dashboard, since NaloPay's status endpoint lags on PENDING. Use
+  // only after checking NaloPay shows them successful.
+  const force = body.force === true
+  const forceRefs: string[] | null = Array.isArray(body.references) ? body.references : null
+
   // Pending payment transactions from the last 7 days
   const since = new Date(Date.now() - 7 * 864e5).toISOString()
   const { data: pending } = await supabaseAdmin
@@ -43,6 +50,14 @@ serveWithCors(async (req) => {
     const orderId = (tx.paystack_data as { provider_order_id?: string } | null)?.provider_order_id
     const lookup = prov === 'nalo' ? orderId : tx.reference
     if (prov === 'nalo' && !orderId) { noOrderId++; continue }
+
+    // Force mode: the operator confirmed these in NaloPay; settle directly.
+    if (force && (!forceRefs || forceRefs.includes(tx.reference))) {
+      await settleTx(tx, { forced: true, at: new Date().toISOString() })
+      settled++
+      details.push({ reference: tx.reference, amount: tx.amount, status: 'force_settled' })
+      continue
+    }
 
     const s = await getStatus(lookup!)
     if (!s) { stillPending++; details.push({ reference: tx.reference, order_id: lookup, status: 'no_response' }); continue }
