@@ -30,13 +30,16 @@ serveWithCors(async (req) => {
     .from('transactions')
     .select('id, reference, amount, type, related_id, batch_id, member_id, paystack_data, created_at')
     .eq('status', 'pending')
-    .in('type', ['contribution', 'bulk_contribution', 'registration_fee'])
     .gte('created_at', since)
+
+  const totalPending = pending?.length ?? 0
+  const paymentPending = (pending ?? []).filter((t: any) =>
+    ['contribution', 'bulk_contribution', 'registration_fee'].includes(t.type))
 
   let settled = 0, stillPending = 0, failed = 0, noOrderId = 0
   const details: any[] = []
 
-  for (const tx of pending ?? []) {
+  for (const tx of paymentPending) {
     const orderId = (tx.paystack_data as { provider_order_id?: string } | null)?.provider_order_id
     const lookup = prov === 'nalo' ? orderId : tx.reference
     if (prov === 'nalo' && !orderId) { noOrderId++; continue }
@@ -56,7 +59,15 @@ serveWithCors(async (req) => {
     }
   }
 
-  return json({ checked: pending?.length ?? 0, settled, still_pending: stillPending, failed, no_order_id: noOrderId, details })
+  return json({
+    checked: paymentPending.length,
+    total_pending_in_db: totalPending,
+    settled, still_pending: stillPending, failed, no_order_id: noOrderId,
+    hint: paymentPending.length === 0
+      ? 'No pending payment transactions found. Either payments settled already, or the member portal is not creating payment intents — confirm the latest functions are deployed.'
+      : undefined,
+    details,
+  })
 })
 
 async function settleTx(tx: any, raw: unknown) {

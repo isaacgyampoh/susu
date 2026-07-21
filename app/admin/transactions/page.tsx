@@ -31,7 +31,9 @@ export default function TransactionsPage() {
     const { data, error } = await callFunction<any>('admin-reconcile-payments', { method: 'POST', token: getAdminToken()! })
     setSyncing(false)
     if (error) { setSyncMsg(error); return }
-    setSyncMsg(`Checked ${data.checked}: ${data.settled} newly settled, ${data.still_pending} still pending, ${data.failed} failed.`)
+    setSyncMsg(
+      `Checked ${data.checked} pending payment(s): ${data.settled} newly settled, ${data.still_pending} still pending, ${data.failed} failed.` +
+      (data.hint ? ` — ${data.hint}` : ''))
     load(true)
   }
 
