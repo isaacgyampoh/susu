@@ -38,6 +38,14 @@ async function settleLocally(reference: string, tx: any, raw: unknown) {
   }
   await supabaseAdmin.from('transactions')
     .update({ status: 'success', paystack_data: raw as never }).eq('reference', reference)
+
+  // If this was a registration fee, flag the member's KYC application paid too
+  if (tx.type === 'registration_fee') {
+    await supabaseAdmin.from('kyc_applications')
+      .update({ registration_fee_paid: true })
+      .eq('created_member_id', tx.member_id).eq('registration_fee_paid', false)
+      .then(({ error }) => { if (error) console.log('kyc flag skipped:', error.message) })
+  }
 }
 
 serveWithCors(async (req) => {

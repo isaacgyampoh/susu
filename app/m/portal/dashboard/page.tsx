@@ -52,6 +52,7 @@ export default function Dashboard() {
 
   const { member, plans, summary, pendingContributions, recentPayments, penalties } = d
   const dueToday = pendingContributions.find(c => isToday(new Date(c.due_date)))
+  const dueTodayAll = pendingContributions.filter(c => isToday(new Date(c.due_date)))
 
   const mine = recentPayments
     .filter(c => c.susu_groups?.id === group?.id)
@@ -125,21 +126,31 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Due today */}
-          {dueToday && (
-            <div className="panel p-4 mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="t-label">Due today</p>
-                <p className="t-figure mt-1">
-                  <span className="text-[13px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(dueToday.amount)}
-                </p>
-                <p className={`text-[11.5px] font-medium mt-1 flex items-center gap-1 ${dl.urgent ? 'text-red' : 'text-ink-2'}`}>
-                  {dl.label}
-                </p>
+          {/* Due today — across every group the member is in */}
+          {dueTodayAll.length > 0 && (
+            <div className="panel p-4 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="t-label">Due today{dueTodayAll.length > 1 ? ` · ${dueTodayAll.length} groups` : ''}</p>
+                {dueTodayAll.length > 1 && (
+                  <p className="text-[13px] font-bold">Total GHS {n2(dueTodayAll.reduce((s, c) => s + Number(c.amount), 0))}</p>
+                )}
               </div>
-              <button onClick={() => pay(dueToday)} disabled={paying === dueToday.id} className="act-gold shrink-0">
-                {paying === dueToday.id ? '…' : 'Pay Now'}
-              </button>
+              <div className="space-y-2">
+                {dueTodayAll.map(c => (
+                  <div key={c.id} className="flex items-center justify-between gap-3 py-1.5 border-t border-line first:border-t-0">
+                    <div>
+                      <p className="text-[13px] font-semibold">{(c.susu_groups as any)?.name ?? 'Susu'}</p>
+                      <p className="t-figure text-[20px] mt-0.5">
+                        <span className="text-[12px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(c.amount)}
+                      </p>
+                    </div>
+                    <button onClick={() => pay(c)} disabled={paying === c.id} className="act-gold shrink-0">
+                      {paying === c.id ? '…' : 'Pay Now'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className={`text-[11.5px] font-medium mt-2 ${dl.urgent ? 'text-red' : 'text-ink-2'}`}>{dl.label}</p>
             </div>
           )}
 

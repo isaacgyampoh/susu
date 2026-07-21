@@ -20,7 +20,68 @@ serveWithCors(async (req) => {
   if (blocked) return blocked
 
   try {
-    const { contribution_id, pay_number, pay_network } = await req.json()
+    const { contribution_id, registration_tx_id, pay_number, pay_network } = await req.json()
+
+    // ── REGISTRATION FEE: pay a pending registration_fee transaction ──
+    if (registration_tx_id) {
+      const { data: regTx } = await supabaseAdmin
+        .from('transactions')
+        .select('id, amount, status, reference, members!member_id(phone, full_name, mobile_money_number, mobile_money_provider)')
+        .eq('id', registration_tx_id)
+        .eq('member_id', session.sub)
+        .eq('type', 'registration_fee')
+        .single()
+      if (!regTx) return error('Registration fee not found', 404)
+      if (regTx.status === 'success') return error('Registration fee already paid')
+
+      const rmember = regTx.members as any
+      const rdue = Number(regTx.amount)
+      const { charged: rcharged, fee: rfee } = withServiceCharge(rdue)
+      const rRef = `REGPAY-${registration_tx_id}-${Date.now()}`
+      const rProviderRef = `RG${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase().slice(0, 20)
+
+      if (devPaymentsAllowed()) {
+        await supabaseAdmin.from('transactions').update({ status: 'success' }).eq('id', registration_tx_id)
+        return json({ dev_mode: true, message: 'Registration fee recorded (dev mode)' })
+      }
+
+      if (provider() === 'nalo' || provider() === 'moolre') {
+        const prov = provider()
+        const doReq = prov === 'nalo' ? naloRequest : moolreRequest
+        const momo = (pay_number && String(pay_number).trim()) || rmember?.mobile_money_number || rmember?.phone
+        if (!momo) return error('Enter a mobile money number to pay.', 400)
+        const net = (pay_network && String(pay_network).trim()) || rmember?.mobile_money_provider || 'MTN'
+
+        // Point the settlement at THIS registration transaction
+        await supabaseAdmin.from('transactions')
+          .update({ reference: rRef, description: `Registration fee (charged GHS ${rcharged.toFixed(2)} incl. ${serviceChargePct()}% fee)` })
+          .eq('id', registration_tx_id)
+
+        const res = await doReq({
+          payer: momo, amount: rcharged, provider: net,
+          externalref: prov === 'nalo' ? rProviderRef : rRef,
+          reference: 'Susu registration', accountName: rmember?.full_name,
+        })
+        if (res.kind === 'prompted') {
+          if (res.moolreRef) {
+            await supabaseAdmin.from('transactions')
+              .update({ paystack_data: { provider_order_id: res.moolreRef } as never })
+              .eq('id', registration_tx_id)
+          }
+          return json({
+            provider: prov, status: 'prompted', reference: rRef, amount: rcharged,
+            ussd: res.ussd, amount_charged: rcharged, fee: rfee,
+            message: res.ussd
+              ? `Dial ${res.ussd} on ${momo} to pay your GHS ${rcharged.toFixed(2)} registration fee.`
+              : `Approve GHS ${rcharged.toFixed(2)} on ${momo} to pay your registration fee.`,
+          })
+        }
+        if (res.kind === 'otp_required') return json({ provider: prov, status: 'otp_required', reference: rRef, amount: rcharged, message: res.message })
+        return error(res.kind === 'failed' ? res.message : 'Could not start payment', 400)
+      }
+      return error('Online payment is not available. Please pay your registration fee to the admin.', 503)
+    }
+
     if (!contribution_id) return error('contribution_id is required')
 
     const { data: contribution } = await supabaseAdmin
