@@ -45,7 +45,7 @@ serveWithCors(async (req) => {
     if (prov === 'nalo' && !orderId) { noOrderId++; continue }
 
     const s = await getStatus(lookup!)
-    if (!s) { stillPending++; continue }
+    if (!s) { stillPending++; details.push({ reference: tx.reference, order_id: lookup, status: 'no_response' }); continue }
 
     if (s.settled) {
       await settleTx(tx, s.raw)
@@ -53,9 +53,11 @@ serveWithCors(async (req) => {
       details.push({ reference: tx.reference, amount: tx.amount, status: 'settled' })
     } else if (s.pending) {
       stillPending++
+      details.push({ reference: tx.reference, order_id: lookup, status: 'pending', raw: s.raw })
     } else {
       await supabaseAdmin.from('transactions').update({ status: 'failed' }).eq('id', tx.id)
       failed++
+      details.push({ reference: tx.reference, status: 'failed', raw: s.raw })
     }
   }
 

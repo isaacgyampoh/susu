@@ -25,6 +25,7 @@ export default function TransactionsPage() {
   const [hasMore, setHasMore] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
+  const [syncRaw, setSyncRaw] = useState('')
 
   async function reconcile() {
     setSyncing(true); setSyncMsg('')
@@ -34,6 +35,10 @@ export default function TransactionsPage() {
     setSyncMsg(
       `Checked ${data.checked} pending payment(s): ${data.settled} newly settled, ${data.still_pending} still pending, ${data.failed} failed.` +
       (data.hint ? ` — ${data.hint}` : ''))
+    // Surface the raw provider response for the first pending, to diagnose format
+    const firstPending = (data.details ?? []).find((d: any) => d.status === 'pending' && d.raw)
+    if (firstPending) setSyncRaw(JSON.stringify(firstPending.raw, null, 2))
+    else setSyncRaw('')
     load(true)
   }
 
@@ -65,6 +70,12 @@ export default function TransactionsPage() {
       </div>
       {syncMsg && (
         <div className="mb-4 p-3 rounded-[10px] bg-tint border border-line text-sm text-ink">{syncMsg}</div>
+      )}
+      {syncRaw && (
+        <div className="mb-4 p-3 rounded-[10px] bg-tint border border-line">
+          <p className="text-xs text-ink-2 mb-1.5">NaloPay's raw status response for a pending payment (send this to your developer):</p>
+          <pre className="text-[10px] text-ink font-mono overflow-x-auto whitespace-pre-wrap break-all">{syncRaw}</pre>
+        </div>
       )}
 
       {/* Totals */}
