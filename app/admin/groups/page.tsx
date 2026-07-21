@@ -87,7 +87,7 @@ export default function GroupsPage() {
             return (
               <div key={g.id} className="border border-line rounded-[10px] p-5 flex flex-col hover:border-line transition-colors">
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-bold text-ink leading-tight">{g.name}</h3>
+                  <Link href={`/admin/groups/${g.id}`} className="font-bold text-ink leading-tight hover:underline underline-offset-2">{g.name}</Link>
                   {statusBadge(g.status)}
                 </div>
 
@@ -145,6 +145,10 @@ export default function GroupsPage() {
                       : 'Set the real start date (past is fine) in Edit group — then add members and activate.'}
                   </p>
                 )}
+                <Link href={`/admin/groups/${g.id}`}
+                  className="w-full py-2 mb-2 rounded-[10px] text-xs font-semibold border border-line text-ink text-center hover:bg-tint transition-colors block">
+                  View members ({g.current_members})
+                </Link>
                 <button onClick={() => toggleWebsite(g)} disabled={togglingId === g.id}
                   className={`w-full py-2 mb-2 rounded-[10px] text-xs font-semibold border transition-colors disabled:opacity-50 ${
                     g.show_on_website !== false

@@ -177,13 +177,50 @@ serveWithCors(async (req) => {
 
     // ── LIST ──
     if (method === 'GET') {
-      const q = id
-        ? supabaseAdmin.from('susu_groups').select('*, group_memberships(*)').eq('id', id).single()
-        : supabaseAdmin.from('susu_groups').select('*, group_memberships(count)').order('created_at', { ascending: false })
+      if (id) {
+        const { data: group, error: gErr } = await supabaseAdmin
+          .from('susu_groups').select('*').eq('id', id).single()
+        if (gErr) return error(gErr.message, 500)
 
-      const { data, error: e } = await q
+        // The roster: every slot, with the person holding it
+        const { data: roster, error: rErr } = await supabaseAdmin
+          .from('group_memberships')
+          .select('id, payout_position, payout_date, payout_amount, payout_received, status, joined_at, members!member_id(id, member_id, full_name, phone)')
+          .eq('group_id', id)
+          .order('payout_position', { ascending: true })
+        if (rErr) return error(rErr.message, 500)
+
+        // Cross-tracking: which OTHER groups each of these members is in
+        const memberIds = [...new Set((roster ?? []).map((r: any) => r.members?.id).filter(Boolean))]
+        let otherByMember: Record<string, { id: string; name: string; slots: number }[]> = {}
+        if (memberIds.length > 0) {
+          const { data: others } = await supabaseAdmin
+            .from('group_memberships')
+            .select('member_id, group_id, susu_groups(id, name)')
+            .in('member_id', memberIds)
+            .neq('group_id', id)
+            .eq('status', 'active')
+          for (const o of others ?? []) {
+            const list = (otherByMember[o.member_id] ??= [])
+            const hit = list.find(x => x.id === (o as any).susu_groups?.id)
+            if (hit) hit.slots++
+            else if ((o as any).susu_groups) list.push({ id: (o as any).susu_groups.id, name: (o as any).susu_groups.name, slots: 1 })
+          }
+        }
+
+        const enriched = (roster ?? []).map((r: any) => ({
+          ...r,
+          other_groups: otherByMember[r.members?.id] ?? [],
+        }))
+
+        return json({ group, roster: enriched })
+      }
+
+      const { data, error: e } = await supabaseAdmin
+        .from('susu_groups').select('*, group_memberships(count)')
+        .order('created_at', { ascending: false })
       if (e) return error(e.message, 500)
-      return json(id ? { group: data } : { groups: data })
+      return json({ groups: data })
     }
 
     return error('Method not allowed', 405)
