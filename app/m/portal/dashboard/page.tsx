@@ -219,6 +219,7 @@ export default function Dashboard() {
           phone={member?.mobile_money_number ?? member?.phone}
           initial={pending.status}
           message={pending.message}
+          ussd={pending.ussd}
           onDone={() => { setPending(null); load() }}
           onClose={() => setPending(null)}
         />

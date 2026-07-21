@@ -68,7 +68,7 @@ export function naloPhone(phone: string): string {
 
 // Common result shapes (match moolre.ts)
 export type PromptResult =
-  | { kind: 'prompted'; moolreRef: string }        // moolreRef carries NaloPay order_id
+  | { kind: 'prompted'; moolreRef: string; ussd?: string }  // ussd = dial-code the member approves with
   | { kind: 'otp_required'; message: string }
   | { kind: 'duplicate' }
   | { kind: 'failed'; code: string; message: string; raw?: unknown }
@@ -187,7 +187,13 @@ export async function requestPayment(args: {
     if (r?.success && r?.data?.order_id) {
       _winningFormat = c.label
       console.log(`NaloPay: accepted format ${c.label}`)
-      return { kind: 'prompted', moolreRef: String(r.data.order_id) }
+      // NaloPay returns a USSD dial-string in otp_code (e.g. "None*252#" or a
+      // full "*920*..#"). Surface it only when it's a real dial code.
+      const raw = String(r.data.otp_code ?? '').trim()
+      const ussd = raw && raw.toLowerCase() !== 'none' && /\*?\d+.*#/.test(raw)
+        ? raw.replace(/^none/i, '')
+        : undefined
+      return { kind: 'prompted', moolreRef: String(r.data.order_id), ussd }
     }
     lastRaw = r
     // Keep trying only while it's specifically the hash it rejects

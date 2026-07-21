@@ -206,6 +206,7 @@ export default function Payments() {
           amount={Number(pending.amount ?? 0)}
           initial={pending.status}
           message={pending.message}
+          ussd={pending.ussd}
           onDone={() => { setPending(null); load() }}
           onClose={() => setPending(null)}
         />

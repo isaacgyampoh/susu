@@ -17,13 +17,14 @@ type Stage = 'prompted' | 'otp' | 'paid' | 'failed'
  * with their admin.
  */
 export default function PayPrompt({
-  reference, amount, phone, initial, message, onDone, onClose,
+  reference, amount, phone, initial, message, ussd, onDone, onClose,
 }: {
   reference: string
   amount: number
   phone?: string
   initial: 'prompted' | 'otp_required'
   message?: string
+  ussd?: string
   onDone: () => void
   onClose: () => void
 }) {
@@ -88,16 +89,34 @@ export default function PayPrompt({
 
         {stage === 'prompted' && (
           <>
-            <h2 className="text-[19px] font-semibold tracking-[-.02em]">Approve on your phone</h2>
+            <h2 className="text-[19px] font-semibold tracking-[-.02em]">
+              {ussd ? 'Dial to approve' : 'Approve on your phone'}
+            </h2>
             <p className="text-[13px] text-ink-2 mt-1.5">
-              {note || `Enter your MoMo PIN on ${phone ?? 'your phone'} to pay GHS ${amount.toFixed(2)}.`}
+              {ussd
+                ? `To pay GHS ${amount.toFixed(2)}, dial the code below on ${phone ?? 'your phone'} and follow the steps.`
+                : (note || `Enter your MoMo PIN on ${phone ?? 'your phone'} to pay GHS ${amount.toFixed(2)}.`)}
             </p>
+
+            {ussd && (
+              <a href={`tel:${encodeURIComponent(ussd)}`}
+                 className="mt-4 block text-center py-4 rounded-lg bg-ink text-white font-bold text-[20px] tracking-wide tnum active:brightness-110">
+                {ussd}
+              </a>
+            )}
+            {ussd && (
+              <button
+                onClick={() => { navigator.clipboard?.writeText(ussd).catch(() => {}) }}
+                className="btn-line w-full mt-2 text-[13px]">
+                Copy code
+              </button>
+            )}
 
             <div className="mt-5 p-4 rounded-lg bg-bg border border-line">
               <p className="text-[12.5px] text-ink-2">
                 {gaveUp
                   ? 'Still not confirmed. If you approved it, your admin can check — do not pay twice.'
-                  : 'Waiting for your approval…'}
+                  : ussd ? 'After you approve on your phone, this updates automatically…' : 'Waiting for your approval…'}
               </p>
               {!gaveUp && (
                 <div className="h-1 bg-line rounded-full overflow-hidden mt-3">
@@ -110,7 +129,7 @@ export default function PayPrompt({
             <button onClick={gaveUp ? onClose : onDone} className="btn-line w-full mt-4">
               {gaveUp ? 'Close' : 'I have approved it'}
             </button>
-            {!gaveUp && (
+            {!gaveUp && !ussd && (
               <p className="text-[11.5px] text-ink-3 mt-3 text-center">
                 No prompt? Dial *170# and check your approvals.
               </p>

@@ -97,7 +97,10 @@ serveWithCors(async (req) => {
         }
         return json({
           provider: prov, status: 'prompted', reference: ref, amount: due,
-          message: `Approve the prompt on ${momo} with your MoMo PIN.`,
+          ussd: res.kind === 'prompted' ? res.ussd : undefined,
+          message: (res.kind === 'prompted' && res.ussd)
+            ? `Dial ${res.ussd} on ${momo} to approve your GHS ${due.toFixed(2)} payment.`
+            : `Approve the prompt on ${momo} with your MoMo PIN.`,
         })
       }
       if (res.kind === 'otp_required') {

@@ -169,7 +169,10 @@ serveWithCors(async (req) => {
             .eq('reference', reference)
         }
         return json({ provider: prov, status: 'prompted', reference, count: unpaid.length, total,
-          message: `Approve GHS ${total.toFixed(2)} on ${momo} with your MoMo PIN.` })
+          ussd: res.ussd,
+          message: res.ussd
+            ? `Dial ${res.ussd} on ${momo} to approve GHS ${total.toFixed(2)}.`
+            : `Approve GHS ${total.toFixed(2)} on ${momo} with your MoMo PIN.` })
       }
       if (res.kind === 'duplicate') {
         return json({ provider: prov, status: 'prompted', reference, count: unpaid.length, total,
