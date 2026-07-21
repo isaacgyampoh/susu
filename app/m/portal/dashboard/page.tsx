@@ -88,6 +88,35 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Due today — across every group the member is in */}
+      {dueTodayAll.length > 0 && (
+        <div className="panel p-4 mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="t-label">Due today{dueTodayAll.length > 1 ? ` · ${dueTodayAll.length} groups` : ''}</p>
+            {dueTodayAll.length > 1 && (
+              <p className="text-[13px] font-bold">Total GHS {n2(dueTodayAll.reduce((s, c) => s + Number(c.amount), 0))}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            {dueTodayAll.map(c => (
+              <div key={c.id} className="flex items-center justify-between gap-3 py-1.5 border-t border-line first:border-t-0">
+                <div>
+                  <p className="text-[13px] font-semibold">{(c.susu_groups as any)?.name ?? 'Susu'}</p>
+                  <p className="t-figure text-[20px] mt-0.5">
+                    <span className="text-[12px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(c.amount)}
+                  </p>
+                </div>
+                <button onClick={() => pay(c)} disabled={paying === c.id} className="act-gold shrink-0">
+                  {paying === c.id ? '…' : 'Pay Now'}
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className={`text-[11.5px] font-medium mt-2 ${dl.urgent ? 'text-red' : 'text-ink-2'}`}>{dl.label}</p>
+        </div>
+      )}
+
+
       {plans.length > 1 && (
         <div className="seg mb-4">
           {plans.map((p, i) => (
@@ -125,34 +154,6 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-
-          {/* Due today — across every group the member is in */}
-          {dueTodayAll.length > 0 && (
-            <div className="panel p-4 mb-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="t-label">Due today{dueTodayAll.length > 1 ? ` · ${dueTodayAll.length} groups` : ''}</p>
-                {dueTodayAll.length > 1 && (
-                  <p className="text-[13px] font-bold">Total GHS {n2(dueTodayAll.reduce((s, c) => s + Number(c.amount), 0))}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                {dueTodayAll.map(c => (
-                  <div key={c.id} className="flex items-center justify-between gap-3 py-1.5 border-t border-line first:border-t-0">
-                    <div>
-                      <p className="text-[13px] font-semibold">{(c.susu_groups as any)?.name ?? 'Susu'}</p>
-                      <p className="t-figure text-[20px] mt-0.5">
-                        <span className="text-[12px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(c.amount)}
-                      </p>
-                    </div>
-                    <button onClick={() => pay(c)} disabled={paying === c.id} className="act-gold shrink-0">
-                      {paying === c.id ? '…' : 'Pay Now'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className={`text-[11.5px] font-medium mt-2 ${dl.urgent ? 'text-red' : 'text-ink-2'}`}>{dl.label}</p>
-            </div>
-          )}
 
           {/* Progress */}
           <div className="grid grid-cols-2 gap-3 mb-3">
