@@ -128,40 +128,62 @@ export async function requestPayment(args: {
   const network = networkFor(args.provider)
   if (!network) return { kind: 'failed', code: 'CHANNEL', message: `Unsupported network: ${args.provider}` }
 
-  const account_number = naloPhone(args.payer)
-  // Amount string must match exactly what we hash (NaloPay's example uses 2dp).
-  const amountStr = String(args.amount)   // "1" not "1.00" — must equal what we hash and send
+  const phone233 = naloPhone(args.payer)                    // 233XXXXXXXXX
+  const phone0   = phone233.replace(/^233/, '0')            // 0XXXXXXXXX
+  const amt2dp   = args.amount.toFixed(2)                    // "1.00"
+  const amtInt   = String(args.amount)                       // "1"
 
   let token: string
   try { token = await getToken() }
   catch (e) { return { kind: 'failed', code: 'TOKEN', message: (e as Error).message } }
 
-  let hash: string
-  try { hash = await transHash(account_number, amountStr, args.externalref) }
-  catch (e) { return { kind: 'failed', code: 'HASH', message: (e as Error).message } }
+  // NaloPay's hash inputs (amount decimals, phone format) are ambiguous in the
+  // docs, so try the sensible combinations and use the first it accepts. The
+  // amount SENT must match the amount HASHED, and the account_number sent is
+  // always 233-format; only the hash's phone representation varies.
+  const candidates: { amountStr: string; hashPhone: string; label: string }[] = [
+    { amountStr: amt2dp, hashPhone: phone233, label: '2dp/233' },
+    { amountStr: amt2dp, hashPhone: phone0,   label: '2dp/0' },
+    { amountStr: amtInt, hashPhone: phone233, label: 'int/233' },
+    { amountStr: amtInt, hashPhone: phone0,   label: 'int/0' },
+  ]
 
-  let r: any
-  try {
-    r = await post('/clientapi/collection/', {
-      merchant_id:    MERCHANT(),
-      service_name:   'MOMO_TRANSACTION',
-      trans_hash:     hash,
-      account_number,
-      account_name:   args.accountName ?? 'Susu member',
-      network,
-      amount:         amountStr,
-      reference:      args.externalref,
-      callback:       callbackUrl(),
-      description:    args.reference ?? 'Susu contribution',
-    }, { token })
-  } catch (e) {
-    return { kind: 'failed', code: 'NET', message: (e as Error).message }
+  let lastRaw: unknown = null
+  for (const c of candidates) {
+    let hash: string
+    try { hash = await transHash(c.hashPhone, c.amountStr, args.externalref) }
+    catch (e) { return { kind: 'failed', code: 'HASH', message: (e as Error).message } }
+
+    let r: any
+    try {
+      r = await post('/clientapi/collection/', {
+        merchant_id:    MERCHANT(),
+        service_name:   'MOMO_TRANSACTION',
+        trans_hash:     hash,
+        account_number: phone233,
+        account_name:   args.accountName ?? 'Susu member',
+        network,
+        amount:         c.amountStr,
+        reference:      args.externalref,
+        callback:       callbackUrl(),
+        description:    args.reference ?? 'Susu contribution',
+      }, { token })
+    } catch (e) {
+      return { kind: 'failed', code: 'NET', message: (e as Error).message }
+    }
+
+    if (r?.success && r?.data?.order_id) {
+      console.log(`NaloPay: accepted hash format ${c.label}`)
+      return { kind: 'prompted', moolreRef: String(r.data.order_id) }
+    }
+    lastRaw = r
+    const cause = String(r?.error?.cause ?? '')
+    // Only keep trying while it's specifically the hash it dislikes
+    if (cause !== 'trans_hash') break
   }
 
-  if (r?.success && r?.data?.order_id) {
-    return { kind: 'prompted', moolreRef: String(r.data.order_id) }
-  }
-  const msg = String(r?.message ?? r?.data?.message ?? 'Payment could not be started')
+  const r: any = lastRaw
+  const msg = String(r?.message ?? r?.error?.description ?? r?.data?.message ?? 'Payment could not be started')
   if (/duplicate|already/i.test(msg)) return { kind: 'duplicate' }
   console.error('NaloPay collection rejected:', JSON.stringify(r))
   return { kind: 'failed', code: String(r?.code ?? 'FAIL'), message: msg, raw: r }
