@@ -3,6 +3,7 @@ import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
 import { initializeTransaction } from '../_shared/paystack.ts'
 import { requestPayment }        from '../_shared/moolre.ts'
+import { requestPayment as naloRequest } from '../_shared/nalo.ts'
 import { provider, devPaymentsAllowed, paymentsUnavailable } from '../_shared/mode.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') ?? ''
@@ -56,7 +57,7 @@ serveWithCors(async (req) => {
   if (req.method !== 'POST') return error('Method not allowed', 405)
 
   try {
-    const { contribution_ids, group_id, days } = await req.json()
+    const { contribution_ids, group_id, days, pay_number: payNumber, pay_network: payNetwork } = await req.json()
 
     // Resolve which contributions to pay
     let ids: string[] = contribution_ids ?? []
@@ -132,32 +133,50 @@ serveWithCors(async (req) => {
 
     const reference = `BULK-${batchId.slice(0, 8)}-${Date.now()}`
 
-    // Moolre: one prompt for the whole batch — the point of paying ahead is
-    // one approval, not thirty.
-    if (provider() === 'moolre') {
-      const momo = member?.mobile_money_number ?? member?.phone
+    // Prompt providers (Nalo, Moolre): one prompt for the whole batch — the
+    // point of paying ahead is one approval, not thirty.
+    if (provider() === 'nalo' || provider() === 'moolre') {
+      const prov = provider()
+      const doRequest = prov === 'nalo' ? naloRequest : requestPayment
+      const momo = (payNumber && String(payNumber).trim()) || member?.mobile_money_number || member?.phone
       if (!momo) return error('No mobile money number on your account. Ask your admin to add one.', 400)
+      const net = (payNetwork && String(payNetwork).trim()) || member?.mobile_money_provider || 'MTN'
+
+      const providerRef = prov === 'nalo'
+        ? `SU${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase().slice(0, 20)
+        : reference
 
       await supabaseAdmin.from('contributions').update({ batch_id: batchId }).in('id', unpaidIds)
       await supabaseAdmin.from('transactions').insert({
         member_id: memberId, type: 'contribution', amount: total,
         reference, batch_id: batchId, items_count: unpaid.length,
         description: `Bulk payment — ${unpaid.length} contributions`, status: 'pending',
+        paystack_data: prov === 'nalo' ? { provider_order_id: null } as never : null,
       })
 
-      const res = await requestPayment({
+      const res = await doRequest({
         payer: momo, amount: total,
-        provider: member?.mobile_money_provider ?? 'MTN',
-        externalref: reference,
+        provider: net,
+        externalref: providerRef,
         reference: `Susu — ${unpaid.length} days`,
+        accountName: member?.full_name,
       })
 
-      if (res.kind === 'prompted' || res.kind === 'duplicate') {
-        return json({ provider: 'moolre', status: 'prompted', reference, count: unpaid.length, total,
+      if (res.kind === 'prompted') {
+        if (res.moolreRef) {
+          await supabaseAdmin.from('transactions')
+            .update({ paystack_data: { provider_order_id: res.moolreRef } as never })
+            .eq('reference', reference)
+        }
+        return json({ provider: prov, status: 'prompted', reference, count: unpaid.length, total,
+          message: `Approve GHS ${total.toFixed(2)} on ${momo} with your MoMo PIN.` })
+      }
+      if (res.kind === 'duplicate') {
+        return json({ provider: prov, status: 'prompted', reference, count: unpaid.length, total,
           message: `Approve GHS ${total.toFixed(2)} on ${momo} with your MoMo PIN.` })
       }
       if (res.kind === 'otp_required') {
-        return json({ provider: 'moolre', status: 'otp_required', reference, count: unpaid.length, total,
+        return json({ provider: prov, status: 'otp_required', reference, count: unpaid.length, total,
           message: res.message })
       }
       await supabaseAdmin.from('transactions').update({ status: 'failed' }).eq('reference', reference)

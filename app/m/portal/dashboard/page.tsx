@@ -9,6 +9,7 @@ import Rotation from '@/components/susu/rotation'
 import { useDeadline } from '@/components/susu/deadline'
 import { ghs as n0 } from '@/lib/money'
 import PayPrompt from '@/components/susu/pay-prompt'
+import PayNumberSheet from '@/components/susu/pay-number-sheet'
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export default function Dashboard() {
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [loading, setL] = useState(true)
   const [paying, setP]  = useState<string | null>(null)
   const [pending, setPending] = useState<any>(null)
+  const [numSheet, setNumSheet] = useState<Contribution | null>(null)
   const [tab, setTab]   = useState(0)
 
   async function load() {
@@ -24,10 +26,13 @@ export default function Dashboard() {
   }
   useEffect(() => { load() }, [])
 
-  async function pay(c: Contribution) {
+  function pay(c: Contribution) { setNumSheet(c) }
+
+  async function doPay(c: Contribution, payNumber?: string, payNetwork?: string) {
+    setNumSheet(null)
     setP(c.id)
     const { data, error } = await callFunction<any>('payments-initialize',
-      { method: 'POST', body: { contribution_id: c.id }, token: getMemberToken()! })
+      { method: 'POST', body: { contribution_id: c.id, pay_number: payNumber, pay_network: payNetwork }, token: getMemberToken()! })
     setP(null)
     if (error) return alert(error)
     if (data?.dev_mode) return load()
@@ -198,6 +203,15 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      {numSheet && (
+        <PayNumberSheet
+          defaultNumber={member?.mobile_money_number ?? member?.phone}
+          defaultNetwork={member?.mobile_money_provider ?? 'MTN'}
+          amount={Number(numSheet.amount ?? 0)}
+          onConfirm={(num, net) => doPay(numSheet, num, net)}
+          onClose={() => setNumSheet(null)}
+        />
+      )}
       {pending && (
         <PayPrompt
           reference={pending.reference}

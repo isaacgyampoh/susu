@@ -4,6 +4,7 @@ import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { Contribution } from '@/types'
 import { format } from 'date-fns'
 import PayPrompt from '@/components/susu/pay-prompt'
+import PayNumberSheet from '@/components/susu/pay-number-sheet'
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const PRESETS = [7, 14, 30]
 
@@ -13,6 +14,7 @@ export default function Payments() {
   const [filter, setF]    = useState<'all' | 'pending' | 'paid'>('all')
   const [paying, setP]    = useState<string | null>(null)
   const [pending, setPending] = useState<any>(null)
+  const [numSheet, setNumSheet] = useState<Contribution | null>(null)
 
   const [sheet, setSheet] = useState(false)
   const [days, setDays]   = useState(7)
@@ -35,10 +37,13 @@ export default function Payments() {
       .then(({ data }) => setPrev(data)).finally(() => setLP(false))
   }, [sheet, days])
 
-  async function payOne(c: Contribution) {
+  function payOne(c: Contribution) { setNumSheet(c) }
+
+  async function doPayOne(c: Contribution, payNumber?: string, payNetwork?: string) {
+    setNumSheet(null)
     setP(c.id)
     const { data, error } = await callFunction<any>('payments-initialize',
-      { method: 'POST', body: { contribution_id: c.id }, token: getMemberToken()! })
+      { method: 'POST', body: { contribution_id: c.id, pay_number: payNumber, pay_network: payNetwork }, token: getMemberToken()! })
     setP(null)
     if (error) return alert(error)
     if (data?.dev_mode) return load()
@@ -187,6 +192,13 @@ export default function Payments() {
             )}
           </div>
         </div>
+      )}
+      {numSheet && (
+        <PayNumberSheet
+          amount={Number(numSheet.amount ?? 0)}
+          onConfirm={(num, net) => doPayOne(numSheet, num, net)}
+          onClose={() => setNumSheet(null)}
+        />
       )}
       {pending && (
         <PayPrompt

@@ -5,6 +5,7 @@ import { paymentStatus as moolreStatus } from '../_shared/moolre.ts'
 import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
 import { verifyTransaction }     from '../_shared/paystack.ts'
 import { provider, paymentsUnavailable } from '../_shared/mode.ts'
+import { sendSMS, smsTemplates } from '../_shared/africas-talking.ts'
 
 /**
  * The member's app polls this after approving a prompt.
@@ -86,6 +87,26 @@ serveWithCors(async (req) => {
       }
 
       await settleLocally(reference, tx, s.raw)
+
+      // Personalised receipt — this is the path the member's app actually hits
+      const { data: m } = await supabaseAdmin
+        .from('members').select('full_name, phone').eq('id', tx.member_id).single()
+      if (m) {
+        let group = 'your susu'
+        let days = 1
+        if (tx.batch_id) {
+          const { data: batchRows } = await supabaseAdmin
+            .from('contributions').select('susu_groups(name)').eq('batch_id', tx.batch_id)
+          days = batchRows?.length ?? 1
+          group = ((batchRows?.[0]?.susu_groups) as { name?: string } | null)?.name ?? group
+        } else if (tx.related_id) {
+          const { data: c } = await supabaseAdmin
+            .from('contributions').select('susu_groups(name)').eq('id', tx.related_id).single()
+          group = (c?.susu_groups as { name?: string } | null)?.name ?? group
+        }
+        await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
+          m.full_name.split(' ')[0], Number(tx.amount).toFixed(2), group, days))
+      }
       return json({ status: 'paid', message: 'Payment confirmed. Thank you.' })
     }
 

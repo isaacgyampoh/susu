@@ -75,6 +75,18 @@ async function settle(orderId: string) {
   const { data: m } = await supabaseAdmin
     .from('members').select('full_name, phone').eq('id', existing.member_id).single()
   if (m) {
-    await sendSMS(m.phone, smsTemplates.paymentConfirmed(m.full_name, tx.amount.toFixed(2), tx.transactionid || ref))
+    // Personalise: name, group, and how many days this covered
+    let group = 'your susu'
+    let days = 1
+    if (existing.type === 'contribution' && existing.related_id) {
+      const { data: c } = await supabaseAdmin
+        .from('contributions').select('susu_groups(name)').eq('id', existing.related_id).single()
+      group = (c?.susu_groups as { name?: string } | null)?.name ?? group
+    }
+    if (existing.type === 'bulk_contribution' || (existing as any).items_count) {
+      days = Number((existing as any).items_count ?? 1)
+    }
+    await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
+      m.full_name.split(' ')[0], tx.amount.toFixed(2), group, days))
   }
 }

@@ -20,7 +20,7 @@ serveWithCors(async (req) => {
   if (blocked) return blocked
 
   try {
-    const { contribution_id } = await req.json()
+    const { contribution_id, pay_number, pay_network } = await req.json()
     if (!contribution_id) return error('contribution_id is required')
 
     const { data: contribution } = await supabaseAdmin
@@ -36,6 +36,10 @@ serveWithCors(async (req) => {
     const member = contribution.members as any
     const due    = Number(contribution.amount) + Number(contribution.penalty_due ?? 0)
     const ref    = `CONT-${contribution_id}-${Date.now()}`
+    // NaloPay rejects long/complex references ("Invalid reference"), so send it
+    // a short alphanumeric one. It's kept only for the provider; we track the
+    // payment by our own `ref` and NaloPay's order_id.
+    const providerRef = `SU${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase().slice(0, 20)
 
     // Record the intent before asking for money, so a settlement always has a
     // row to land on — even if the member closes the app mid-prompt.
@@ -64,17 +68,23 @@ serveWithCors(async (req) => {
     if (provider() === 'nalo' || provider() === 'moolre') {
       const prov = provider()
       const requestPayment = prov === 'nalo' ? naloRequest : moolreRequest
-      const momo = member.mobile_money_number ?? member.phone
-      if (!momo) return error('No mobile money number on your account. Ask your admin to add one.', 400)
+      // The member may pay from a DIFFERENT number than the one on file —
+      // e.g. their registration number has no MoMo. Honour a chosen number.
+      const momo = (pay_number && String(pay_number).trim())
+        || member.mobile_money_number || member.phone
+      if (!momo) return error('No mobile money number. Enter one to pay.', 400)
+      const net = (pay_network && String(pay_network).trim())
+        || member.mobile_money_provider || 'MTN'
 
       await recordIntent()
 
       const res = await requestPayment({
         payer:       momo,
         amount:      due,
-        provider:    member.mobile_money_provider ?? 'MTN',
-        externalref: ref,
+        provider:    net,
+        externalref: prov === 'nalo' ? providerRef : ref,
         reference:   'Susu contribution',
+        accountName: member.full_name,
       })
 
       if (res.kind === 'prompted') {

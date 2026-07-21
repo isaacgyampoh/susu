@@ -87,7 +87,11 @@ export const smsTemplates = {
   paymentReminder: (name: string, amount: string, dueDate: string, portalUrl: string) =>
     `Hi ${name}, your GHS ${amount} Abbie Wealth Susu contribution is due ${dueDate}. Pay before 6:00 PM: ${portalUrl}`,
   paymentConfirmed: (name: string, amount: string, ref: string) =>
-    `Hi ${name}, your GHS ${amount} payment is confirmed. Ref: ${ref}. Thank you!`,
+    `Hi ${name}, we've received your Abbie Wealth Susu payment of GHS ${amount}. Your contribution is recorded. Ref: ${ref}. Thank you!`,
+  paymentConfirmedDetailed: (name: string, amount: string, group: string, days: number) =>
+    `Hi ${name}, your GHS ${amount} payment for ${group} is confirmed${days > 1 ? ` (${days} days)` : ' for today'}. You're up to date — thank you for saving with Abbie Wealth Susu!`,
+  contributionPaid: (name: string, amount: string, groupName: string, dayLabel: string) =>
+    `Hi ${name}, your Abbie Wealth Susu payment of GHS ${amount} for ${groupName} (${dayLabel}) has been received. Thank you! Keep saving 💪`,
   payoutAlert: (name: string, amount: string, date: string) =>
     `Congratulations ${name}! Your Susu payout of GHS ${amount} is scheduled for ${date}.`,
   applicationApproved: (name: string, memberId: string, passcode: string, portalUrl: string) =>
