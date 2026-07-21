@@ -220,13 +220,14 @@ export async function paymentStatus(orderId: string): Promise<TxStatus | null> {
     }, {})
   } catch { return null }
 
-  const status = String(r?.data?.status ?? '').toUpperCase()
-  if (!status) return null
+  const status = String(r?.data?.status ?? r?.status ?? '').toUpperCase()
+  if (!status) { console.warn('NaloPay status: no status field in', JSON.stringify(r).slice(0, 300)); return null }
+  console.log(`NaloPay status for ${orderId}: ${status}`)
 
   return {
-    settled: status === 'COMPLETED' || status === 'SUCCESS' || status === 'PAID',
-    pending: status === 'PENDING',
-    amount:  Number(r?.data?.amount ?? 0),
+    settled: status === 'COMPLETED' || status === 'SUCCESS' || status === 'PAID' || status === 'COMPLETE',
+    pending: status === 'PENDING' || status === 'PROCESSING',
+    amount:  Number(r?.data?.amount ?? r?.amount ?? 0),
     transactionid: orderId,
     externalref:   orderId,
     raw: r,

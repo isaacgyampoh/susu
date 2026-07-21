@@ -37,7 +37,8 @@ async function settleLocally(reference: string, tx: any, raw: unknown) {
       .eq('contribution_id', tx.related_id)
   }
   await supabaseAdmin.from('transactions')
-    .update({ status: 'success', paystack_data: raw as never }).eq('reference', reference)
+    .update({ status: 'success', paystack_data: { ...(tx.paystack_data ?? {}), settled_raw: raw } as never })
+    .eq('reference', reference)
 
   // If this was a registration fee, flag the member's KYC application paid too
   if (tx.type === 'registration_fee') {
