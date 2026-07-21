@@ -59,7 +59,7 @@ serveWithCors(async (req) => {
 
     // Record it so a later status check has something to look at
     await supabaseAdmin.from('transactions').insert({
-      member_id: null, type: 'contribution', amount, reference,
+      member_id: null, type: 'provider_test', amount, reference,
       description: `Provider self-test (${prov}) to ${phone}`,
       status: res.kind === 'prompted' ? 'pending' : 'failed',
     }).then(() => {}, () => {})   // best-effort; member_id may be non-null-constrained
