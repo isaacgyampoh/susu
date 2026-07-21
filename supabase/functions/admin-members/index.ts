@@ -188,6 +188,48 @@ serveWithCors(async (req) => {
     // DELETE /admin-members?all=true — wipe EVERY member for a fresh start.
     // Groups survive (and are re-opened); all member records — paid or not —
     // are erased. Requires the exact confirmation phrase in the body.
+    // POST /admin-members?id=xxx  { action: 'reset_passcode' | 'portal_link', send_sms? }
+    if (method === 'POST' && id) {
+      const body = await req.json().catch(() => ({}))
+      const MEMBER_URL = Deno.env.get('MEMBER_URL') ?? 'https://my.abbiewealthsusu.com'
+      const SIGNIN_URL = `${MEMBER_URL}/m/login`
+
+      const { data: m } = await supabaseAdmin
+        .from('members').select('id, full_name, member_id, phone').eq('id', id).single()
+      if (!m) return error('Member not found', 404)
+
+      if (body.action === 'portal_link') {
+        // Just hand back the link + ID for the admin to copy into WhatsApp
+        return json({
+          portal_url: SIGNIN_URL,
+          member_id: m.member_id,
+          whatsapp_text: `Hello ${m.full_name.split(' ')[0]}, here is your Abbie Wealth Susu portal: ${SIGNIN_URL} — Member ID: ${m.member_id}. Log in to see your savings and pay. Keep your passcode private.`,
+          whatsapp_link: m.phone ? `https://wa.me/${m.phone.replace(/[^0-9]/g, '').replace(/^0/, '233')}` : null,
+        })
+      }
+
+      if (body.action === 'reset_passcode') {
+        const passcode = String(Math.floor(100000 + Math.random() * 900000))
+        const { data: hash } = await supabaseAdmin.rpc('hash_passcode', { p_passcode: passcode })
+        const { error: upErr } = await supabaseAdmin
+          .from('members').update({ passcode_hash: hash, credentials_sent_at: new Date().toISOString() }).eq('id', id)
+        if (upErr) return error(upErr.message, 500)
+
+        let smsSent = false
+        if (body.send_sms !== false && m.phone) {
+          smsSent = await sendSMS(m.phone,
+            `Hello ${m.full_name.split(' ')[0]}, your Abbie Wealth Susu passcode has been reset. ID: ${m.member_id} | New passcode: ${passcode} | Sign in: ${SIGNIN_URL} | Keep it private.`)
+        }
+        return json({
+          passcode, member_id: m.member_id, portal_url: SIGNIN_URL, sms_sent: smsSent,
+          whatsapp_text: `Hello ${m.full_name.split(' ')[0]}, your Abbie Wealth Susu login — ID: ${m.member_id}, Passcode: ${passcode}, Sign in: ${SIGNIN_URL}. Keep your passcode private.`,
+          whatsapp_link: m.phone ? `https://wa.me/${m.phone.replace(/[^0-9]/g, '').replace(/^0/, '233')}` : null,
+        })
+      }
+
+      return error('Unknown action', 400)
+    }
+
     if (method === 'DELETE' && url.searchParams.get('all') === 'true') {
       const body = await req.json().catch(() => ({}))
       if (body.confirm !== 'DELETE ALL MEMBERS') {

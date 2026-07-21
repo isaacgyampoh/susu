@@ -37,6 +37,47 @@ serveWithCors(async (req) => {
     if (ids.length === 0) return error('Select at least one contribution to mark as paid')
     if (!METHODS.includes(method as any)) return error(`method must be one of: ${METHODS.join(', ')}`)
 
+    // ── PARTIAL payment: an instalment toward ONE contribution ──
+    if (body.partial_amount != null && ids.length === 1) {
+      const amt = Number(body.partial_amount)
+      if (isNaN(amt) || amt <= 0) return error('partial_amount must be a positive number')
+
+      const { data: pr, error: prErr } = await supabaseAdmin.rpc('record_partial_payment', {
+        p_contribution_id: ids[0], p_amount: amt, p_method: method, p_note: note,
+      })
+      if (prErr) return error(`Could not record instalment: ${prErr.message}. Run migration v22.`, 500)
+      const row = Array.isArray(pr) ? pr[0] : pr
+
+      // Audit transaction for the instalment
+      const { data: c } = await supabaseAdmin
+        .from('contributions').select('member_id, group_id, susu_groups(name), members(full_name, phone)')
+        .eq('id', ids[0]).single()
+      if (c) {
+        await supabaseAdmin.from('transactions').insert({
+          member_id: c.member_id, type: 'contribution', amount: amt,
+          reference: `PART-${ids[0].slice(0, 8)}-${Date.now()}`,
+          description: `Instalment (${method}) toward ${(c.susu_groups as any)?.name ?? 'susu'}${note ? ` — ${note}` : ''}`,
+          status: 'success',
+        }).then(() => {}, () => {})
+
+        const m = (c as any).members
+        if (m?.phone) {
+          const { sendSMS, smsTemplates } = await import('../_shared/africas-talking.ts')
+          if (row?.fully_paid) {
+            await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
+              m.full_name.split(' ')[0], Number(row.amount_due).toFixed(2), (c.susu_groups as any)?.name ?? 'your susu', 1))
+          } else {
+            await sendSMS(m.phone,
+              `Hi ${m.full_name.split(' ')[0]}, we received GHS ${amt.toFixed(2)} toward your ${(c.susu_groups as any)?.name ?? 'susu'}. Paid so far: GHS ${Number(row.paid_so_far).toFixed(2)} of GHS ${Number(row.amount_due).toFixed(2)}. Thank you!`)
+          }
+        }
+      }
+      return json({
+        partial: true, paid_so_far: row?.paid_so_far, amount_due: row?.amount_due, fully_paid: row?.fully_paid,
+        message: row?.fully_paid ? 'Contribution fully paid' : `Instalment recorded — GHS ${Number(row?.paid_so_far ?? 0).toFixed(2)} of GHS ${Number(row?.amount_due ?? 0).toFixed(2)}`,
+      })
+    }
+
     // Fetch the rows and keep only ones actually awaiting payment
     const { data: rows } = await supabaseAdmin
       .from('contributions')

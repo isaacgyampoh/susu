@@ -37,6 +37,25 @@ export default function MemberDetailPage() {
   const [paySaving, setPaySaving] = useState(false)
   // Send message
   const [msgOpen, setMsgOpen]   = useState(false)
+  const [portalOpen, setPortalOpen] = useState(false)
+  const [portalData, setPortalData] = useState<any>(null)
+  const [portalBusy, setPortalBusy] = useState(false)
+
+  async function openPortal() {
+    setPortalOpen(true); setPortalData(null)
+    const { data } = await callFunction<any>(`admin-members?id=${id}`, {
+      method: 'POST', token: getAdminToken()!, body: { action: 'portal_link' } })
+    setPortalData(data)
+  }
+  async function resetPasscode(sendSms: boolean) {
+    setPortalBusy(true)
+    const { data, error } = await callFunction<any>(`admin-members?id=${id}`, {
+      method: 'POST', token: getAdminToken()!, body: { action: 'reset_passcode', send_sms: sendSms } })
+    setPortalBusy(false)
+    if (error) { alert(error); return }
+    setPortalData(data)
+  }
+  function copyText(t: string) { navigator.clipboard?.writeText(t).catch(() => {}); showToast('Copied') }
   const [msgText, setMsgText]   = useState('')
   const [msgSending, setMsgSending] = useState(false)
   // Add to group
@@ -335,6 +354,10 @@ export default function MemberDetailPage() {
             <button onClick={() => setMsgOpen(true)}
               className="flex items-center gap-1.5 px-3 py-2 border border-line text-ink hover:bg-tint rounded-[10px] text-sm font-medium transition-colors">
               Send SMS
+            </button>
+            <button onClick={openPortal}
+              className="flex items-center gap-1.5 px-3 py-2 border border-line text-ink hover:bg-tint rounded-[10px] text-sm font-medium transition-colors">
+              Portal &amp; Passcode
             </button>
             <a href={`https://wa.me/${String(member.phone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-2 border border-line text-ink hover:bg-tint rounded-[10px] text-sm font-medium transition-colors">
@@ -676,6 +699,62 @@ export default function MemberDetailPage() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Portal & Passcode modal */}
+      {portalOpen && (
+        <div className="fixed inset-0 z-50 bg-ink/25 flex items-center justify-center p-4" onClick={() => setPortalOpen(false)}>
+          <div className="bg-white shadow-xl border border-line rounded-[10px] w-full max-w-md p-6 space-y-4 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div>
+              <h2 className="font-bold text-ink text-lg">Portal &amp; Passcode</h2>
+              <p className="text-ink-2 text-sm mt-0.5">{member.full_name} · {member.member_id}</p>
+            </div>
+
+            {!portalData ? (
+              <p className="text-sm text-ink-3 py-6 text-center">Loading…</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-3 bg-tint border border-line rounded-[10px]">
+                  <p className="text-xs text-ink-2 mb-1">Portal link</p>
+                  <p className="text-sm text-ink font-mono break-all">{portalData.portal_url}</p>
+                  {portalData.passcode && (
+                    <p className="text-sm text-ink mt-2"><span className="text-ink-2">New passcode: </span><span className="font-bold text-lg tnum">{portalData.passcode}</span></p>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={() => copyText(portalData.whatsapp_text)}
+                    className="flex-1 py-2.5 border border-line text-ink text-sm font-semibold rounded-[10px] hover:bg-tint transition-colors">
+                    Copy message
+                  </button>
+                  {portalData.whatsapp_link && (
+                    <a href={portalData.whatsapp_link} target="_blank" rel="noopener noreferrer"
+                      onClick={() => copyText(portalData.whatsapp_text)}
+                      className="flex-1 py-2.5 bg-ink text-white text-sm font-semibold rounded-[10px] text-center hover:brightness-105 transition-all">
+                      Open WhatsApp
+                    </a>
+                  )}
+                </div>
+                <p className="text-[11px] text-ink-3">Tip: tap "Open WhatsApp" (message is copied) then paste it to the member.</p>
+
+                <div className="border-t border-line pt-3">
+                  <p className="text-xs text-ink-2 mb-2">Member lost their passcode?</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => resetPasscode(true)} disabled={portalBusy}
+                      className="flex-1 py-2.5 bg-ink text-white text-sm font-semibold rounded-[10px] hover:brightness-105 transition-all disabled:opacity-50">
+                      {portalBusy ? 'Resetting…' : 'Reset &amp; SMS new passcode'}
+                    </button>
+                    <button onClick={() => resetPasscode(false)} disabled={portalBusy}
+                      className="py-2.5 px-3 border border-line text-ink text-sm font-medium rounded-[10px] hover:bg-tint transition-colors disabled:opacity-50">
+                      Reset only
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <button onClick={() => setPortalOpen(false)} className="w-full text-ink-2 text-sm hover:text-ink transition-colors py-1">Close</button>
           </div>
         </div>
       )}
