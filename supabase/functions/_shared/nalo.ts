@@ -101,10 +101,10 @@ async function getToken(): Promise<string> {
 }
 
 /** trans_hash = HMAC_SHA256(merchant_id + account_number + amount + reference, secret). */
-async function transHash(account_number: string, amount: string, reference: string): Promise<string> {
+async function transHash(account_number: string, amount: string, reference: string, secret: string): Promise<string> {
   const message = `${MERCHANT()}${account_number}${amount}${reference}`
   const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(SECRET()),
+    'raw', new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
   )
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message))
@@ -137,21 +137,26 @@ export async function requestPayment(args: {
   try { token = await getToken() }
   catch (e) { return { kind: 'failed', code: 'TOKEN', message: (e as Error).message } }
 
-  // NaloPay's hash inputs (amount decimals, phone format) are ambiguous in the
-  // docs, so try the sensible combinations and use the first it accepts. The
-  // amount SENT must match the amount HASHED, and the account_number sent is
-  // always 233-format; only the hash's phone representation varies.
-  const candidates: { amountStr: string; hashPhone: string; label: string }[] = [
-    { amountStr: amt2dp, hashPhone: phone233, label: '2dp/233' },
-    { amountStr: amt2dp, hashPhone: phone0,   label: '2dp/0' },
-    { amountStr: amtInt, hashPhone: phone233, label: 'int/233' },
-    { amountStr: amtInt, hashPhone: phone0,   label: 'int/0' },
-  ]
+  // The Auth key from the portal is "Basic <base64>"; the raw base64 part is a
+  // candidate signing secret in case NaloPay signs with it rather than the
+  // Secret Key.
+  const authRaw = AUTH_RAW().trim().replace(/^basic\s+/i, '')
+  const secrets = [...new Set([SECRET(), authRaw].filter(Boolean))]
+
+  const combos: { amountStr: string; hashPhone: string; secret: string; label: string }[] = []
+  for (const secret of secrets) {
+    for (const [amtLabel, amountStr] of [['2dp', amt2dp], ['int', amtInt]] as const) {
+      for (const [phLabel, hashPhone] of [['233', phone233], ['0', phone0]] as const) {
+        combos.push({ amountStr, hashPhone, secret,
+          label: `${secret === SECRET() ? 'secret' : 'authkey'}/${amtLabel}/${phLabel}` })
+      }
+    }
+  }
 
   let lastRaw: unknown = null
-  for (const c of candidates) {
+  for (const c of combos) {
     let hash: string
-    try { hash = await transHash(c.hashPhone, c.amountStr, args.externalref) }
+    try { hash = await transHash(c.hashPhone, c.amountStr, args.externalref, c.secret) }
     catch (e) { return { kind: 'failed', code: 'HASH', message: (e as Error).message } }
 
     let r: any
@@ -173,13 +178,12 @@ export async function requestPayment(args: {
     }
 
     if (r?.success && r?.data?.order_id) {
-      console.log(`NaloPay: accepted hash format ${c.label}`)
+      console.log(`NaloPay: accepted format ${c.label}`)
       return { kind: 'prompted', moolreRef: String(r.data.order_id) }
     }
     lastRaw = r
-    const cause = String(r?.error?.cause ?? '')
-    // Only keep trying while it's specifically the hash it dislikes
-    if (cause !== 'trans_hash') break
+    // Keep trying only while it's specifically the hash it rejects
+    if (String(r?.error?.cause ?? '') !== 'trans_hash') break
   }
 
   const r: any = lastRaw
