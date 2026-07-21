@@ -1,7 +1,9 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
-import { requestPayment }          from '../_shared/moolre.ts'
+import { requestPayment as moolreRequest } from '../_shared/moolre.ts'
+import { requestPayment as naloRequest }   from '../_shared/nalo.ts'
+import { provider } from '../_shared/mode.ts'
 
 /**
  * Some networks put an OTP in front of the payment prompt (Moolre code TP14).
@@ -36,6 +38,7 @@ serveWithCors(async (req) => {
       .from('members').select('phone, mobile_money_number, mobile_money_provider')
       .eq('id', session.sub).single()
 
+    const requestPayment = provider() === 'nalo' ? naloRequest : moolreRequest
     const res = await requestPayment({
       payer:       member?.mobile_money_number ?? member?.phone ?? '',
       amount:      Number(tx.amount),

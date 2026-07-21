@@ -1,7 +1,8 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }         from '../_shared/supabase-admin.ts'
 import { requireMember }         from '../_shared/jwt.ts'
-import { paymentStatus }         from '../_shared/moolre.ts'
+import { paymentStatus as moolreStatus } from '../_shared/moolre.ts'
+import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
 import { verifyTransaction }     from '../_shared/paystack.ts'
 import { provider, paymentsUnavailable } from '../_shared/mode.ts'
 
@@ -62,8 +63,8 @@ serveWithCors(async (req) => {
     if (!tx) return error('Payment not found', 404)
     if (tx.status === 'success') return json({ status: 'paid', message: 'Payment confirmed' })
 
-    if (provider() === 'moolre') {
-      const s = await paymentStatus(reference)
+    if (provider() === 'nalo' || provider() === 'moolre') {
+      const s = provider() === 'nalo' ? await naloStatus(reference) : await moolreStatus(reference)
       if (!s)        return json({ status: 'pending', message: 'Waiting for confirmation…' })
       if (s.pending) return json({ status: 'pending', message: 'Waiting for you to approve the prompt…' })
       if (!s.settled) {

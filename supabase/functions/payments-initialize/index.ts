@@ -2,7 +2,8 @@ import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
 import { initializeTransaction }   from '../_shared/paystack.ts'
-import { requestPayment }          from '../_shared/moolre.ts'
+import { requestPayment as moolreRequest } from '../_shared/moolre.ts'
+import { requestPayment as naloRequest }   from '../_shared/nalo.ts'
 import { provider, devPaymentsAllowed, paymentsUnavailable } from '../_shared/mode.ts'
 
 const FRONTEND_URL = Deno.env.get('MEMBER_URL') ?? Deno.env.get('FRONTEND_URL') ?? ''
@@ -59,8 +60,10 @@ serveWithCors(async (req) => {
       return json({ dev_mode: true, message: 'Payment recorded (dev mode)', reference: devRef })
     }
 
-    // ── MOOLRE: a prompt on the member's phone, no redirect ──
-    if (provider() === 'moolre') {
+    // ── PROMPT PROVIDERS (Nalo, Moolre): a prompt on the member's phone ──
+    if (provider() === 'nalo' || provider() === 'moolre') {
+      const prov = provider()
+      const requestPayment = prov === 'nalo' ? naloRequest : moolreRequest
       const momo = member.mobile_money_number ?? member.phone
       if (!momo) return error('No mobile money number on your account. Ask your admin to add one.', 400)
 
@@ -76,19 +79,19 @@ serveWithCors(async (req) => {
 
       if (res.kind === 'prompted') {
         return json({
-          provider: 'moolre', status: 'prompted', reference: ref, amount: due,
+          provider: prov, status: 'prompted', reference: ref, amount: due,
           message: `Approve the prompt on ${momo} with your MoMo PIN.`,
         })
       }
       if (res.kind === 'otp_required') {
         // Not an error: the network wants a code first. Keep the same reference.
         return json({
-          provider: 'moolre', status: 'otp_required', reference: ref, amount: due,
+          provider: prov, status: 'otp_required', reference: ref, amount: due,
           message: res.message,
         })
       }
       if (res.kind === 'duplicate') {
-        return json({ provider: 'moolre', status: 'prompted', reference: ref, amount: due,
+        return json({ provider: prov, status: 'prompted', reference: ref, amount: due,
           message: 'Already sent — approve the prompt on your phone.' })
       }
 
