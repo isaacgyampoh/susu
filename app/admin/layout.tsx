@@ -16,6 +16,7 @@ const NAV = [
     { href: '/admin/kyc',           label: 'Applications' },
   ]},
   { group: 'Money', items: [
+    { href: '/admin/transactions',  label: 'Money Received' },
     { href: '/admin/contributions', label: 'Contributions' },
     { href: '/admin/payouts',       label: 'Payouts' },
   ]},
