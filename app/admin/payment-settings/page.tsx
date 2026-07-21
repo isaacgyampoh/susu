@@ -105,6 +105,9 @@ export default function PaymentSettingsPage() {
               {test.result?.kind === 'prompted' && <p className="text-ink-2 mt-1">Approve the prompt on your phone, then tap Re-check below.</p>}
               {test.result?.kind === 'otp_required' && <p className="text-ink-2 mt-1">{test.result.message}</p>}
               {test.result?.kind === 'failed' && <p className="text-red mt-1">{test.result.code}: {test.result.message}</p>}
+              {test.result?.raw && (
+                <pre className="mt-2 p-2 bg-white border border-line rounded text-[10px] text-ink-2 overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(test.result.raw, null, 2)}</pre>
+              )}
               <p className="text-[11px] text-ink-3 mt-2 font-mono break-all">ref: {test.reference}</p>
               <button onClick={recheck} disabled={checking}
                 className="mt-2 px-3 py-1.5 border border-line rounded-[8px] text-xs font-semibold text-ink hover:bg-white transition-colors">

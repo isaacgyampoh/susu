@@ -55,7 +55,7 @@ export type PromptResult =
   | { kind: 'prompted'; moolreRef: string }        // moolreRef carries NaloPay order_id
   | { kind: 'otp_required'; message: string }
   | { kind: 'duplicate' }
-  | { kind: 'failed'; code: string; message: string }
+  | { kind: 'failed'; code: string; message: string; raw?: unknown }
 
 export type TxStatus = {
   settled: boolean
@@ -117,7 +117,7 @@ export async function requestPayment(args: {
 
   const account_number = naloPhone(args.payer)
   // Amount string must match exactly what we hash (NaloPay's example uses 2dp).
-  const amountStr = args.amount.toFixed(2)
+  const amountStr = String(args.amount)   // "1" not "1.00" — must equal what we hash and send
 
   let token: string
   try { token = await getToken() }
@@ -150,7 +150,8 @@ export async function requestPayment(args: {
   }
   const msg = String(r?.message ?? r?.data?.message ?? 'Payment could not be started')
   if (/duplicate|already/i.test(msg)) return { kind: 'duplicate' }
-  return { kind: 'failed', code: String(r?.code ?? 'FAIL'), message: msg }
+  console.error('NaloPay collection rejected:', JSON.stringify(r))
+  return { kind: 'failed', code: String(r?.code ?? 'FAIL'), message: msg, raw: r }
 }
 
 /**
