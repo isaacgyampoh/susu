@@ -20,6 +20,7 @@ const NAV = [
     { href: '/admin/payouts',       label: 'Payouts' },
   ]},
   { group: 'Account', items: [
+    { href: '/admin/payment-settings', label: 'Payments' },
     { href: '/admin/password', label: 'Change password' },
   ]},
   { group: 'Records', items: [

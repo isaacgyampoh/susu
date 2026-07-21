@@ -1,7 +1,7 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { initializeTransaction } from '../_shared/paystack.ts'
-import { paystackConfigured, devPaymentsAllowed } from '../_shared/mode.ts'
+import { paystackConfigured, devPaymentsAllowed, provider } from '../_shared/mode.ts'
 
 
 /** Validate an uploaded image when present (absent files are fine). */
@@ -145,9 +145,12 @@ serveWithCors(async (req) => {
     }
     if (kycErr || !kyc) return error(kycErr?.message ?? 'Could not save application', 500)
 
-    // Initialize Paystack payment (if enabled and fee > 0)
+    // Registration fee online only via Paystack's redirect. Nalo/Moolre are
+    // phone-prompt providers that need an authenticated member, which an
+    // applicant is not yet — so under those, the fee is collected manually
+    // (admin 'Mark paid' on the KYC list once the MoMo lands).
     let paystackData = null
-    if (paystackConfigured() && group.registration_fee > 0) {
+    if (provider() === 'paystack' && paystackConfigured() && group.registration_fee > 0) {
       const reference  = `KYC-${kyc.id}-${ts}`
       const paystackRes = await initializeTransaction({
         email:        (formData.get('email') as string) ?? `${normPhone.replace('+', '')}@susu.platform`,
