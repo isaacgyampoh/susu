@@ -13,9 +13,13 @@ export default function Dashboard() {
   const [busy, setBusy]  = useState(false)
   const [note, setNote]  = useState('')
 
+  const [today, setToday] = useState<any>(null)
+
   async function load() {
     const { data } = await callFunction<AdminDashboard>('admin-dashboard', { token: getAdminToken()! })
     setD(data); setL(false)
+    callFunction<any>('admin-analytics', { token: getAdminToken()! })
+      .then(({ data: a }) => setToday(a?.today ?? null))
   }
   useEffect(() => { load() }, [])
 
@@ -71,6 +75,29 @@ export default function Dashboard() {
           <p className="text-[12px] font-medium text-white/60 mt-1.5">Total collected</p>
         </div>
       </div>
+
+      {today && today.count > 0 && (
+        <div className="card p-4 mb-3">
+          <div className="flex items-baseline justify-between mb-3">
+            <p className="t-label">Received today</p>
+            <p className="text-[12px] text-ink-3">reconcile online total with NaloPay</p>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-[22px] font-extrabold tnum">GHS {n0(today.total)}</p>
+              <p className="t-label mt-1">{today.count} payment{today.count === 1 ? '' : 's'} total</p>
+            </div>
+            <div>
+              <p className="text-[22px] font-extrabold tnum text-green">GHS {n0(today.online.total)}</p>
+              <p className="t-label mt-1">{today.online.count} online (NaloPay)</p>
+            </div>
+            <div>
+              <p className="text-[22px] font-extrabold tnum">GHS {n0(today.manual.total)}</p>
+              <p className="t-label mt-1">{today.manual.count} manual</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-3">
         {/* Payouts */}

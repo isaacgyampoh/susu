@@ -30,6 +30,31 @@ serveWithCors(async (req) => {
 
     if (analytics.error) return error(analytics.error.message, 500)
 
+    // Today's receipts, split by channel so the admin can reconcile the online
+    // total against NaloPay's own dashboard.
+    const now = new Date()
+    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0)).toISOString()
+    const { data: todayTx } = await supabaseAdmin
+      .from('transactions')
+      .select('amount, description, paystack_data')
+      .eq('status', 'success')
+      .in('type', ['contribution', 'bulk_contribution', 'registration_fee'])
+      .gte('created_at', startOfDay)
+
+    let onlineTotal = 0, onlineCount = 0, manualTotal = 0, manualCount = 0
+    for (const t of todayTx ?? []) {
+      const online = !!(t.paystack_data && (t.paystack_data as any).provider_order_id)
+      const amt = Number(t.amount ?? 0)
+      if (online) { onlineTotal += amt; onlineCount++ }
+      else        { manualTotal += amt; manualCount++ }
+    }
+    const today = {
+      total: Math.round((onlineTotal + manualTotal) * 100) / 100,
+      count: (todayTx ?? []).length,
+      online: { total: Math.round(onlineTotal * 100) / 100, count: onlineCount },
+      manual: { total: Math.round(manualTotal * 100) / 100, count: manualCount },
+    }
+
     // Financials per active group
     const groupFinancials = await Promise.all(
       (groups.data ?? []).map(async (g: { id: string; name: string }) => {
@@ -42,6 +67,7 @@ serveWithCors(async (req) => {
       analytics: analytics.data?.[0] ?? null,
       trend:     trend.data ?? [],
       groupFinancials,
+      today,
     })
   } catch (e) {
     console.error(e)
