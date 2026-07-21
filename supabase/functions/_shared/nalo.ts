@@ -30,6 +30,19 @@ const AUTH_HEADER = () => {
 
 export const naloConfigured = () => !!MERCHANT() && !!SECRET() && !!AUTH_RAW()
 
+/**
+ * NaloPay validates the callback as a real public https URL and rejects blanks
+ * (PAY-INVAL-0069, cause "callback"). Prefer the configured URL; if it's
+ * missing or not https, derive the webhook from the Supabase project URL.
+ */
+function callbackUrl(): string {
+  const explicit = (Deno.env.get('NALO_CALLBACK_URL') ?? '').trim()
+  if (/^https:\/\/\S+$/.test(explicit)) return explicit
+  const supa = (Deno.env.get('SUPABASE_URL') ?? '').replace(/\/$/, '')
+  if (supa) return `${supa}/functions/v1/nalo-webhook`
+  return 'https://example.com/nalo-webhook'   // last resort; NaloPay needs *some* valid https URL
+}
+
 /** NaloPay networks: MTN, AT (AirtelTigo), TELECEL. */
 export function networkFor(provider: string | null | undefined): string | null {
   const s = (provider ?? '').toUpperCase().replace(/[^A-Z]/g, '')
@@ -138,7 +151,7 @@ export async function requestPayment(args: {
       network,
       amount:         amountStr,
       reference:      args.externalref,
-      callback:       Deno.env.get('NALO_CALLBACK_URL') ?? '',
+      callback:       callbackUrl(),
       description:    args.reference ?? 'Susu contribution',
     }, { token })
   } catch (e) {
