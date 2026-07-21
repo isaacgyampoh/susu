@@ -48,7 +48,7 @@ export default function PaymentSettingsPage() {
     setChecking(true)
     const token = getAdminToken()
     const { data } = await callFunction<any>('admin-payment-test', {
-      method: 'POST', token: token!, body: { action: 'check', reference: test.reference },
+      method: 'POST', token: token!, body: { action: 'check', reference: test.order_id ?? test.reference },
     })
     setChecking(false)
     setCheck(data)

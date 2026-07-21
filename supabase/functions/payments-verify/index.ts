@@ -64,7 +64,15 @@ serveWithCors(async (req) => {
     if (tx.status === 'success') return json({ status: 'paid', message: 'Payment confirmed' })
 
     if (provider() === 'nalo' || provider() === 'moolre') {
-      const s = provider() === 'nalo' ? await naloStatus(reference) : await moolreStatus(reference)
+      let lookupRef = reference
+      if (provider() === 'nalo') {
+        // NaloPay is keyed by its order_id, saved on the transaction at prompt time
+        const { data: txRow } = await supabaseAdmin
+          .from('transactions').select('paystack_data').eq('reference', reference).maybeSingle()
+        const oid = (txRow?.paystack_data as { provider_order_id?: string } | null)?.provider_order_id
+        if (oid) lookupRef = oid
+      }
+      const s = provider() === 'nalo' ? await naloStatus(lookupRef) : await moolreStatus(reference)
       if (!s)        return json({ status: 'pending', message: 'Waiting for confirmation…' })
       if (s.pending) return json({ status: 'pending', message: 'Waiting for you to approve the prompt…' })
       if (!s.settled) {

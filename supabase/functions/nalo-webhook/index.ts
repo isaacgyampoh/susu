@@ -31,16 +31,22 @@ serveWithCors(async (req) => {
   }
 })
 
-async function settle(ref: string) {
-  const tx = await paymentStatus(ref)           // the source of truth
-  if (!tx) { console.warn(`nalo: no status for ${ref}`); return }
+async function settle(orderId: string) {
+  const tx = await paymentStatus(orderId)        // the source of truth (by order_id)
+  if (!tx) { console.warn(`nalo: no status for ${orderId}`); return }
   if (!tx.settled) return                        // pending or failed: leave alone
 
-  const { data: existing } = await supabaseAdmin
-    .from('transactions').select('id, status, member_id, related_id, type, amount')
-    .eq('reference', ref).maybeSingle()
+  // The transaction was stored under OUR reference with NaloPay's order_id in
+  // paystack_data — find it by that order_id.
+  const { data: matches } = await supabaseAdmin
+    .from('transactions')
+    .select('id, status, member_id, related_id, type, amount, reference, paystack_data')
+    .eq('status', 'pending')
+  const existing = (matches ?? []).find((t: any) =>
+    (t.paystack_data as { provider_order_id?: string } | null)?.provider_order_id === orderId)
 
-  if (!existing) { console.warn(`nalo: settled ${ref} with no local record`); return }
+  if (!existing) { console.warn(`nalo: settled ${orderId} with no local record`); return }
+  const ref = existing.reference
   if (existing.status === 'success') return      // already done
 
   // Refuse to clear a debt the payment does not cover

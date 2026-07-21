@@ -64,7 +64,8 @@ serveWithCors(async (req) => {
       status: res.kind === 'prompted' ? 'pending' : 'failed',
     }).then(() => {}, () => {})   // best-effort; member_id may be non-null-constrained
 
-    return json({ provider: prov, reference, result: res })
+    const orderId = res.kind === 'prompted' ? res.moolreRef : null
+    return json({ provider: prov, reference, order_id: orderId, result: res })
   }
 
   if (action === 'check') {

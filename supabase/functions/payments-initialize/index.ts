@@ -78,6 +78,13 @@ serveWithCors(async (req) => {
       })
 
       if (res.kind === 'prompted') {
+        // NaloPay verifies by ITS order_id (res.moolreRef), not our ref —
+        // persist it so verify/webhook can look the payment up.
+        if (res.moolreRef) {
+          await supabaseAdmin.from('transactions')
+            .update({ paystack_data: { provider_order_id: res.moolreRef } as never })
+            .eq('reference', ref)
+        }
         return json({
           provider: prov, status: 'prompted', reference: ref, amount: due,
           message: `Approve the prompt on ${momo} with your MoMo PIN.`,

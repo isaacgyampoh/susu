@@ -1,42 +1,47 @@
 /**
- * Nalo Solutions — Ghanaian payments (collections). https://nalosolutions.com
+ * NaloPay — Ghanaian payments (collections). merchant.nalopay.com
+ * API docs: https://documenter.getpostman.com/view/46352845/2sB3QRoSva
  *
- * Same two truths that shape the Moolre integration apply here:
+ * Two truths, same as the other providers:
+ *   1. THE CALLBACK IS A HINT, NOT PROOF. We settle nothing on the callback
+ *      alone — every order is confirmed against collection-status ourselves.
+ *   2. COLLECTION IS A PROMPT, NOT A REDIRECT. The member approves a MoMo
+ *      prompt with their PIN; nobody leaves the app.
  *
- * 1. THE CALLBACK IS A HINT, NOT PROOF. Nalo POSTs a callback to our webhook
- *    when a charge resolves, but we never settle money on the callback alone —
- *    we confirm every payment by asking Nalo's status endpoint ourselves.
+ * Three-step flow:
+ *   a) POST generate-payment-token  (Basic auth)      -> short-lived JWT
+ *   b) POST collection              (JWT + trans_hash) -> prompt pushed, order_id
+ *   c) POST collection-status       (by order_id)      -> PENDING/COMPLETED/FAILED
  *
- * 2. COLLECTION IS A PROMPT, NOT A REDIRECT. make_payment triggers a mobile
- *    money prompt on the member's phone; they approve with their PIN. Nobody
- *    leaves the app. Some networks insert an OTP step first.
+ * trans_hash = HMAC_SHA256(merchant_id + account_number + amount + reference, secret) hex.
  *
- * This module deliberately exposes the SAME shapes as _shared/moolre.ts
- * (PromptResult, TxStatus, requestPayment, paymentStatus, localPhone) so the
- * edge functions can treat providers interchangeably.
+ * Exposes the SAME shapes as _shared/moolre.ts so callers are provider-agnostic.
  */
 
-const PAY_BASE = () => Deno.env.get('NALO_PAYMENT_URL') ?? 'https://api.nalosolutions.com/payplus/api/'
-const USERNAME = () => Deno.env.get('NALO_PAYMENT_USERNAME') ?? ''
-const PASSWORD = () => Deno.env.get('NALO_PAYMENT_PASSWORD') ?? ''
+const BASE     = () => (Deno.env.get('NALO_BASE_URL') ?? 'https://api.nalopay.com').replace(/\/$/, '')
 const MERCHANT = () => Deno.env.get('NALO_MERCHANT_ID') ?? ''
-const CALLBACK = () => Deno.env.get('NALO_CALLBACK_URL') ?? ''
+const SECRET   = () => Deno.env.get('NALO_SECRET_KEY') ?? ''
+// The portal's "Auth key" already includes "Basic". Accept it with or without.
+const AUTH_RAW = () => Deno.env.get('NALO_AUTH_KEY') ?? ''
+const AUTH_HEADER = () => {
+  const a = AUTH_RAW().trim()
+  return a.toLowerCase().startsWith('basic ') ? a : (a ? `Basic ${a}` : '')
+}
 
-export const naloConfigured = () =>
-  !!USERNAME() && !!PASSWORD() && !!MERCHANT()
+export const naloConfigured = () => !!MERCHANT() && !!SECRET() && !!AUTH_RAW()
 
-/** Nalo's payby values by network. */
-export function paybyFor(provider: string | null | undefined): string | null {
+/** NaloPay networks: MTN, AT (AirtelTigo), TELECEL. */
+export function networkFor(provider: string | null | undefined): string | null {
   const s = (provider ?? '').toUpperCase().replace(/[^A-Z]/g, '')
   if (!s) return null
-  if (s.includes('AIRTELTIGO') || s.includes('TIGO')) return 'AIRTELTIGO'
+  if (s.includes('AIRTELTIGO') || s.includes('TIGO')) return 'AT'
   if (s.includes('MTN')) return 'MTN'
-  if (s.includes('TELECEL') || s.includes('VODAFONE') || s.includes('VODA')) return 'VODAFONE'
-  if (s === 'AT' || s.startsWith('AT')) return 'AIRTELTIGO'
+  if (s.includes('TELECEL') || s.includes('VODAFONE') || s.includes('VODA')) return 'TELECEL'
+  if (s === 'AT' || s.startsWith('AT')) return 'AT'
   return null
 }
 
-/** Nalo wants 233XXXXXXXXX (no plus, no leading zero). */
+/** NaloPay wants 233XXXXXXXXX (no plus, no leading zero). */
 export function naloPhone(phone: string): string {
   const d = (phone ?? '').replace(/\D/g, '')
   if (d.startsWith('233')) return d
@@ -45,9 +50,9 @@ export function naloPhone(phone: string): string {
   return d
 }
 
-// Same result shapes as moolre.ts, so callers are provider-agnostic
+// Common result shapes (match moolre.ts)
 export type PromptResult =
-  | { kind: 'prompted'; moolreRef: string }        // 'moolreRef' kept for a common field name
+  | { kind: 'prompted'; moolreRef: string }        // moolreRef carries NaloPay order_id
   | { kind: 'otp_required'; message: string }
   | { kind: 'duplicate' }
   | { kind: 'failed'; code: string; message: string }
@@ -61,32 +66,43 @@ export type TxStatus = {
   raw: unknown
 }
 
-async function call(path: string, body: unknown): Promise<any> {
-  const res = await fetch(`${PAY_BASE()}${path}`, {
+async function post(path: string, body: unknown, headers: Record<string, string>): Promise<any> {
+  const res = await fetch(`${BASE()}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),
   })
   const text = await res.text()
   try { return JSON.parse(text) }
-  catch { throw new Error(`Nalo returned non-JSON (${res.status}): ${text.slice(0, 200)}`) }
+  catch { throw new Error(`NaloPay non-JSON (${res.status}): ${text.slice(0, 200)}`) }
 }
 
-/**
- * Nalo signals success in a few shapes across accounts; accept the documented
- * ones. 'ACCEPTED'/'SUCCESS'/status 1 mean the prompt was pushed.
- */
-const accepted = (r: any) => {
-  const s = String(r?.Status ?? r?.status ?? '').toUpperCase()
-  const code = String(r?.Code ?? r?.code ?? '')
-  return s === 'ACCEPTED' || s === 'SUCCESS' || s === '1' || code === '00' || code === '000'
+/** Step a: exchange Basic auth for a short-lived JWT. */
+async function getToken(): Promise<string> {
+  const r = await post('/clientapi/generate-payment-token/', { merchant_id: MERCHANT() }, {
+    Authorization: AUTH_HEADER(),
+  })
+  const token = r?.data?.token
+  if (!token) throw new Error(`NaloPay token failed: ${JSON.stringify(r).slice(0, 200)}`)
+  return token
 }
 
-// ── COLLECTIONS ───────────────────────────────────────────────
+/** trans_hash = HMAC_SHA256(merchant_id + account_number + amount + reference, secret). */
+async function transHash(account_number: string, amount: string, reference: string): Promise<string> {
+  const message = `${MERCHANT()}${account_number}${amount}${reference}`
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(SECRET()),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message))
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// COLLECTIONS ──────────────────────────────────────────────────
 
 /**
- * Push a payment prompt to the member's phone. externalref (our order_id)
- * must be unique so a repeat can't double-charge.
+ * Push a MoMo prompt to the member's phone. externalref (our reference) must
+ * be unique. On success NaloPay returns an order_id we store to check status.
  */
 export async function requestPayment(args: {
   payer: string
@@ -94,84 +110,79 @@ export async function requestPayment(args: {
   provider: string
   externalref: string
   reference?: string          // human description
-  otpcode?: string
+  accountName?: string
 }): Promise<PromptResult> {
-  const payby = paybyFor(args.provider)
-  if (!payby) return { kind: 'failed', code: 'CHANNEL', message: `Unsupported network: ${args.provider}` }
+  const network = networkFor(args.provider)
+  if (!network) return { kind: 'failed', code: 'CHANNEL', message: `Unsupported network: ${args.provider}` }
 
-  const body: Record<string, unknown> = {
-    merchant_id:     MERCHANT(),
-    secrete:         PASSWORD(),      // Nalo payment password
-    key:             USERNAME(),      // Nalo payment username
-    order_id:        args.externalref,
-    customerName:    args.reference ?? 'Susu member',
-    amount:          args.amount.toFixed(2),
-    item_desc:       args.reference ?? 'Susu contribution',
-    customerNumber:  naloPhone(args.payer),
-    payby,
-    newVodaPayment:  payby === 'VODAFONE' ? true : undefined,
-    callback:        CALLBACK() || undefined,
-    isussd:          1,
-  }
-  if (args.otpcode) body.otpcode = args.otpcode
+  const account_number = naloPhone(args.payer)
+  // Amount string must match exactly what we hash (NaloPay's example uses 2dp).
+  const amountStr = args.amount.toFixed(2)
+
+  let token: string
+  try { token = await getToken() }
+  catch (e) { return { kind: 'failed', code: 'TOKEN', message: (e as Error).message } }
+
+  let hash: string
+  try { hash = await transHash(account_number, amountStr, args.externalref) }
+  catch (e) { return { kind: 'failed', code: 'HASH', message: (e as Error).message } }
 
   let r: any
-  try { r = await call('', body) }
-  catch (e) { return { kind: 'failed', code: 'NET', message: (e as Error).message } }
-
-  // Some networks (notably Vodafone/Telecel) require an OTP the member gets by SMS
-  const msg = String(r?.Message ?? r?.message ?? '')
-  if (/otp/i.test(msg) && !args.otpcode) {
-    return { kind: 'otp_required', message: msg || 'Check your SMS for a verification code.' }
+  try {
+    r = await post('/clientapi/collection/', {
+      merchant_id:    MERCHANT(),
+      service_name:   'MOMO_TRANSACTION',
+      trans_hash:     hash,
+      account_number,
+      account_name:   args.accountName ?? 'Susu member',
+      network,
+      amount:         amountStr,
+      reference:      args.externalref,
+      callback:       Deno.env.get('NALO_CALLBACK_URL') ?? '',
+      description:    args.reference ?? 'Susu contribution',
+    }, { token })
+  } catch (e) {
+    return { kind: 'failed', code: 'NET', message: (e as Error).message }
   }
+
+  if (r?.success && r?.data?.order_id) {
+    return { kind: 'prompted', moolreRef: String(r.data.order_id) }
+  }
+  const msg = String(r?.message ?? r?.data?.message ?? 'Payment could not be started')
   if (/duplicate|already/i.test(msg)) return { kind: 'duplicate' }
-
-  if (accepted(r)) {
-    const ref = String(r?.TransactionId ?? r?.transaction_id ?? r?.InvoiceNo ?? args.externalref)
-    return { kind: 'prompted', moolreRef: ref }
-  }
-  return { kind: 'failed', code: String(r?.Code ?? r?.code ?? 'FAIL'), message: msg || 'Payment could not be started' }
+  return { kind: 'failed', code: String(r?.code ?? 'FAIL'), message: msg }
 }
 
 /**
- * The only thing we believe: ask Nalo directly whether the money moved.
- * Nalo exposes a transaction-status query keyed by our order_id.
+ * The only thing we believe: ask NaloPay whether the money moved. Looked up by
+ * order_id (returned at creation, echoed in the callback), stored as our ref.
  */
-export async function paymentStatus(externalref: string): Promise<TxStatus | null> {
+export async function paymentStatus(orderId: string): Promise<TxStatus | null> {
   let r: any
   try {
-    r = await call('', {
+    r = await post('/clientapi/collection-status/', {
       merchant_id: MERCHANT(),
-      secrete:     PASSWORD(),
-      key:         USERNAME(),
-      order_id:    externalref,
-      action:      'status',        // status query
-    })
+      order_id:    orderId,
+    }, {})
   } catch { return null }
 
-  const s = String(r?.Status ?? r?.status ?? '').toUpperCase()
-  const code = String(r?.Code ?? r?.code ?? '')
-  const settled = s === 'PAID' || s === 'SUCCESS' || code === '00' || code === '000'
-  const failed  = s === 'FAILED' || s === 'CANCELLED'
-  if (!settled && !failed && !s && !code) return null
+  const status = String(r?.data?.status ?? '').toUpperCase()
+  if (!status) return null
 
   return {
-    settled,
-    pending: !settled && !failed,
-    amount: Number(r?.amount ?? r?.Amount ?? 0),
-    transactionid: String(r?.TransactionId ?? r?.transaction_id ?? ''),
-    externalref,
+    settled: status === 'COMPLETED' || status === 'SUCCESS' || status === 'PAID',
+    pending: status === 'PENDING',
+    amount:  Number(r?.data?.amount ?? 0),
+    transactionid: orderId,
+    externalref:   orderId,
     raw: r,
   }
 }
 
-/**
- * Read a callback body into our common shape. Never trusted on its own —
- * the webhook uses this only to know WHICH order to re-verify.
- */
+/** Read a callback into our common shape. Never trusted alone — used only to
+ *  know which order_id to re-verify. */
 export function parseCallback(body: any): { externalref: string | null; claimsSuccess: boolean } {
-  const externalref = body?.order_id ?? body?.Order_id ?? body?.externalref ?? null
-  const s = String(body?.Status ?? body?.status ?? '').toUpperCase()
-  const code = String(body?.Code ?? body?.code ?? '')
-  return { externalref, claimsSuccess: s === 'PAID' || s === 'SUCCESS' || code === '00' || code === '000' }
+  const externalref = body?.order_id ?? null
+  const status = String(body?.status ?? '').toUpperCase()
+  return { externalref, claimsSuccess: status === 'COMPLETED' }
 }
