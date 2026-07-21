@@ -30,6 +30,9 @@ const AUTH_HEADER = () => {
 
 export const naloConfigured = () => !!MERCHANT() && !!SECRET() && !!AUTH_RAW()
 
+// Remembers which hash format NaloPay accepted, so warm instances skip probing.
+let _winningFormat: string | null = null
+
 /**
  * NaloPay validates the callback as a real public https URL and rejects blanks
  * (PAY-INVAL-0069, cause "callback"). Prefer the configured URL; if it's
@@ -152,6 +155,10 @@ export async function requestPayment(args: {
       }
     }
   }
+  // Once a format has worked, try it first — most calls become a single request.
+  if (_winningFormat) {
+    combos.sort((a, b) => (a.label === _winningFormat ? -1 : b.label === _winningFormat ? 1 : 0))
+  }
 
   let lastRaw: unknown = null
   for (const c of combos) {
@@ -178,6 +185,7 @@ export async function requestPayment(args: {
     }
 
     if (r?.success && r?.data?.order_id) {
+      _winningFormat = c.label
       console.log(`NaloPay: accepted format ${c.label}`)
       return { kind: 'prompted', moolreRef: String(r.data.order_id) }
     }
