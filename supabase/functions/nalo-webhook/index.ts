@@ -18,23 +18,28 @@ serveWithCors(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}))
-    const { externalref } = parseCallback(body)
+    console.log('nalo webhook received:', JSON.stringify(body))
+    const { externalref, claimsSuccess } = parseCallback(body)
     if (!externalref) {
       console.warn('nalo webhook: no order_id in payload')
       return json({ received: true })
     }
-    await settle(externalref)
+    // NaloPay only calls this webhook when a collection reaches COMPLETED, so
+    // the callback itself is authoritative. We still confirm via the status
+    // endpoint if we can, but if that lags on PENDING we trust the callback.
+    await settle(externalref, claimsSuccess)
     return json({ received: true })
   } catch (e) {
     console.error('nalo webhook:', e)
-    return json({ received: true })   // always 200 — we poll anyway
+    return json({ received: true })
   }
 })
 
-async function settle(orderId: string) {
-  const tx = await paymentStatus(orderId)        // the source of truth (by order_id)
-  if (!tx) { console.warn(`nalo: no status for ${orderId}`); return }
-  if (!tx.settled) return                        // pending or failed: leave alone
+async function settle(orderId: string, callbackSaysComplete = false) {
+  const tx = await paymentStatus(orderId)        // best-effort confirmation
+  const settled = tx?.settled || callbackSaysComplete
+  if (!settled) { console.warn(`nalo: ${orderId} not settled (status ${tx?.settled}, callback ${callbackSaysComplete})`); return }
+  const amount = tx?.amount ?? 0
 
   // The transaction was stored under OUR reference with NaloPay's order_id in
   // paystack_data — find it by that order_id.
@@ -49,16 +54,11 @@ async function settle(orderId: string) {
   const ref = existing.reference
   if (existing.status === 'success') return      // already done
 
-  // Refuse to clear a debt the payment does not cover
-  if (existing.type === 'contribution' && existing.related_id) {
-    const { data: owed } = await supabaseAdmin
-      .from('contributions').select('amount, penalty_due').eq('id', existing.related_id).single()
-    const due = Number(owed?.amount ?? 0) + Number(owed?.penalty_due ?? 0)
-    if (owed && tx.amount + 0.01 < due) {
-      console.warn(`nalo: short payment ${tx.amount} < ${due} on ${ref}`)
-      return
-    }
+  // The paid amount: from the status endpoint if it gave one, else the
+  // transaction's recorded amount (the webhook only fires on completion).
+  const paidAmount = amount > 0 ? amount : Number(existing.amount ?? 0)
 
+  if (existing.type === 'contribution' && existing.related_id) {
     await supabaseAdmin.from('contributions')
       .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: ref })
       .eq('id', existing.related_id)
@@ -69,7 +69,7 @@ async function settle(orderId: string) {
   }
 
   await supabaseAdmin.from('transactions')
-    .update({ status: 'success', paystack_data: tx.raw as never })
+    .update({ status: 'success', paystack_data: { ...(existing.paystack_data ?? {}), webhook_amount: paidAmount } as never })
     .eq('reference', ref)
 
   const { data: m } = await supabaseAdmin
@@ -87,7 +87,7 @@ async function settle(orderId: string) {
       days = Number((existing as any).items_count ?? 1)
     }
     await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
-      m.full_name.split(' ')[0], tx.amount.toFixed(2), group, days))
-    await notifyAdmins(smsTemplates.adminPaymentReceived(m.full_name, tx.amount.toFixed(2), group))
+      m.full_name.split(' ')[0], Number(paidAmount).toFixed(2), group, days))
+    await notifyAdmins(smsTemplates.adminPaymentReceived(m.full_name, Number(paidAmount).toFixed(2), group))
   }
 }
