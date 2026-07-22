@@ -23,6 +23,7 @@ export default function PayoutsPage() {
   const [notes, setNotes]       = useState('')
   const [ref, setRef]           = useState('')
   const [override, setOverride] = useState(false)
+  const [amountSent, setAmountSent] = useState('')
   const [processing, setProcessing] = useState(false)
   const [toast, setToast]       = useState('')
   const [copiedMomo, setCopiedMomo] = useState(false)
@@ -40,13 +41,14 @@ export default function PayoutsPage() {
   useEffect(() => { load() }, [filter])
 
   async function openPayout(p: Payout) {
-    setSelected(p); setNotes(''); setRef(''); setOverride(false); setElig(null)
+    setSelected(p); setNotes(''); setRef(''); setOverride(false); setElig(null); setAmountSent('')
     setChecking(true)
     const token = getAdminToken()
     const { data } = await callFunction<{ eligibility: Eligibility }>(
       `payouts-admin?eligibility=${p.id}`, { token: token! }
     )
     setElig(data?.eligibility ?? null)
+    if (data?.eligibility?.net_amount != null) setAmountSent(String(data.eligibility.net_amount))
     setChecking(false)
   }
 
@@ -56,7 +58,11 @@ export default function PayoutsPage() {
     const token = getAdminToken()
     const { data, error } = await callFunction<any>('payouts-admin', {
       method: 'PATCH',
-      body: { payout_id: selected.id, notes, paystack_transfer_ref: ref, override_eligibility: override },
+      body: {
+        payout_id: selected.id, notes, paystack_transfer_ref: ref,
+        override_eligibility: override,
+        amount_sent: amountSent === '' ? undefined : Number(amountSent),
+      },
       token: token!,
     })
     setProcessing(false)
@@ -202,10 +208,27 @@ export default function PayoutsPage() {
                       <span className="text-red font-medium">−{ghs(elig.outstanding_penalty)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between pt-2.5 border-t border-line">
+                  <div className="flex justify-between items-center pt-2.5 border-t border-line">
                     <span className="font-bold text-ink">Send to member</span>
-                    <span className="font-extrabold text-ink text-xl">{ghs(elig.net_amount)}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-ink-2 text-sm">GHS</span>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={amountSent}
+                        onChange={e => setAmountSent(e.target.value)}
+                        className="w-32 px-2.5 py-1.5 bg-white border border-line rounded-[8px] text-right font-extrabold text-ink text-lg tnum focus:outline-none focus:border-ink"
+                      />
+                    </div>
                   </div>
+                  {amountSent !== '' && Math.abs(Number(amountSent) - Number(elig.net_amount)) > 0.001 && (
+                    <div className="flex justify-between text-xs pt-1">
+                      <span className="text-ink-2">Calculated: {ghs(elig.net_amount)}</span>
+                      <button type="button" onClick={() => setAmountSent(String(elig.net_amount))}
+                        className="text-ink font-semibold underline underline-offset-2">
+                        Reset to full
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* MoMo destination */}
@@ -245,11 +268,12 @@ export default function PayoutsPage() {
                     placeholder="e.g. Sent via MTN MoMo at 14:32" />
                 </div>
 
-                <button onClick={markPaid} disabled={processing || (!elig.eligible && !override)}
+                <button onClick={markPaid}
+                  disabled={processing || (!elig.eligible && !override) || amountSent === '' || Number(amountSent) <= 0}
                   className="w-full flex items-center justify-center gap-2 py-3.5 bg-ink text-white font-bold rounded-[10px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                   {processing ? 'Recording…'
                     : !elig.eligible && !override ? 'Blocked — tick override to proceed'
-                    : `Confirm ${ghs(elig.net_amount)} Sent`}
+                    : `Confirm ${ghs(amountSent === '' ? elig.net_amount : Number(amountSent))} Sent`}
                 </button>
               </>
             ) : (

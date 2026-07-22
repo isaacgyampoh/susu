@@ -26,6 +26,19 @@ export default function TransactionsPage() {
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [syncRaw, setSyncRaw] = useState('')
+  const [view, setView]       = useState<'received' | 'whopaid'>('whopaid')
+  const [paidRows, setPaidRows] = useState<any[]>([])
+  const [paidSummary, setPaidSummary] = useState<any>(null)
+  const [paidLoading, setPaidLoading] = useState(true)
+
+  async function loadPaid() {
+    setPaidLoading(true)
+    const { data } = await callFunction<any>(`admin-paid-today?range=${range}`, { token: getAdminToken()! })
+    setPaidRows(data?.rows ?? [])
+    setPaidSummary(data?.summary ?? null)
+    setPaidLoading(false)
+  }
+  useEffect(() => { if (view === 'whopaid') loadPaid() }, [range, view])
 
   async function reconcile() {
     setSyncing(true); setSyncMsg('')
@@ -95,6 +108,82 @@ export default function TransactionsPage() {
         </div>
       )}
 
+      {/* View toggle */}
+      <div className="flex gap-2 mb-4">
+        <button onClick={() => setView('whopaid')}
+          className={`px-4 py-2 rounded-[10px] text-sm font-semibold transition-colors ${view === 'whopaid' ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>
+          Who paid
+        </button>
+        <button onClick={() => setView('received')}
+          className={`px-4 py-2 rounded-[10px] text-sm font-semibold transition-colors ${view === 'received' ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>
+          Transactions
+        </button>
+      </div>
+
+      {view === 'whopaid' && (
+        <>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {RANGES.map(([v, l]) => (
+              <button key={v} onClick={() => setRange(v)}
+                className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-colors ${range === v ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>{l}</button>
+            ))}
+          </div>
+          {paidSummary && (
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              <div className="card p-4 bg-ink border-ink">
+                <p className="text-[22px] font-extrabold tnum text-white"><span className="text-[12px] align-[.35em] mr-0.5 text-white/60">GHS</span>{n2(paidSummary.total)}</p>
+                <p className="text-[12px] text-white/60 mt-1">collected · {RANGES.find(r => r[0] === range)?.[1]}</p>
+              </div>
+              <div className="card p-4">
+                <p className="text-[22px] font-extrabold tnum">{paidSummary.members}</p>
+                <p className="t-label mt-1">members paid</p>
+              </div>
+              <div className="card p-4">
+                <p className="text-[22px] font-extrabold tnum">{paidSummary.payments}</p>
+                <p className="t-label mt-1">days paid</p>
+              </div>
+            </div>
+          )}
+          {paidLoading ? (
+            <p className="text-ink-3 text-sm py-10 text-center">Loading…</p>
+          ) : paidRows.length === 0 ? (
+            <div className="border border-line rounded-[10px] p-10 text-center text-ink-2">Nobody has paid in this period yet.</div>
+          ) : (
+            <div className="border border-line rounded-[10px] overflow-hidden">
+              <div className="scroll-x">
+                <table className="w-full text-sm min-w-[560px] lg:min-w-0">
+                  <thead className="border-b border-line">
+                    <tr className="text-ink-2 text-left">
+                      <th className="px-5 py-3 font-medium">Member</th>
+                      <th className="px-5 py-3 font-medium">Group</th>
+                      <th className="px-5 py-3 font-medium">Days paid</th>
+                      <th className="px-5 py-3 font-medium">Amount</th>
+                      <th className="px-5 py-3 font-medium">When</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {paidRows.map((r, i) => (
+                      <tr key={i} className="hover:bg-tint transition-colors">
+                        <td className="px-5 py-3.5">
+                          <Link href={`/admin/members/${r.member_id}`} className="font-medium text-ink hover:underline underline-offset-2">{r.name}</Link>
+                          <p className="text-[11px] text-ink-3">{r.code}</p>
+                        </td>
+                        <td className="px-5 py-3.5 text-ink-2">{r.group}</td>
+                        <td className="px-5 py-3.5 font-medium">{r.days}</td>
+                        <td className="px-5 py-3.5 font-semibold tnum">GHS {n2(r.total)}</td>
+                        <td className="px-5 py-3.5 text-ink-2 text-xs whitespace-nowrap">{r.last_paid ? format(new Date(r.last_paid), 'MMM d, HH:mm') : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {view === 'received' && (
+       <>
       {/* Totals */}
       {totals && (
         <div className="grid grid-cols-3 gap-3 mb-5">
@@ -186,6 +275,8 @@ export default function TransactionsPage() {
             </button>
           )}
         </div>
+      )}
+       </>
       )}
     </div>
   )

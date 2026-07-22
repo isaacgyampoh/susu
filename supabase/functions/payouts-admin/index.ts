@@ -55,7 +55,7 @@ serveWithCors(async (req) => {
 
     // ── PATCH — mark as paid (with eligibility enforcement) ──
     if (method === 'PATCH') {
-      const { payout_id, notes, paystack_transfer_ref, override_eligibility } = await req.json()
+      const { payout_id, notes, paystack_transfer_ref, override_eligibility, amount_sent } = await req.json()
       if (!payout_id) return error('payout_id is required')
 
       const { data: payout } = await supabaseAdmin
@@ -79,13 +79,32 @@ serveWithCors(async (req) => {
         }, 409)
       }
 
-      const netAmount = e?.net_amount ?? payout.total_amount
+      const calculatedNet = e?.net_amount ?? payout.total_amount
       const deductions = (e?.outstanding_contrib ?? 0) + (e?.outstanding_penalty ?? 0)
+
+      // The admin may send a different amount than the system calculated —
+      // part payments, splits, an agreed adjustment. We record what was
+      // ACTUALLY sent, and keep the calculated figure in the notes so the
+      // difference is never silently lost.
+      let netAmount = calculatedNet
+      let amountNote = notes ?? null
+      if (amount_sent != null) {
+        const entered = Number(amount_sent)
+        if (isNaN(entered) || entered <= 0) return error('Amount sent must be a positive number')
+        if (entered > Number(calculatedNet) + 0.001) {
+          return error(`Amount sent (GHS ${entered.toFixed(2)}) is more than this member is owed (GHS ${Number(calculatedNet).toFixed(2)}).`)
+        }
+        netAmount = Math.round(entered * 100) / 100
+        if (Math.abs(netAmount - Number(calculatedNet)) > 0.001) {
+          const diff = (Number(calculatedNet) - netAmount).toFixed(2)
+          amountNote = `${notes ? notes + ' — ' : ''}Sent GHS ${netAmount.toFixed(2)} of GHS ${Number(calculatedNet).toFixed(2)} calculated (GHS ${diff} not sent).`
+        }
+      }
 
       await supabaseAdmin.from('payouts').update({
         status: 'paid',
         paid_at: new Date().toISOString(),
-        notes, paystack_transfer_ref,
+        notes: amountNote, paystack_transfer_ref,
         marked_paid_by: admin.sub,
         eligibility_checked_at: new Date().toISOString(),
         outstanding_at_payout: e?.outstanding_contrib ?? 0,
