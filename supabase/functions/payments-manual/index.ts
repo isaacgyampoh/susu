@@ -1,7 +1,7 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
-import { sendSMS }                 from '../_shared/africas-talking.ts'
+import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 
 /*
  * Manual payment collection — for money received outside any gateway:
@@ -62,7 +62,6 @@ serveWithCors(async (req) => {
 
         const m = (c as any).members
         if (m?.phone) {
-          const { sendSMS, smsTemplates } = await import('../_shared/africas-talking.ts')
           if (row?.fully_paid) {
             await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
               m.full_name.split(' ')[0], Number(row.amount_due).toFixed(2), (c.susu_groups as any)?.name ?? 'your susu', 1))
@@ -70,6 +69,9 @@ serveWithCors(async (req) => {
             await sendSMS(m.phone,
               `Hi ${m.full_name.split(' ')[0]}, we received GHS ${amt.toFixed(2)} toward your ${(c.susu_groups as any)?.name ?? 'susu'}. Paid so far: GHS ${Number(row.paid_so_far).toFixed(2)} of GHS ${Number(row.amount_due).toFixed(2)}. Thank you!`)
           }
+          await notifyAdmins(
+            `${m.full_name} paid GHS ${amt.toFixed(2)} toward ${(c.susu_groups as any)?.name ?? 'susu'}` +
+            (row?.fully_paid ? ' (now fully paid).' : ` (GHS ${Number(row?.paid_so_far ?? 0).toFixed(2)} of GHS ${Number(row?.amount_due ?? 0).toFixed(2)}).`))
         }
       }
       return json({
@@ -131,6 +133,9 @@ serveWithCors(async (req) => {
         await sendSMS(first.members.phone,
           `Hi ${first.members.full_name?.split(' ')[0] ?? ''}, we received your ${label(method).toLowerCase()} payment of GHS ${total.toLocaleString()} for ${gName} (${days} day${days > 1 ? 's' : ''}). Thank you!`)
       }
+      // The admin gets a record of every payment, however it was collected
+      await notifyAdmins(
+        `${first.members?.full_name ?? 'A member'} paid GHS ${total.toFixed(2)} for ${gName} (${days} day${days > 1 ? 's' : ''}, ${label(method).toLowerCase()}).`)
 
       receipts.push({ member: first.members?.full_name, group: gName, days, total, reference: ref })
     }

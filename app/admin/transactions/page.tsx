@@ -11,6 +11,12 @@ import { format } from 'date-fns'
  */
 const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+const todayISO = () => new Date().toISOString().slice(0, 10)
+const shiftDay = (d: string, n: number) => {
+  const dt = new Date(d + 'T12:00:00Z'); dt.setUTCDate(dt.getUTCDate() + n)
+  return dt.toISOString().slice(0, 10)
+}
+
 const RANGES = [['today', 'Today'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['all', 'All time']] as const
 const CHANNELS = [['all', 'All'], ['online', 'NaloPay'], ['manual', 'Manual']] as const
 
@@ -30,15 +36,22 @@ export default function TransactionsPage() {
   const [paidRows, setPaidRows] = useState<any[]>([])
   const [paidSummary, setPaidSummary] = useState<any>(null)
   const [paidLoading, setPaidLoading] = useState(true)
+  const [unpaidRows, setUnpaidRows]   = useState<any[]>([])
+  const [day, setDay]                 = useState<string>(todayISO())
+  const [paidChannel, setPaidChannel] = useState<'all'|'nalopay'|'manual'>('all')
 
   async function loadPaid() {
     setPaidLoading(true)
-    const { data } = await callFunction<any>(`admin-paid-today?range=${range}`, { token: getAdminToken()! })
+    const qs = range
+      ? `range=${range}&channel=${paidChannel}`
+      : `date=${day}&channel=${paidChannel}`
+    const { data } = await callFunction<any>(`admin-paid-today?${qs}`, { token: getAdminToken()! })
     setPaidRows(data?.rows ?? [])
+    setUnpaidRows(data?.unpaid ?? [])
     setPaidSummary(data?.summary ?? null)
     setPaidLoading(false)
   }
-  useEffect(() => { if (view === 'whopaid') loadPaid() }, [range, view])
+  useEffect(() => { if (view === 'whopaid') loadPaid() }, [range, day, paidChannel, view])
 
   async function reconcile() {
     setSyncing(true); setSyncMsg('')
@@ -71,7 +84,7 @@ export default function TransactionsPage() {
     const p = reset ? 1 : page
     const token = getAdminToken()
     const { data } = await callFunction<any>(
-      `admin-transactions?range=${range}&channel=${channel}&status=${status}&page=${p}`, { token: token! })
+      `admin-transactions?range=${range || 'today'}&channel=${channel}&status=${status}&page=${p}`, { token: token! })
     setTotals(data?.totals ?? null)
     setHasMore(!!data?.has_more)
     setRows(reset ? (data?.transactions ?? []) : [...rows, ...(data?.transactions ?? [])])
@@ -122,65 +135,154 @@ export default function TransactionsPage() {
 
       {view === 'whopaid' && (
         <>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {RANGES.map(([v, l]) => (
+          {/* Day navigation — the whole point: pick a day, see who paid */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <button onClick={() => { setDay(todayISO()); setRange('') }}
+              className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-colors ${!range && day === todayISO() ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>Today</button>
+            <button onClick={() => { setDay(shiftDay(todayISO(), -1)); setRange('') }}
+              className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-colors ${!range && day === shiftDay(todayISO(), -1) ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>Yesterday</button>
+            <div className="flex items-center gap-1">
+              <button onClick={() => { setDay(shiftDay(day, -1)); setRange('') }}
+                className="px-2 py-1.5 rounded-[8px] bg-tint text-ink-2 hover:text-ink text-xs font-semibold">←</button>
+              <input type="date" value={day} onChange={e => { setDay(e.target.value); setRange('') }}
+                className="px-2.5 py-1.5 bg-tint border border-line rounded-[8px] text-xs font-semibold text-ink focus:outline-none focus:border-ink" />
+              <button onClick={() => { setDay(shiftDay(day, 1)); setRange('') }}
+                disabled={day >= todayISO()}
+                className="px-2 py-1.5 rounded-[8px] bg-tint text-ink-2 hover:text-ink text-xs font-semibold disabled:opacity-30">→</button>
+            </div>
+            <span className="w-px h-5 bg-line mx-1" />
+            {([['7d','Last 7 days'],['30d','Last 30 days'],['all','All time']] as const).map(([v,l]) => (
               <button key={v} onClick={() => setRange(v)}
                 className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-colors ${range === v ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>{l}</button>
             ))}
           </div>
+
+          {/* Channel filter */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {([['all','All payments'],['nalopay','Paid in app (NaloPay)'],['manual','Recorded by admin']] as const).map(([v,l]) => (
+              <button key={v} onClick={() => setPaidChannel(v)}
+                className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-colors ${paidChannel === v ? 'bg-ink text-white' : 'bg-tint text-ink-2 hover:text-ink'}`}>{l}</button>
+            ))}
+          </div>
+
           {paidSummary && (
-            <div className="grid grid-cols-3 gap-3 mb-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
               <div className="card p-4 bg-ink border-ink">
                 <p className="text-[22px] font-extrabold tnum text-white"><span className="text-[12px] align-[.35em] mr-0.5 text-white/60">GHS</span>{n2(paidSummary.total)}</p>
-                <p className="text-[12px] text-white/60 mt-1">collected · {RANGES.find(r => r[0] === range)?.[1]}</p>
+                <p className="text-[12px] text-white/60 mt-1">{paidSummary.members} member{paidSummary.members === 1 ? '' : 's'} paid</p>
               </div>
               <div className="card p-4">
-                <p className="text-[22px] font-extrabold tnum">{paidSummary.members}</p>
-                <p className="t-label mt-1">members paid</p>
+                <p className="text-[22px] font-extrabold tnum text-green">GHS {n2(paidSummary.nalopay)}</p>
+                <p className="t-label mt-1">paid in app</p>
               </div>
               <div className="card p-4">
-                <p className="text-[22px] font-extrabold tnum">{paidSummary.payments}</p>
-                <p className="t-label mt-1">days paid</p>
+                <p className="text-[22px] font-extrabold tnum">GHS {n2(paidSummary.manual)}</p>
+                <p className="t-label mt-1">recorded by admin</p>
+              </div>
+              <div className="card p-4">
+                <p className={`text-[22px] font-extrabold tnum ${paidSummary.unpaid_members > 0 ? 'text-red' : ''}`}>{paidSummary.unpaid_members ?? 0}</p>
+                <p className="t-label mt-1">have not paid</p>
               </div>
             </div>
           )}
+
           {paidLoading ? (
             <p className="text-ink-3 text-sm py-10 text-center">Loading…</p>
-          ) : paidRows.length === 0 ? (
-            <div className="border border-line rounded-[10px] p-10 text-center text-ink-2">Nobody has paid in this period yet.</div>
           ) : (
-            <div className="border border-line rounded-[10px] overflow-hidden">
-              <div className="scroll-x">
-                <table className="w-full text-sm min-w-[560px] lg:min-w-0">
-                  <thead className="border-b border-line">
-                    <tr className="text-ink-2 text-left">
-                      <th className="px-5 py-3 font-medium">Member</th>
-                      <th className="px-5 py-3 font-medium">Group</th>
-                      <th className="px-5 py-3 font-medium">Days paid</th>
-                      <th className="px-5 py-3 font-medium">Amount</th>
-                      <th className="px-5 py-3 font-medium">When</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {paidRows.map((r, i) => (
-                      <tr key={i} className="hover:bg-tint transition-colors">
-                        <td className="px-5 py-3.5">
-                          <Link href={`/admin/members/${r.member_id}`} className="font-medium text-ink hover:underline underline-offset-2">{r.name}</Link>
-                          <p className="text-[11px] text-ink-3">{r.code}</p>
-                        </td>
-                        <td className="px-5 py-3.5 text-ink-2">{r.group}</td>
-                        <td className="px-5 py-3.5 font-medium">{r.days}</td>
-                        <td className="px-5 py-3.5 font-semibold tnum">GHS {n2(r.total)}</td>
-                        <td className="px-5 py-3.5 text-ink-2 text-xs whitespace-nowrap">{r.last_paid ? format(new Date(r.last_paid), 'MMM d, HH:mm') : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <>
+              {paidRows.length === 0 ? (
+                <div className="border border-line rounded-[10px] p-10 text-center text-ink-2">Nobody has paid in this period yet.</div>
+              ) : (
+                <div className="border border-line rounded-[10px] overflow-hidden mb-6">
+                  <div className="px-5 py-3 border-b border-line bg-tint">
+                    <p className="font-semibold text-ink text-sm">Paid{!range ? ` on ${day}` : ''}</p>
+                  </div>
+                  <div className="scroll-x">
+                    <table className="w-full text-sm min-w-[620px] lg:min-w-0">
+                      <thead className="border-b border-line">
+                        <tr className="text-ink-2 text-left">
+                          <th className="px-5 py-3 font-medium">Member</th>
+                          <th className="px-5 py-3 font-medium">Group</th>
+                          <th className="px-5 py-3 font-medium">How</th>
+                          <th className="px-5 py-3 font-medium">Days</th>
+                          <th className="px-5 py-3 font-medium">Amount</th>
+                          <th className="px-5 py-3 font-medium">When</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line">
+                        {paidRows.map((r, i) => (
+                          <tr key={i} className="hover:bg-tint transition-colors">
+                            <td className="px-5 py-3.5">
+                              <Link href={`/admin/members/${r.member_id}`} className="font-medium text-ink hover:underline underline-offset-2">{r.name}</Link>
+                              <p className="text-[11px] text-ink-3">{r.code}</p>
+                            </td>
+                            <td className="px-5 py-3.5 text-ink-2">{r.group}</td>
+                            <td className="px-5 py-3.5">
+                              {r.channel === 'nalopay' ? (
+                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full badge-green">Paid in app</span>
+                              ) : (
+                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-tint text-ink-2">
+                                  Admin{r.method ? ` · ${r.method}` : ''}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3.5 font-medium">{r.days}</td>
+                            <td className="px-5 py-3.5 font-semibold tnum">GHS {n2(r.total)}</td>
+                            <td className="px-5 py-3.5 text-ink-2 text-xs whitespace-nowrap">{r.last_paid ? format(new Date(r.last_paid), 'MMM d, HH:mm') : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Who has NOT paid — only meaningful for a single day */}
+              {!range && unpaidRows.length > 0 && (
+                <div className="border border-line rounded-[10px] overflow-hidden">
+                  <div className="px-5 py-3 border-b border-line bg-tint flex items-center justify-between">
+                    <p className="font-semibold text-ink text-sm">Not yet paid on {day}</p>
+                    <p className="text-xs text-ink-2">{unpaidRows.length} member{unpaidRows.length === 1 ? '' : 's'} · GHS {n2(paidSummary?.unpaid_total ?? 0)} outstanding</p>
+                  </div>
+                  <div className="scroll-x">
+                    <table className="w-full text-sm min-w-[520px] lg:min-w-0">
+                      <thead className="border-b border-line">
+                        <tr className="text-ink-2 text-left">
+                          <th className="px-5 py-3 font-medium">Member</th>
+                          <th className="px-5 py-3 font-medium">Group</th>
+                          <th className="px-5 py-3 font-medium">Owed</th>
+                          <th className="px-5 py-3 font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line">
+                        {unpaidRows.map((r, i) => (
+                          <tr key={i} className="hover:bg-tint transition-colors">
+                            <td className="px-5 py-3.5">
+                              <Link href={`/admin/members/${r.member_id}`} className="font-medium text-ink hover:underline underline-offset-2">{r.name}</Link>
+                              <p className="text-[11px] text-ink-3">{r.code}</p>
+                            </td>
+                            <td className="px-5 py-3.5 text-ink-2">{r.group}</td>
+                            <td className="px-5 py-3.5 font-semibold tnum">
+                              GHS {n2(r.owed)}
+                              {r.part_paid > 0 && <span className="ml-1 text-[11px] text-ink-2 font-normal">(GHS {n2(r.part_paid)} part-paid)</span>}
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${r.status === 'overdue' ? 'badge-red' : 'bg-tint text-ink-2'}`}>
+                                {r.status === 'overdue' ? 'Overdue' : 'Due'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
+
 
       {view === 'received' && (
        <>
