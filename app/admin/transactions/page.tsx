@@ -33,6 +33,7 @@ export default function DailyPaymentsPage() {
   const [summary, setSummary] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [q, setQ]             = useState('')
+  const [busyId, setBusyId]   = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -43,6 +44,23 @@ export default function DailyPaymentsPage() {
     setLoading(false)
   }
   useEffect(() => { load() }, [day])
+
+  async function undoPayment(r: any) {
+    const ok = confirm(
+      `Mark ${r.name}'s GHS ${n2(r.amount)} for ${day} as NOT paid?\n\n` +
+      `Use this when money was recorded that never actually arrived. ` +
+      `The day goes back to unpaid and the reversal is written to the audit log.`)
+    if (!ok) return
+    const reason = prompt('Reason (optional) — e.g. "never completed at NaloPay"') ?? undefined
+    setBusyId(r.contribution_id)
+    const { error } = await callFunction<any>('admin-undo-payment', {
+      method: 'POST', token: getAdminToken()!,
+      body: { contribution_id: r.contribution_id, reason },
+    })
+    setBusyId(null)
+    if (error) { alert(error); return }
+    load()
+  }
 
   const match = (r: any) =>
     !q.trim() ||
@@ -99,10 +117,19 @@ export default function DailyPaymentsPage() {
                 <div className="h-full bg-ink rounded-full transition-all"
                   style={{ width: `${Math.round((summary.paid_count / summary.expected) * 100)}%` }} />
               </div>
-              <p className="text-xs text-ink-2 mt-2">
-                GHS {n2(summary.collected)} collected
-                {summary.unpaid_count > 0 && <> · GHS {n2(summary.outstanding)} still outstanding</>}
-              </p>
+              <div className="text-xs text-ink-2 mt-2 space-y-0.5">
+                <p>
+                  <span className="font-semibold text-ink">GHS {n2(summary.collected_app)}</span> paid in the app
+                  <span className="text-ink-3"> — this is the figure to compare with NaloPay</span>
+                </p>
+                <p>
+                  <span className="font-semibold text-ink">GHS {n2(summary.collected_recorded)}</span> recorded by an admin
+                  <span className="text-ink-3"> — cash or MoMo collected directly, never passes through NaloPay</span>
+                </p>
+                {summary.unpaid_count > 0 && (
+                  <p className="text-ink-3">GHS {n2(summary.outstanding)} still outstanding</p>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -127,6 +154,7 @@ export default function DailyPaymentsPage() {
                       <th className="px-5 py-3 font-medium">Amount</th>
                       <th className="px-5 py-3 font-medium">How</th>
                       <th className="px-5 py-3 font-medium">When</th>
+                      <th className="px-5 py-3 font-medium"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
@@ -142,11 +170,17 @@ export default function DailyPaymentsPage() {
                         <td className="px-5 py-3.5">
                           {r.how === 'app'
                             ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full badge-green">Paid in app</span>
-                            : <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-tint text-ink-2">Recorded{r.method ? ` · ${r.method}` : ''}</span>}
+                            : <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-tint text-ink-2">By admin{r.method ? ` · ${r.method}` : ''}</span>}
                         </td>
                         <td className="px-5 py-3.5 text-ink-2 text-xs whitespace-nowrap">
                           {r.paid_at ? format(new Date(r.paid_at), 'MMM d, HH:mm') : '—'}
                           {r.late && <span className="ml-1 text-[10px] text-ink-3">(late)</span>}
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <button onClick={() => undoPayment(r)} disabled={busyId === r.contribution_id}
+                            className="text-[11px] font-semibold text-ink-2 hover:text-red underline underline-offset-2 disabled:opacity-40">
+                            {busyId === r.contribution_id ? '…' : 'Undo'}
+                          </button>
                         </td>
                       </tr>
                     ))}

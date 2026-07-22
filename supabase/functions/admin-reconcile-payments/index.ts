@@ -51,12 +51,12 @@ serveWithCors(async (req) => {
     const lookup = prov === 'nalo' ? orderId : tx.reference
     if (prov === 'nalo' && !orderId) { noOrderId++; continue }
 
-    // Force mode: the operator confirmed these in NaloPay; settle directly.
+    // Force-settling was a mistake: NaloPay's status endpoint lags on PENDING,
+    // so "settle everything pending" also marked payments that never completed
+    // as received. Money is only ever recorded when the provider confirms it,
+    // or when an admin records it deliberately against a named member.
     if (force && (!forceRefs || forceRefs.includes(tx.reference))) {
-      await settleTx(tx, { forced: true, at: new Date().toISOString() })
-      settled++
-      details.push({ reference: tx.reference, amount: tx.amount, status: 'force_settled' })
-      continue
+      return error('Force-settling is disabled — it can record money that was never collected. Record the payment against the member instead.', 400)
     }
 
     const s = await getStatus(lookup!)

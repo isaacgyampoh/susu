@@ -49,7 +49,7 @@ serveWithCors(async (req) => {
 
     const paid: any[] = []
     const unpaid: any[] = []
-    let collected = 0
+    let collected = 0, collectedApp = 0, collectedRecorded = 0
 
     for (const c of rows ?? []) {
       const m = (c as any).members
@@ -64,10 +64,13 @@ serveWithCors(async (req) => {
       }
 
       if (c.status === 'paid') {
+        const how = howPaid(c)
         collected += Number(c.amount)
+        if (how === 'app') collectedApp += Number(c.amount)
+        else collectedRecorded += Number(c.amount)
         paid.push({
           ...base,
-          how: howPaid(c),
+          how,
           method: c.payment_method || null,
           paid_at: c.paid_at,
           late: c.paid_at ? c.paid_at.slice(0, 10) > day : false,
@@ -93,6 +96,8 @@ serveWithCors(async (req) => {
         paid_count: paid.length,
         unpaid_count: unpaid.length,
         collected:  Math.round(collected * 100) / 100,
+        collected_app:      Math.round(collectedApp * 100) / 100,
+        collected_recorded: Math.round(collectedRecorded * 100) / 100,
         outstanding: Math.round(unpaid.reduce((s, r) => s + r.amount, 0) * 100) / 100,
       },
     })
