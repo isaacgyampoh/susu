@@ -43,14 +43,14 @@ serveWithCors(async (req) => {
     .lte('due_date', today)
 
   // Group by member+group so one prompt covers what they owe in that group today
-  type Bucket = { member: any; group: any; ids: string[]; amount: number; penalty: number }
+  type Bucket = { member_id: string; member: any; group: any; ids: string[]; amount: number; penalty: number }
   const buckets = new Map<string, Bucket>()
   for (const c of due ?? []) {
     const m = (c as any).members
     if (!m || m.status !== 'active' || !m.phone) continue
     const key = `${c.member_id}:${c.group_id}`
     if (!buckets.has(key)) {
-      buckets.set(key, { member: m, group: (c as any).susu_groups, ids: [], amount: 0, penalty: 0 })
+      buckets.set(key, { member_id: c.member_id, member: m, group: (c as any).susu_groups, ids: [], amount: 0, penalty: 0 })
     }
     const bk = buckets.get(key)!
     // Only settle the SINGLE oldest due day per group in the daily nudge, to
@@ -81,7 +81,7 @@ serveWithCors(async (req) => {
     const providerRef = `DY${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase().slice(0, 20)
 
     await supabaseAdmin.from('transactions').insert({
-      member_id: bk.member_id ?? bk.member.id, type: 'contribution', amount: base,
+      member_id: bk.member_id, type: 'contribution', amount: base,
       reference: ref, related_id: oldest, status: 'pending',
       description: `Daily reminder charge for ${bk.group?.name ?? 'susu'} (${today})`,
     }).then(() => {}, () => {})

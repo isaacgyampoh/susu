@@ -45,6 +45,26 @@ export default function DailyPaymentsPage() {
   }
   useEffect(() => { load() }, [day])
 
+  async function repairForced() {
+    const { data: preview, error: pErr } = await callFunction<any>('admin-repair-forced', {
+      method: 'POST', token: getAdminToken()!, body: { dry_run: true },
+    })
+    if (pErr) { alert(pErr); return }
+    if (!preview?.details?.length) { alert(preview?.message ?? 'Nothing to repair.'); return }
+    const lines = preview.details
+      .map((d: any) => `• ${d.member} — GHS ${n2(d.amount)} (${d.group}, ${d.due_date})`).join('\n')
+    if (!confirm(
+      `These payments were marked received while still pending at NaloPay, so they were never actually collected:\n\n${lines}\n\n` +
+      `Put them back to unpaid? Each reversal is written to the audit log.`)) return
+
+    const { data, error } = await callFunction<any>('admin-repair-forced', {
+      method: 'POST', token: getAdminToken()!, body: {},
+    })
+    if (error) { alert(error); return }
+    alert(data?.message ?? 'Repaired.')
+    load()
+  }
+
   async function undoPayment(r: any) {
     const ok = confirm(
       `Mark ${r.name}'s GHS ${n2(r.amount)} for ${day} as NOT paid?\n\n` +
@@ -73,11 +93,17 @@ export default function DailyPaymentsPage() {
 
   return (
     <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
-      <div className="mb-5">
-        <h1 className="text-2xl font-extrabold text-ink">Daily Payments</h1>
-        <p className="text-ink-2 text-sm mt-1">
-          Who was due to pay on a day, and who has paid.
-        </p>
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div>
+          <h1 className="text-2xl font-extrabold text-ink">Daily Payments</h1>
+          <p className="text-ink-2 text-sm mt-1">
+            Who was due to pay on a day, and who has paid.
+          </p>
+        </div>
+        <button onClick={repairForced}
+          className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap shrink-0">
+          Repair force-settled
+        </button>
       </div>
 
       {/* Day picker */}
@@ -119,12 +145,12 @@ export default function DailyPaymentsPage() {
               </div>
               <div className="text-xs text-ink-2 mt-2 space-y-0.5">
                 <p>
-                  <span className="font-semibold text-ink">GHS {n2(summary.collected_app)}</span> paid in the app
-                  <span className="text-ink-3"> — this is the figure to compare with NaloPay</span>
+                  <span className="font-semibold text-ink">GHS {n2(summary.collected_app)}</span> collected in-app
+                  <span className="text-ink-3"> — compare this with NaloPay</span>
                 </p>
                 <p>
-                  <span className="font-semibold text-ink">GHS {n2(summary.collected_recorded)}</span> recorded by an admin
-                  <span className="text-ink-3"> — cash or MoMo collected directly, never passes through NaloPay</span>
+                  <span className="font-semibold text-ink">GHS {n2(summary.collected_recorded)}</span> collected manually
+                  <span className="text-ink-3"> — cash or MoMo taken directly, never passes through NaloPay</span>
                 </p>
                 {summary.unpaid_count > 0 && (
                   <p className="text-ink-3">GHS {n2(summary.outstanding)} still outstanding</p>
@@ -169,8 +195,8 @@ export default function DailyPaymentsPage() {
                         <td className="px-5 py-3.5 font-semibold tnum">GHS {n2(r.amount)}</td>
                         <td className="px-5 py-3.5">
                           {r.how === 'app'
-                            ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full badge-green">Paid in app</span>
-                            : <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-tint text-ink-2">By admin{r.method ? ` · ${r.method}` : ''}</span>}
+                            ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full badge-green">In-app</span>
+                            : <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-tint text-ink-2">Manual{r.method ? ` · ${r.method}` : ''}</span>}
                         </td>
                         <td className="px-5 py-3.5 text-ink-2 text-xs whitespace-nowrap">
                           {r.paid_at ? format(new Date(r.paid_at), 'MMM d, HH:mm') : '—'}
