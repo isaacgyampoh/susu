@@ -18,8 +18,8 @@ export default function Dashboard() {
   async function load() {
     const { data } = await callFunction<AdminDashboard>('admin-dashboard', { token: getAdminToken()! })
     setD(data); setL(false)
-    callFunction<any>('admin-analytics', { token: getAdminToken()! })
-      .then(({ data: a }) => setToday(a?.today ?? null))
+    callFunction<any>('admin-paid-today', { token: getAdminToken()! })
+      .then(({ data: a }) => setToday(a?.summary ?? null))
   }
   useEffect(() => { load() }, [])
 
@@ -76,27 +76,24 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {today && today.count > 0 && (
-        <div className="card p-4 mb-3">
-          <div className="flex items-baseline justify-between mb-3">
-            <p className="t-label">Received today</p>
-            <p className="text-[12px] text-ink-3">reconcile online total with NaloPay</p>
+      {today && today.expected > 0 && (
+        <Link href="/admin/transactions" className="card p-4 mb-3 block hover:border-ink/25 transition-colors">
+          <div className="flex items-baseline justify-between mb-2">
+            <p className="t-label">Today&rsquo;s collection</p>
+            <p className="text-[12px] text-ink-3">see who paid &rarr;</p>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <p className="text-[22px] font-extrabold tnum">GHS {n0(today.total)}</p>
-              <p className="t-label mt-1">{today.count} payment{today.count === 1 ? '' : 's'} total</p>
-            </div>
-            <div>
-              <p className="text-[22px] font-extrabold tnum text-green">GHS {n0(today.online.total)}</p>
-              <p className="t-label mt-1">{today.online.count} online (NaloPay)</p>
-            </div>
-            <div>
-              <p className="text-[22px] font-extrabold tnum">GHS {n0(today.manual.total)}</p>
-              <p className="t-label mt-1">{today.manual.count} manual</p>
-            </div>
+          <p className="text-[26px] font-extrabold text-ink tnum">
+            {today.paid_count} <span className="text-ink-2 font-semibold text-[18px]">of {today.expected} paid</span>
+          </p>
+          <div className="h-1.5 bg-line rounded-full overflow-hidden mt-3">
+            <div className="h-full bg-ink rounded-full transition-all"
+              style={{ width: `${Math.round((today.paid_count / today.expected) * 100)}%` }} />
           </div>
-        </div>
+          <p className="text-xs text-ink-2 mt-2">
+            GHS {n0(today.collected)} collected
+            {today.unpaid_count > 0 && <> &middot; {today.unpaid_count} still to pay</>}
+          </p>
+        </Link>
       )}
 
       <div className="grid lg:grid-cols-2 gap-3">
