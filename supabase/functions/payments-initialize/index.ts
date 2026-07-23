@@ -20,7 +20,7 @@ serveWithCors(async (req) => {
   if (blocked) return blocked
 
   try {
-    const { contribution_id, registration_tx_id, pay_number, pay_network } = await req.json()
+    const { contribution_id, registration_tx_id, pay_number, pay_network, pay_amount } = await req.json()
 
     // ── REGISTRATION FEE: pay a pending registration_fee transaction ──
     if (registration_tx_id) {
@@ -95,7 +95,11 @@ serveWithCors(async (req) => {
     if (contribution.status === 'paid') return error('This contribution is already paid')
 
     const member = contribution.members as any
-    const due    = Number(contribution.amount) + Number(contribution.penalty_due ?? 0)
+    const owedToday = Number(contribution.amount) + Number(contribution.penalty_due ?? 0) - Number(contribution.amount_paid ?? 0)
+    // A member may choose to send more (clears following days in this slot) or
+    // less (banked as a part payment against this day).
+    const requested = Number(pay_amount)
+    const due = (!isNaN(requested) && requested > 0) ? Math.round(requested * 100) / 100 : owedToday
     // The member is charged the contribution PLUS the service charge; their
     // contribution record stays at `due`. `charged` is what MoMo debits.
     const { charged, fee } = withServiceCharge(due)

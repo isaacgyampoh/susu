@@ -74,7 +74,7 @@ serveWithCors(async (req) => {
     // Pending / overdue across all groups
     const { data: pendingContributions } = await supabaseAdmin
       .from('contributions')
-      .select('id, amount, due_date, status, is_late, is_flagged, penalty_due, group_id, susu_groups(id, name, payment_deadline)')
+      .select('id, amount, amount_paid, due_date, status, is_late, is_flagged, penalty_due, group_id, membership_id, susu_groups(id, name, payment_deadline), group_memberships(payout_position)')
       .eq('member_id', memberId)
       .in('status', ['pending', 'overdue'])
       .order('due_date', { ascending: true })

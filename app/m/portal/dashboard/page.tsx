@@ -28,11 +28,11 @@ export default function Dashboard() {
 
   function pay(c: Contribution) { setNumSheet(c) }
 
-  async function doPay(c: Contribution, payNumber?: string, payNetwork?: string) {
+  async function doPay(c: Contribution, payNumber?: string, payNetwork?: string, payAmount?: number) {
     setNumSheet(null)
     setP(c.id)
     const { data, error } = await callFunction<any>('payments-initialize',
-      { method: 'POST', body: { contribution_id: c.id, pay_number: payNumber, pay_network: payNetwork }, token: getMemberToken()! })
+      { method: 'POST', body: { contribution_id: c.id, pay_number: payNumber, pay_network: payNetwork, pay_amount: payAmount }, token: getMemberToken()! })
     setP(null)
     if (error) return alert(error)
     if (data?.dev_mode) return load()
@@ -220,7 +220,10 @@ export default function Dashboard() {
           defaultNumber={member?.mobile_money_number ?? member?.phone}
           defaultNetwork={member?.mobile_money_provider ?? 'MTN'}
           amount={Number(numSheet.amount ?? 0)}
-          onConfirm={(num, net) => doPay(numSheet, num, net)}
+          groupName={(numSheet as any).susu_groups?.name}
+          slotLabel={(numSheet as any).group_memberships?.payout_position ? `Slot ${(numSheet as any).group_memberships.payout_position}` : undefined}
+          dueDate={(numSheet as any).due_date}
+          onConfirm={(num, net, amt) => doPay(numSheet, num, net, amt)}
           onClose={() => setNumSheet(null)}
         />
       )}

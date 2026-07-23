@@ -46,22 +46,35 @@ export default function DailyPaymentsPage() {
   useEffect(() => { load() }, [day])
 
   async function repairForced() {
+    const pasted = prompt(
+      'Reconcile in-app payments against NaloPay.\n\n' +
+      'Open NaloPay \u2192 Reports \u2192 Collection report, filter Status = Successful, ' +
+      'and paste the TRANSACTION IDs here (one per line, or comma separated).\n\n' +
+      'Any in-app payment NOT in that list will be put back to unpaid. ' +
+      'Manual payments are never touched.')
+    if (!pasted?.trim()) return
+    const ids = pasted.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
+
     const { data: preview, error: pErr } = await callFunction<any>('admin-repair-forced', {
-      method: 'POST', token: getAdminToken()!, body: { dry_run: true },
+      method: 'POST', token: getAdminToken()!,
+      body: { keep_order_ids: ids, dry_run: true },
     })
     if (pErr) { alert(pErr); return }
-    if (!preview?.details?.length) { alert(preview?.message ?? 'Nothing to repair.'); return }
+    if (!preview?.details?.length) { alert(preview?.message ?? 'Nothing to reverse.'); return }
+
     const lines = preview.details
-      .map((d: any) => `• ${d.member} — GHS ${n2(d.amount)} (${d.group}, ${d.due_date})`).join('\n')
+      .map((d: any) => `\u2022 ${d.member} \u2014 GHS ${n2(d.amount)} (${d.group}, ${d.due_date})`).join('\n')
     if (!confirm(
-      `These payments were marked received while still pending at NaloPay, so they were never actually collected:\n\n${lines}\n\n` +
-      `Put them back to unpaid? Each reversal is written to the audit log.`)) return
+      `${preview.confirmed} payment(s) match NaloPay (GHS ${n2(preview.confirmed_total)}).\n\n` +
+      `These ${preview.to_reverse} are NOT in the report \u2014 GHS ${n2(preview.reverse_total)}:\n\n${lines}\n\n` +
+      `Put them back to unpaid?`)) return
 
     const { data, error } = await callFunction<any>('admin-repair-forced', {
-      method: 'POST', token: getAdminToken()!, body: {},
+      method: 'POST', token: getAdminToken()!,
+      body: { keep_order_ids: ids },
     })
     if (error) { alert(error); return }
-    alert(data?.message ?? 'Repaired.')
+    alert(data?.message ?? 'Done.')
     load()
   }
 
