@@ -82,14 +82,17 @@ export default function DailyPaymentsPage() {
       body: { keep_order_ids: ids, dry_run: true },
     })
     if (pErr) { alert(pErr); return }
-    if (!preview?.details?.length) { alert(preview?.message ?? 'Nothing to reverse.'); return }
+    if (!preview?.details?.length && !preview?.to_settle) { alert(preview?.message ?? 'Everything already matches.'); return }
 
-    const lines = preview.details
+    const revLines = (preview.details ?? [])
       .map((d: any) => `\u2022 ${d.member} \u2014 GHS ${n2(d.amount)} (${d.group}, ${d.due_date})`).join('\n')
-    if (!confirm(
-      `${preview.confirmed} payment(s) match NaloPay (GHS ${n2(preview.confirmed_total)}).\n\n` +
-      `These ${preview.to_reverse} are NOT in the report \u2014 GHS ${n2(preview.reverse_total)}:\n\n${lines}\n\n` +
-      `Put them back to unpaid?`)) return
+    const setLines = (preview.settle_details ?? [])
+      .map((d: any) => `\u2022 GHS ${n2(d.amount)} (${d.order_id})`).join('\n')
+    let msg = `${preview.confirmed} payment(s) already correct.\n`
+    if (preview.to_settle > 0) msg += `\nWILL BE MARKED PAID (successful at NaloPay but missing here) \u2014 GHS ${n2(preview.settle_total)}:\n${setLines}\n`
+    if (preview.to_reverse > 0) msg += `\nWILL BE REVERSED (marked here but not in the report) \u2014 GHS ${n2(preview.reverse_total)}:\n${revLines}\n`
+    msg += '\nProceed?'
+    if (!confirm(msg)) return
 
     const { data, error } = await callFunction<any>('admin-repair-forced', {
       method: 'POST', token: getAdminToken()!,

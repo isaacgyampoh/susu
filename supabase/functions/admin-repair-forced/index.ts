@@ -1,6 +1,7 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
+import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 
 /*
  * Reconcile in-app payments against the provider's own report.
@@ -90,18 +91,96 @@ serveWithCors(async (req) => {
       else toReverse.push(row)
     }
 
+    // The other direction: payments NaloPay confirms successful whose webhook
+    // callback never landed — still sitting pending here. Dorcas's case.
+    const { data: pendingTx } = await supabaseAdmin
+      .from('transactions')
+      .select('id, reference, amount, type, related_id, batch_id, member_id, paystack_data')
+      .eq('status', 'pending')
+      .in('type', ['contribution', 'bulk_contribution', 'registration_fee'])
+      .gte('created_at', from)
+      .lte('created_at', to)
+      .limit(500)
+
+    const toSettle = (pendingTx ?? [])
+      .filter((t: any) => {
+        const oid = (t.paystack_data as any)?.provider_order_id
+        return oid && keep.has(oid)
+      })
+      .map((t: any) => ({
+        tx: t,
+        order_id: (t.paystack_data as any).provider_order_id,
+        amount: Number(t.amount),
+        reference: t.reference,
+      }))
+
     if (dryRun) {
       return json({
         dry_run: true,
+        to_settle: toSettle.length,
+        settle_total: Math.round(toSettle.reduce((s, r) => s + r.amount, 0) * 100) / 100,
+        settle_details: toSettle.map(r => ({ reference: r.reference, order_id: r.order_id, amount: r.amount })),
         confirmed: kept.length,
         confirmed_total: Math.round(kept.reduce((s, r) => s + r.amount, 0) * 100) / 100,
         to_reverse: toReverse.length,
         reverse_total: Math.round(toReverse.reduce((s, r) => s + r.amount, 0) * 100) / 100,
         details: toReverse,
-        message: toReverse.length === 0
-          ? 'Every in-app payment matches the provider report. Nothing to reverse.'
-          : `${toReverse.length} in-app payment(s) are not in the provider report.`,
+        message: `${toSettle.length} confirmed payment(s) missing locally will be settled; ${toReverse.length} unconfirmed will be reversed.`,
       })
+    }
+
+    // Settle the missing ones first — mark days paid, receipts out
+    let settledMissing = 0
+    for (const r of toSettle) {
+      const tx = r.tx
+      const now = new Date().toISOString()
+      if (tx.batch_id) {
+        await supabaseAdmin.from('contributions')
+          .update({ status: 'paid', paid_at: now, paystack_ref: tx.reference })
+          .eq('batch_id', tx.batch_id).neq('status', 'paid')
+      } else if (tx.related_id) {
+        const { data: c0 } = await supabaseAdmin
+          .from('contributions').select('amount').eq('id', tx.related_id).single()
+        await supabaseAdmin.from('contributions')
+          .update({ status: 'paid', paid_at: now, paystack_ref: tx.reference,
+                    amount_paid: Number(c0?.amount ?? 0) })
+          .eq('id', tx.related_id)
+        await supabaseAdmin.from('payment_penalties')
+          .update({ is_paid: true, paid_at: now })
+          .eq('contribution_id', tx.related_id).then(() => {}, () => {})
+      }
+      await supabaseAdmin.from('transactions')
+        .update({ status: 'success', paystack_data: { ...(tx.paystack_data ?? {}), reconciled_success: true } as never })
+        .eq('id', tx.id)
+      if (tx.type === 'registration_fee') {
+        await supabaseAdmin.from('kyc_applications')
+          .update({ registration_fee_paid: true })
+          .eq('created_member_id', tx.member_id).eq('registration_fee_paid', false)
+          .then(() => {}, () => {})
+      }
+      // Receipt + admin note, same as a normal settlement
+      if (tx.member_id) {
+        const { data: m } = await supabaseAdmin
+          .from('members').select('full_name, phone').eq('id', tx.member_id).single()
+        if (m?.phone) {
+          let group = 'your susu'
+          if (tx.related_id) {
+            const { data: cc } = await supabaseAdmin
+              .from('contributions').select('susu_groups(name)').eq('id', tx.related_id).single()
+            group = (cc?.susu_groups as { name?: string } | null)?.name ?? group
+          }
+          await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
+            m.full_name.split(' ')[0], Number(tx.amount).toFixed(2), group, 1))
+          await notifyAdmins(smsTemplates.adminPaymentReceived(m.full_name, Number(tx.amount).toFixed(2), group))
+        }
+      }
+      await supabaseAdmin.from('audit_log').insert({
+        admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
+        action: 'payment.reconciled_settled', entity_type: 'transaction',
+        entity_id: tx.id, entity_label: r.order_id,
+        details: { amount: tx.amount, order_id: r.order_id },
+      }).then(() => {}, () => {})
+      settledMissing++
     }
 
     let reversed = 0
@@ -139,9 +218,10 @@ serveWithCors(async (req) => {
     return json({
       dry_run: false,
       confirmed: kept.length,
+      settled_missing: settledMissing,
       reversed,
       details: toReverse,
-      message: `${reversed} in-app payment(s) put back to unpaid. ${kept.length} confirmed against the provider report.`,
+      message: `${settledMissing} confirmed payment(s) settled, ${reversed} unconfirmed reversed, ${kept.length} already correct.`,
     })
   } catch (e) {
     console.error(e)
