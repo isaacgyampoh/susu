@@ -47,7 +47,18 @@ export default function Dashboard() {
   const group = plan?.susu_groups
   const dl    = useDeadline(group?.payment_deadline?.slice(0, 5) ?? '18:00')
 
-  if (loading) return <div className="grid place-items-center h-[70vh]">Loading…</div>
+  if (loading) return (
+    <div className="max-w-[420px] mx-auto px-5 pt-6 space-y-3 animate-pulse">
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-full bg-tint" />
+        <div className="space-y-1.5"><div className="h-3.5 w-36 bg-tint rounded" /><div className="h-2.5 w-20 bg-tint rounded" /></div>
+      </div>
+      <div className="h-36 bg-tint rounded-2xl" />
+      <div className="h-20 bg-tint rounded-2xl" />
+      <div className="h-24 bg-tint rounded-2xl" />
+      <div className="h-40 bg-tint rounded-2xl" />
+    </div>
+  )
   if (!d)      return <div className="p-10 text-center t-meta">Could not load your account.</div>
 
   const { member, plans, summary, pendingContributions, recentPayments, penalties } = d

@@ -45,6 +45,28 @@ export default function DailyPaymentsPage() {
   }
   useEffect(() => { load() }, [day])
 
+  function exportCsv() {
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const lines = [
+      ['Status','Member','ID','Group','Amount (GHS)','How','When'].join(','),
+      ...paid.map(r => [
+        'Paid', esc(r.name), esc(r.code), esc(r.group), Number(r.amount).toFixed(2),
+        r.how === 'app' ? 'In-app' : `Manual${r.method ? ' ' + r.method : ''}`,
+        r.paid_at ? format(new Date(r.paid_at), 'yyyy-MM-dd HH:mm') : '',
+      ].join(',')),
+      ...unpaid.map(r => [
+        r.status === 'overdue' ? 'Overdue' : 'Not paid',
+        esc(r.name), esc(r.code), esc(r.group), Number(r.amount).toFixed(2), '', '',
+      ].join(',')),
+    ]
+    const blob = new Blob(["\ufeff" + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `daily-payments-${day}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
   async function repairForced() {
     const pasted = prompt(
       'Reconcile in-app payments against NaloPay.\n\n' +
@@ -113,10 +135,16 @@ export default function DailyPaymentsPage() {
             Who was due to pay on a day, and who has paid.
           </p>
         </div>
+        <div className="flex gap-2 shrink-0">
+        <button onClick={exportCsv}
+          className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
+          Export CSV
+        </button>
         <button onClick={repairForced}
           className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap shrink-0">
-          Repair force-settled
+          Reconcile with NaloPay
         </button>
+        </div>
       </div>
 
       {/* Day picker */}
