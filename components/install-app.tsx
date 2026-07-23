@@ -29,7 +29,9 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
       (navigator as any).standalone === true
     if (installed) return
 
-    if (localStorage.getItem('install_dismissed') === '1') return
+    // Dismissing only hides it for this visit — it returns until installed,
+    // so members who skip it once still get the app eventually.
+    if (sessionStorage.getItem('install_dismissed') === '1') return
 
     const isIOS = /iPad|iPhone|iPod/.test(ua)
 
@@ -64,7 +66,7 @@ export default function InstallApp({ compact = false }: { compact?: boolean }) {
   }
 
   function dismiss() {
-    localStorage.setItem('install_dismissed', '1')
+    sessionStorage.setItem('install_dismissed', '1')
     setMode('hidden')
   }
 

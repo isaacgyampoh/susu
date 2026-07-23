@@ -7,6 +7,7 @@
 -- Project ref qaelfwtbaehdwhnxkpid is pre-filled. Times are UTC = Ghana time.
 --
 --   07:00  daily payment reminders  (texts each member their dial code per group)
+--   14:30  afternoon reminders      (same, for anyone still unpaid)
 --   09:00  payout reminders         (member on standby + admin prepare funds)
 --   20:00  daily digest             (day's totals to admins)
 --   21:00  flag late / overdue      (applies penalties, texts late members)
@@ -16,12 +17,23 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- Clean slate
 SELECT cron.unschedule('susu-daily-reminders')  WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-daily-reminders');
+SELECT cron.unschedule('susu-afternoon-reminders') WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-afternoon-reminders');
 SELECT cron.unschedule('susu-payout-reminders') WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-payout-reminders');
 SELECT cron.unschedule('susu-daily-digest')     WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-daily-digest');
 SELECT cron.unschedule('susu-flag-late')        WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-flag-late');
 
 -- 07:00 — daily payment reminders with dial codes
 SELECT cron.schedule('susu-daily-reminders', '0 7 * * *', $$
+  SELECT net.http_post(
+    url     := 'https://qaelfwtbaehdwhnxkpid.supabase.co/functions/v1/cron-daily-reminders?key=<CRON_SECRET>',
+    headers := '{"Content-Type": "application/json"}'::jsonb,
+    body    := '{}'::jsonb
+  );
+$$);
+
+-- 14:30 — afternoon nudge: same reminder, only reaches those still unpaid
+-- (the job skips anyone already charged/paid today, so nobody is double-texted)
+SELECT cron.schedule('susu-afternoon-reminders', '30 14 * * *', $$
   SELECT net.http_post(
     url     := 'https://qaelfwtbaehdwhnxkpid.supabase.co/functions/v1/cron-daily-reminders?key=<CRON_SECRET>',
     headers := '{"Content-Type": "application/json"}'::jsonb,

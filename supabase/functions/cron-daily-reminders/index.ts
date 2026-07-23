@@ -1,5 +1,6 @@
 import { json, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }       from '../_shared/supabase-admin.ts'
+import { requireAdmin }        from '../_shared/jwt.ts'
 import { sendSMS }             from '../_shared/africas-talking.ts'
 import { requestPayment as naloRequest } from '../_shared/nalo.ts'
 import { requestPayment as moolreRequest } from '../_shared/moolre.ts'
@@ -23,7 +24,11 @@ serveWithCors(async (req) => {
   const url = new URL(req.url)
   const secret = Deno.env.get('CRON_SECRET') ?? ''
   const provided = url.searchParams.get('key') ?? req.headers.get('x-cron-key') ?? ''
-  if (!secret || provided !== secret) return json({ error: 'unauthorized' }, 401)
+  // Two doors: the scheduler's secret, or a signed-in admin (for "Run now")
+  if (!secret || provided !== secret) {
+    const admin = await requireAdmin(req)
+    if (!admin) return json({ error: 'unauthorized' }, 401)
+  }
 
   const prov = provider()
   if (prov !== 'nalo' && prov !== 'moolre') {

@@ -118,10 +118,15 @@ export default function Dashboard() {
 
 
       {plans.length > 1 && (
-        <div className="seg mb-4">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-5 px-5 scrollbar-none"
+             style={{ scrollbarWidth: 'none' }}>
           {plans.map((p, i) => (
-            <button key={p.id} onClick={() => setTab(i)} className={`seg-item ${i === tab ? 'seg-on' : ''}`}>
+            <button key={p.id} onClick={() => setTab(i)}
+              className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-colors ${
+                i === tab ? 'bg-ink text-white' : 'bg-tint text-ink-2'
+              }`}>
               {p.susu_groups?.name}
+              {p.payout_position ? <span className={`ml-1 ${i === tab ? 'text-white/60' : 'text-ink-3'}`}>· S{p.payout_position}</span> : null}
             </button>
           ))}
         </div>

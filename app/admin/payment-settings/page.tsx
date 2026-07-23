@@ -18,6 +18,8 @@ export default function PaymentSettingsPage() {
   const [test, setTest]       = useState<any>(null)
   const [checking, setChecking] = useState(false)
   const [check, setCheck]     = useState<any>(null)
+  const [running, setRunning] = useState('')
+  const [runResult, setRunResult] = useState('')
 
   async function loadStatus() {
     setLoading(true)
@@ -123,6 +125,30 @@ export default function PaymentSettingsPage() {
           )}
         </div>
       )}
+
+      {/* Message tests — fire the scheduled jobs right now to prove SMS works */}
+      <div className="card p-5 mt-5">
+        <h2 className="font-semibold text-ink mb-1">Test the automatic messages</h2>
+        <p className="text-xs text-ink-3 mb-4">
+          Runs the job immediately, exactly as the schedule would. Real SMS are sent — reminders create real payment codes for members who owe today.
+        </p>
+        <div className="grid sm:grid-cols-3 gap-2">
+          {([['cron-daily-reminders','Payment reminders'],['cron-daily-digest','Daily digest'],['cron-payout-reminders','Payout reminders']] as const).map(([fn, label]) => (
+            <button key={fn} disabled={!!running}
+              onClick={async () => {
+                if (fn === 'cron-daily-reminders' && !confirm('This sends REAL payment codes by SMS to every member who owes today. Continue?')) return
+                setRunning(fn); setRunResult('')
+                const { data, error } = await callFunction<any>(fn, { method: 'POST', token: getAdminToken()!, body: {} })
+                setRunning('')
+                setRunResult(error ? `${label}: ${error}` : `${label}: ${JSON.stringify(data)}`)
+              }}
+              className="py-2.5 border border-line rounded-[10px] text-sm font-semibold text-ink hover:bg-tint transition-colors disabled:opacity-50">
+              {running === fn ? 'Running…' : label}
+            </button>
+          ))}
+        </div>
+        {runResult && <p className="mt-3 text-xs text-ink-2 font-mono break-all">{runResult}</p>}
+      </div>
 
       {live && status?.provider === 'paystack' && (
         <p className="text-sm text-ink-2 mt-5">Paystack uses a redirect checkout — test it from the member portal's pay flow.</p>
