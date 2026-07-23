@@ -2,6 +2,7 @@ import { handleCors, json, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }         from '../_shared/supabase-admin.ts'
 import { paymentStatus, parseCallback } from '../_shared/nalo.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
+import { applyPaymentToSchedule } from '../_shared/settle.ts'
 
 /**
  * Nalo payment callback.
@@ -59,13 +60,9 @@ async function settle(orderId: string, callbackSaysComplete = false) {
   const paidAmount = amount > 0 ? amount : Number(existing.amount ?? 0)
 
   if (existing.type === 'contribution' && existing.related_id) {
-    await supabaseAdmin.from('contributions')
-      .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: ref })
-      .eq('id', existing.related_id)
-
-    await supabaseAdmin.from('payment_penalties')
-      .update({ is_paid: true, paid_at: new Date().toISOString() })
-      .eq('contribution_id', existing.related_id)
+    // Spread the payment: overpayments clear later days of the same slot,
+    // shortfalls bank as a part payment — identical to every other path.
+    await applyPaymentToSchedule(existing.related_id, Number(existing.amount ?? 0), ref)
   }
 
   await supabaseAdmin.from('transactions')

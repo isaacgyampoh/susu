@@ -2,6 +2,7 @@ import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
+import { applyPaymentToSchedule } from '../_shared/settle.ts'
 
 /*
  * Reconcile in-app payments against the provider's own report.
@@ -139,15 +140,9 @@ serveWithCors(async (req) => {
           .update({ status: 'paid', paid_at: now, paystack_ref: tx.reference })
           .eq('batch_id', tx.batch_id).neq('status', 'paid')
       } else if (tx.related_id) {
-        const { data: c0 } = await supabaseAdmin
-          .from('contributions').select('amount').eq('id', tx.related_id).single()
-        await supabaseAdmin.from('contributions')
-          .update({ status: 'paid', paid_at: now, paystack_ref: tx.reference,
-                    amount_paid: Number(c0?.amount ?? 0) })
-          .eq('id', tx.related_id)
-        await supabaseAdmin.from('payment_penalties')
-          .update({ is_paid: true, paid_at: now })
-          .eq('contribution_id', tx.related_id).then(() => {}, () => {})
+        // Spread with the shared settlement: a 300-cedi payment on a 100/day
+        // plan clears three days; any remainder banks as a part payment.
+        await applyPaymentToSchedule(tx.related_id, Number(tx.amount ?? 0), tx.reference)
       }
       await supabaseAdmin.from('transactions')
         .update({ status: 'success', paystack_data: { ...(tx.paystack_data ?? {}), reconciled_success: true } as never })

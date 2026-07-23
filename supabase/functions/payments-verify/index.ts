@@ -6,6 +6,7 @@ import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
 import { verifyTransaction }     from '../_shared/paystack.ts'
 import { provider, paymentsUnavailable } from '../_shared/mode.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
+import { applyPaymentToSchedule } from '../_shared/settle.ts'
 
 /**
  * The member's app polls this after approving a prompt.
@@ -15,64 +16,6 @@ import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.
  * answer decides.
  */
 /** A single payment or a whole batch — settle whatever this reference covers. */
-
-/**
- * Apply a payment to a member's schedule, spilling any surplus forward.
- *
- * A member on GHS 100/day who sends 300 clears three days; 250 clears two and
- * leaves 50 sitting against the third. The surplus only ever moves forward
- * within the SAME slot (same membership), because each slot is its own savings
- * position with its own payout — money for one slot must never quietly settle
- * another.
- */
-async function applyToSchedule(startContributionId: string, paidAmount: number, reference: string) {
-  const now = new Date().toISOString()
-
-  const { data: start } = await supabaseAdmin
-    .from('contributions')
-    .select('id, amount, amount_paid, penalty_due, membership_id, member_id, due_date')
-    .eq('id', startContributionId).single()
-  if (!start) return
-
-  // The days this money can touch: this one, then later unpaid days of the
-  // same slot, oldest first.
-  let queue = [start]
-  if (start.membership_id) {
-    const { data: rest } = await supabaseAdmin
-      .from('contributions')
-      .select('id, amount, amount_paid, penalty_due, membership_id, member_id, due_date')
-      .eq('membership_id', start.membership_id)
-      .in('status', ['pending', 'overdue'])
-      .neq('id', startContributionId)
-      .order('due_date', { ascending: true })
-      .limit(120)
-    queue = queue.concat(rest ?? [])
-  }
-
-  let left = paidAmount
-  for (const c of queue) {
-    if (left <= 0.001) break
-    const owed = Number(c.amount) + Number(c.penalty_due ?? 0) - Number(c.amount_paid ?? 0)
-    if (owed <= 0.001) continue
-
-    if (left + 0.001 >= owed) {
-      await supabaseAdmin.from('contributions').update({
-        status: 'paid', paid_at: now, paystack_ref: reference,
-        amount_paid: Number(c.amount),
-      }).eq('id', c.id)
-      await supabaseAdmin.from('payment_penalties')
-        .update({ is_paid: true, paid_at: now })
-        .eq('contribution_id', c.id).then(() => {}, () => {})
-      left -= owed
-    } else {
-      // Not enough to clear this day — bank it as a part payment and stop
-      await supabaseAdmin.from('contributions')
-        .update({ amount_paid: Number(c.amount_paid ?? 0) + left })
-        .eq('id', c.id)
-      left = 0
-    }
-  }
-}
 
 async function settleLocally(reference: string, tx: any, raw: unknown) {
   if (tx.batch_id) {
@@ -88,7 +31,7 @@ async function settleLocally(reference: string, tx: any, raw: unknown) {
         .in('contribution_id', ids.map((r: { id: string }) => r.id))
     }
   } else if (tx.type === 'contribution' && tx.related_id) {
-    await applyToSchedule(tx.related_id, Number(tx.amount), reference)
+    await applyPaymentToSchedule(tx.related_id, Number(tx.amount), reference)
   }
   await supabaseAdmin.from('transactions')
     .update({ status: 'success', paystack_data: { ...(tx.paystack_data ?? {}), settled_raw: raw } as never })
