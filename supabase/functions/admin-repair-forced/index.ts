@@ -38,6 +38,10 @@ serveWithCors(async (req) => {
   try {
     const body = await req.json().catch(() => ({}))
     const dryRun = body.dry_run === true
+    // Settling missing payments is safe; REVERSING is destructive and only
+    // happens when explicitly requested — a paginated provider report pasted
+    // one page at a time must never wipe real payments again.
+    const alsoReverse = body.also_reverse === true
 
     const keep = new Set(
       (Array.isArray(body.keep_order_ids) ? body.keep_order_ids : [])
@@ -179,7 +183,7 @@ serveWithCors(async (req) => {
     }
 
     let reversed = 0
-    for (const r of toReverse) {
+    for (const r of alsoReverse ? toReverse : []) {
       const { data: c } = await supabaseAdmin
         .from('contributions').select('id, status, due_date, paystack_ref')
         .eq('id', r.contribution_id).single()
@@ -216,7 +220,7 @@ serveWithCors(async (req) => {
       settled_missing: settledMissing,
       reversed,
       details: toReverse,
-      message: `${settledMissing} confirmed payment(s) settled, ${reversed} unconfirmed reversed, ${kept.length} already correct.`,
+      message: `${settledMissing} confirmed payment(s) settled, ${alsoReverse ? `${reversed} unconfirmed reversed` : 'reversals skipped (not requested)'}, ${kept.length} already correct.`,
     })
   } catch (e) {
     console.error(e)

@@ -67,6 +67,23 @@ export default function DailyPaymentsPage() {
     URL.revokeObjectURL(a.href)
   }
 
+  async function restoreReversals() {
+    const { data: preview, error: pErr } = await callFunction<any>('admin-restore-reversals', {
+      method: 'POST', token: getAdminToken()!, body: { dry_run: true },
+    })
+    if (pErr) { alert(pErr); return }
+    if (!preview?.restored) { alert(preview?.message ?? 'Nothing to restore.'); return }
+    const lines = (preview.details ?? [])
+      .map((d: any) => `\u2022 ${d.member} \u2014 GHS ${n2(d.amount)} (${d.group}, ${d.due_date})`).join('\n')
+    if (!confirm(`Restore these ${preview.restored} reversed payment(s)?\n\n${lines}`)) return
+    const { data, error } = await callFunction<any>('admin-restore-reversals', {
+      method: 'POST', token: getAdminToken()!, body: {},
+    })
+    if (error) { alert(error); return }
+    alert(data?.message ?? 'Restored.')
+    load()
+  }
+
   async function repairForced() {
     const pasted = prompt(
       'Reconcile in-app payments against NaloPay.\n\n' +
@@ -90,13 +107,21 @@ export default function DailyPaymentsPage() {
       .map((d: any) => `\u2022 GHS ${n2(d.amount)} (${d.order_id})`).join('\n')
     let msg = `${preview.confirmed} payment(s) already correct.\n`
     if (preview.to_settle > 0) msg += `\nWILL BE MARKED PAID (successful at NaloPay but missing here) \u2014 GHS ${n2(preview.settle_total)}:\n${setLines}\n`
-    if (preview.to_reverse > 0) msg += `\nWILL BE REVERSED (marked here but not in the report) \u2014 GHS ${n2(preview.reverse_total)}:\n${revLines}\n`
+    if (preview.to_reverse > 0) msg += `\n${preview.to_reverse} payment(s) are marked here but NOT in your pasted list \u2014 they will be LEFT ALONE unless you choose to reverse them in the next step.\n`
     msg += '\nProceed?'
     if (!confirm(msg)) return
 
+    let alsoReverse = false
+    if (preview.to_reverse > 0) {
+      alsoReverse = confirm(
+        `Also REVERSE these ${preview.to_reverse} payment(s) \u2014 GHS ${n2(preview.reverse_total)}?\n\n${revLines}\n\n` +
+        `ONLY choose OK if you are certain you pasted EVERY page of NaloPay's successful list \u2014 the report is paginated. ` +
+        `If in doubt, choose Cancel: nothing is reversed and you can run this again with the full list.`)
+    }
+
     const { data, error } = await callFunction<any>('admin-repair-forced', {
       method: 'POST', token: getAdminToken()!,
-      body: { keep_order_ids: ids },
+      body: { keep_order_ids: ids, also_reverse: alsoReverse },
     })
     if (error) { alert(error); return }
     alert(data?.message ?? 'Done.')
@@ -139,6 +164,10 @@ export default function DailyPaymentsPage() {
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
+        <button onClick={restoreReversals}
+          className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
+          Restore reversed
+        </button>
         <button onClick={exportCsv}
           className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
           Export CSV
