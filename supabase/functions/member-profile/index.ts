@@ -15,7 +15,7 @@ serveWithCors(async (req) => {
     // Member profile
     const { data: member, error: mErr } = await supabaseAdmin
       .from('members')
-      .select('id, member_id, full_name, phone, email, whatsapp_number, status, occupation, residential_address, mobile_money_number, mobile_money_provider, bank_name, bank_account_number, bank_account_name, created_at')
+      .select('id, member_id, full_name, phone, email, whatsapp_number, status, occupation, residential_address, mobile_money_number, mobile_money_provider, bank_name, bank_account_number, bank_account_name, credit_balance, created_at')
       .eq('id', memberId)
       .single()
 
@@ -115,6 +115,23 @@ serveWithCors(async (req) => {
       .limit(10)
 
     // Global summary
+    // What recent payments covered — the day-by-day breakdown per payment,
+    // so the member sees a GHS 500 split across their groups.
+    const { data: allocs } = await supabaseAdmin
+      .from('payment_allocations')
+      .select('reference, group_name, amount, kind, created_at')
+      .eq('member_id', memberId)
+      .order('created_at', { ascending: false })
+      .limit(60)
+    const byRef = new Map<string, any>()
+    for (const a of allocs ?? []) {
+      if (!byRef.has(a.reference)) byRef.set(a.reference, { reference: a.reference, at: a.created_at, total: 0, items: [] })
+      const g = byRef.get(a.reference)
+      g.total += Number(a.amount)
+      g.items.push({ group: a.group_name, amount: Number(a.amount), kind: a.kind })
+    }
+    const paymentBreakdowns = Array.from(byRef.values()).slice(0, 20)
+
     const totalPaidAll    = (recentPayments ?? []).filter((c: any) => c.status === 'paid').reduce((s: number, c: any) => s + Number(c.amount), 0)
     const totalPendingAll = (pendingContributions ?? []).reduce((s: number, c: any) => s + Number(c.amount), 0)
     const totalPenalties  = (penalties ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0)
@@ -125,6 +142,8 @@ serveWithCors(async (req) => {
       plans: plansWithBalance,          // memberships enriched with balance + next contribution
       pendingContributions,
       recentPayments,
+      paymentBreakdowns,
+      credit: Number((member as any).credit_balance ?? 0),
       payouts,
       penalties,
       announcements,

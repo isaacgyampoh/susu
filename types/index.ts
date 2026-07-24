@@ -93,6 +93,8 @@ export interface MemberDashboard {
   plans: GroupMembership[]
   pendingContributions: Contribution[]
   recentPayments: Contribution[]
+  credit?: number
+  paymentBreakdowns?: { reference: string; at: string; total: number; items: { group: string; amount: number; kind: string }[] }[]
   payouts: Payout[]
   penalties: PaymentPenalty[]
   announcements: Announcement[]

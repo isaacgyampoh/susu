@@ -109,9 +109,16 @@ serveWithCors(async (req) => {
       await sendSMS(bk.member.phone, line)
       texted++
     } else {
-      // Charge couldn't start — clean up the pending row so tomorrow retries
+      // The prompt couldn't be raised (a provider hiccup, a bad number). The
+      // member must still be reminded — send a plain reminder with the amount
+      // and how to pay, rather than going silent. Clean up the dead charge so
+      // tomorrow retries the prompt.
       await supabaseAdmin.from('transactions').update({ status: 'failed' }).eq('reference', ref)
-      skipped++
+      const first = bk.member.full_name.split(' ')[0]
+      await sendSMS(bk.member.phone,
+        `Hi ${first}, your ${bk.group?.name ?? 'susu'} contribution of GHS ${base.toFixed(2)} is due today. ` +
+        `Open your portal to pay, or reply/visit to pay by MoMo or cash. Thank you! — Abbie Wealth`)
+      texted++
     }
   }
 

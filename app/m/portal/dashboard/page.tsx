@@ -61,7 +61,7 @@ export default function Dashboard() {
   )
   if (!d)      return <div className="p-10 text-center t-meta">Could not load your account.</div>
 
-  const { member, plans, summary, pendingContributions, recentPayments, penalties } = d
+  const { member, plans, summary, pendingContributions, recentPayments, penalties, credit, paymentBreakdowns } = d
   const dueToday = pendingContributions.find(c => isToday(new Date(c.due_date)))
   const dueTodayAll = pendingContributions.filter(c => isToday(new Date(c.due_date)))
 
@@ -127,6 +127,16 @@ export default function Dashboard() {
         </div>
       )}
 
+
+      {(credit ?? 0) > 0 && (
+        <div className="mb-4 p-3.5 rounded-2xl bg-ink text-white flex items-center justify-between">
+          <div>
+            <p className="text-[12px] text-white/70">Credit on your account</p>
+            <p className="text-[20px] font-extrabold tnum">GHS {n2(credit ?? 0)}</p>
+          </div>
+          <p className="text-[11px] text-white/60 max-w-[46%] text-right">Goes towards your next contribution automatically.</p>
+        </div>
+      )}
 
       {plans.length > 1 && (
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-5 px-5 scrollbar-none"
@@ -208,26 +218,57 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Recent */}
+      {/* Recent payments — each shows what it covered */}
       <div className="panel p-5">
         <div className="flex items-center justify-between mb-3">
           <p className="t-h2">Recent payments</p>
           <Link href="/m/portal/payments" className="t-meta font-semibold flex items-center gap-0.5 hover:text-ink transition-colors">
             See all </Link>
         </div>
-        {recentPayments.filter(p => p.status === 'paid').length === 0 ? (
-          <p className="t-meta py-3">No payments yet.</p>
-        ) : (
-          <div className="divide-y divide-line">
-            {recentPayments.filter(p => p.status === 'paid').slice(0, 5).map(c => (
-              <div key={c.id} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="text-[13.5px] font-semibold">{c.susu_groups?.name}</p>
-                  <p className="t-meta">{c.paid_at ? format(new Date(c.paid_at), 'd MMM, HH:mm') : format(new Date(c.due_date), 'd MMM')}</p>
+        {(!paymentBreakdowns || paymentBreakdowns.length === 0) ? (
+          recentPayments.filter(p => p.status === 'paid').length === 0 ? (
+            <p className="t-meta py-3">No payments yet.</p>
+          ) : (
+            <div className="divide-y divide-line">
+              {recentPayments.filter(p => p.status === 'paid').slice(0, 5).map(c => (
+                <div key={c.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-[13.5px] font-semibold">{c.susu_groups?.name}</p>
+                    <p className="t-meta">{c.paid_at ? format(new Date(c.paid_at), 'd MMM, HH:mm') : format(new Date(c.due_date), 'd MMM')}</p>
+                  </div>
+                  <p className="text-[14px] font-bold text-ink tnum">GHS {n2(c.amount)}</p>
                 </div>
-                <p className="text-[14px] font-bold text-ink tnum">GHS {n2(c.amount)}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+          )
+        ) : (
+          <div className="space-y-3">
+            {paymentBreakdowns.slice(0, 5).map((p: any) => {
+              // Roll the per-day items up to per-group, so one payment reads
+              // 'Group A — 3 days, Group B — 1 day' rather than a long list.
+              const perGroup = new Map<string, { amount: number; days: number }>()
+              for (const it of p.items) {
+                const g = perGroup.get(it.group) ?? { amount: 0, days: 0 }
+                g.amount += it.amount; g.days += 1
+                perGroup.set(it.group, g)
+              }
+              return (
+                <div key={p.reference} className="rounded-xl border border-line p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[14px] font-bold text-ink tnum">GHS {n2(p.total)}</p>
+                    <p className="t-meta">{p.at ? format(new Date(p.at), 'd MMM, HH:mm') : ''}</p>
+                  </div>
+                  <div className="space-y-1">
+                    {Array.from(perGroup.entries()).map(([group, v]) => (
+                      <div key={group} className="flex items-center justify-between text-[12.5px]">
+                        <span className="text-ink-2">{group}</span>
+                        <span className="text-ink font-medium tnum">GHS {n2(v.amount)} · {v.days} day{v.days === 1 ? '' : 's'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
