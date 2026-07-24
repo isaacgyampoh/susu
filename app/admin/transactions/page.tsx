@@ -34,6 +34,7 @@ export default function DailyPaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [q, setQ]             = useState('')
   const [busyId, setBusyId]   = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -65,6 +66,16 @@ export default function DailyPaymentsPage() {
     a.download = `daily-payments-${day}.csv`
     a.click()
     URL.revokeObjectURL(a.href)
+  }
+
+  async function syncNow() {
+    setSyncing(true)
+    const { data, error } = await callFunction<any>('cron-settle-pending', {
+      method: 'POST', token: getAdminToken()!, body: {},
+    })
+    setSyncing(false)
+    alert(error ? `${error}` : (data?.message ?? 'Done.'))
+    if (!error) load()
   }
 
   async function restoreReversals() {
@@ -164,6 +175,10 @@ export default function DailyPaymentsPage() {
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
+        <button onClick={syncNow} disabled={syncing}
+          className="px-3 py-2 bg-ink text-white rounded-[10px] text-xs font-semibold hover:brightness-105 transition-all disabled:opacity-50 whitespace-nowrap">
+          {syncing ? 'Checking…' : 'Sync now'}
+        </button>
         <button onClick={restoreReversals}
           className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
           Restore reversed

@@ -42,14 +42,32 @@ async function settle(orderId: string, callbackSaysComplete = false) {
   if (!settled) { console.warn(`nalo: ${orderId} not settled (status ${tx?.settled}, callback ${callbackSaysComplete})`); return }
   const amount = tx?.amount ?? 0
 
-  // The transaction was stored under OUR reference with NaloPay's order_id in
-  // paystack_data — find it by that order_id.
+  // Find the transaction by the provider's order id, matched in the database
+  // rather than by scanning pending rows. Scanning was fragile: it only looked
+  // at pending transactions and was capped by the default row limit, so when a
+  // member paid two groups within a minute the second callback could arrive
+  // while the first was mid-settle and match nothing at all — one payment
+  // showed, the other silently vanished.
   const { data: matches } = await supabaseAdmin
     .from('transactions')
     .select('id, status, member_id, related_id, type, amount, reference, paystack_data')
-    .eq('status', 'pending')
-  const existing = (matches ?? []).find((t: any) =>
-    (t.paystack_data as { provider_order_id?: string } | null)?.provider_order_id === orderId)
+    .contains('paystack_data', { provider_order_id: orderId })
+    .limit(5)
+
+  let existing = (matches ?? [])[0] ?? null
+
+  // The order id is written just after the prompt is raised, so a very fast
+  // callback can beat it. Give it a moment rather than dropping the payment —
+  // the sweeper would catch it later, but the member should not wait.
+  if (!existing) {
+    await new Promise(r => setTimeout(r, 2500))
+    const { data: retry } = await supabaseAdmin
+      .from('transactions')
+      .select('id, status, member_id, related_id, type, amount, reference, paystack_data')
+      .contains('paystack_data', { provider_order_id: orderId })
+      .limit(5)
+    existing = (retry ?? [])[0] ?? null
+  }
 
   if (!existing) { console.warn(`nalo: settled ${orderId} with no local record`); return }
   const ref = existing.reference

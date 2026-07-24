@@ -6,6 +6,7 @@
 -- Replace <CRON_SECRET> with the value you set as the CRON_SECRET edge secret.
 -- Project ref qaelfwtbaehdwhnxkpid is pre-filled. Times are UTC = Ghana time.
 --
+--   every 10 min  settle pending  (catches any payment the callback missed)
 --   07:00  daily payment reminders  (texts each member their dial code per group)
 --   14:30  afternoon reminders      (same, for anyone still unpaid)
 --   09:00  payout reminders         (member on standby + admin prepare funds)
@@ -16,11 +17,22 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- Clean slate
+SELECT cron.unschedule('susu-settle-pending')   WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-settle-pending');
 SELECT cron.unschedule('susu-daily-reminders')  WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-daily-reminders');
 SELECT cron.unschedule('susu-afternoon-reminders') WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-afternoon-reminders');
 SELECT cron.unschedule('susu-payout-reminders') WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-payout-reminders');
 SELECT cron.unschedule('susu-daily-digest')     WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-daily-digest');
 SELECT cron.unschedule('susu-flag-late')        WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'susu-flag-late');
+
+-- every 10 minutes — settle any payment the provider now confirms successful.
+-- This is what makes payments appear without anyone pasting transaction IDs.
+SELECT cron.schedule('susu-settle-pending', '*/10 * * * *', $$
+  SELECT net.http_post(
+    url     := 'https://qaelfwtbaehdwhnxkpid.supabase.co/functions/v1/cron-settle-pending?key=<CRON_SECRET>',
+    headers := '{"Content-Type": "application/json"}'::jsonb,
+    body    := '{}'::jsonb
+  );
+$$);
 
 -- 07:00 — daily payment reminders with dial codes
 SELECT cron.schedule('susu-daily-reminders', '0 7 * * *', $$
