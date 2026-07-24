@@ -7,7 +7,10 @@ import type { SusuGroup } from '@/types'
  * Public application form — no sign-in required. A prospective member
  * picks ONE OR SEVERAL susu groups, fills in their details, uploads
  * their Ghana Card, and submits. The application lands in the admin
- * KYC queue; if Paystack is configured and fees apply, they're sent
+ * KYC queue. The registration fee is taken after approval — either the
+ * admin records it, or the member pays it from their portal — because a
+ * mobile-money prompt needs a member account, which an applicant lacks.
+ * (was: if Paystack is configured and fees apply, they're sent
  * to pay the combined registration fee.
  */
 
@@ -62,16 +65,11 @@ export default function JoinPage() {
 
     const { data, error: err } = await callFunction<{
       kyc_id: string; fee: number; fee_paid: boolean
-      paystack: { authorization_url: string } | null
     }>('kyc-submit', { method: 'POST', body: fd })
     setSending(false)
     if (err) { setError(err); return }
 
-    // Registration fee due online? Send them straight to payment.
-    if (data?.paystack?.authorization_url) {
-      window.location.href = data.paystack.authorization_url
-      return
-    }
+    // Fee is handled after approval, so just confirm the application.
     setDone({ fee: data?.fee ?? 0, paid: !!data?.fee_paid })
     window.scrollTo(0, 0)
   }

@@ -2,7 +2,6 @@ import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
-import { paymentStatus as moolreStatus } from '../_shared/moolre.ts'
 import { provider }                from '../_shared/mode.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 
@@ -21,8 +20,8 @@ serveWithCors(async (req) => {
   if (!admin) return error('Unauthorized', 401)
 
   const prov = provider()
-  if (prov !== 'nalo' && prov !== 'moolre') return error(`Reconcile needs a phone-prompt provider. Active: ${prov}.`, 400)
-  const getStatus = prov === 'nalo' ? naloStatus : moolreStatus
+  if (prov !== 'nalo') return error(`Reconcile needs a phone-prompt provider. Active: ${prov}.`, 400)
+  const getStatus = naloStatus
 
   const body = await req.json().catch(() => ({}))
   // force=true: settle every pending payment the operator has confirmed in the

@@ -1,26 +1,19 @@
-import { moolreConfigured } from './moolre.ts'
 import { naloConfigured } from './nalo.ts'
 
 /**
  * Which payment provider is live, and is it safe to take money?
  *
+ * NaloPay is the only provider. Moolre and Paystack were removed once the
+ * business settled on Nalo — carrying three half-exercised payment paths was
+ * a liability, since a bug could hide in the two nobody ever ran.
+ *
  * The rule that matters: dev payments are an explicit choice, never an
  * inference. A missing key must never become free contributions.
  */
-export type Provider = 'nalo' | 'moolre' | 'paystack' | 'none'
-
-export const paystackConfigured = () => !!Deno.env.get('PAYSTACK_SECRET_KEY')
+export type Provider = 'nalo' | 'none'
 
 export function provider(): Provider {
-  const pick = (Deno.env.get('PAYMENT_PROVIDER') ?? '').toLowerCase()
-  if (pick === 'nalo'     && naloConfigured())     return 'nalo'
-  if (pick === 'moolre'   && moolreConfigured())   return 'moolre'
-  if (pick === 'paystack' && paystackConfigured()) return 'paystack'
-  // Nothing chosen: use whatever is actually configured, Nalo first.
-  if (naloConfigured())     return 'nalo'
-  if (moolreConfigured())   return 'moolre'
-  if (paystackConfigured()) return 'paystack'
-  return 'none'
+  return naloConfigured() ? 'nalo' : 'none'
 }
 
 export const devPaymentsAllowed = () =>

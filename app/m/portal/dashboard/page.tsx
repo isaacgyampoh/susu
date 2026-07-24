@@ -36,7 +36,7 @@ export default function Dashboard() {
     setP(null)
     if (error) return alert(error)
     if (data?.dev_mode) return load()
-    // Moolre: the member approves on their phone, so wait here rather than leave
+    // The member approves on their phone, so wait here rather than leave
     if (data?.status === 'prompted' || data?.status === 'otp_required') {
       setPending({ ...data, amount: data.amount ?? c.amount }); return
     }

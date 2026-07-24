@@ -3,7 +3,6 @@ import { supabaseAdmin }        from '../_shared/supabase-admin.ts'
 import { requireAdmin }         from '../_shared/jwt.ts'
 import { provider }             from '../_shared/mode.ts'
 import { requestPayment as naloRequest,   paymentStatus as naloStatus }   from '../_shared/nalo.ts'
-import { requestPayment as moolreRequest, paymentStatus as moolreStatus } from '../_shared/moolre.ts'
 
 /*
  * Admin payment self-test. Fires a real (small) MoMo prompt to a chosen
@@ -39,11 +38,11 @@ serveWithCors(async (req) => {
     })
   }
 
-  if (prov !== 'nalo' && prov !== 'moolre') {
+  if (prov !== 'nalo') {
     return error(`Test prompts only apply to phone-prompt providers. Active provider: ${prov}.`, 400)
   }
-  const doRequest = prov === 'nalo' ? naloRequest : moolreRequest
-  const doStatus  = prov === 'nalo' ? naloStatus  : moolreStatus
+  const doRequest = naloRequest
+  const doStatus  = naloStatus
 
   if (action === 'prompt') {
     const phone   = String(body.phone ?? '').trim()

@@ -15,7 +15,9 @@
  *
  * trans_hash = HMAC_SHA256(merchant_id + account_number + amount + reference, secret) hex.
  *
- * Exposes the SAME shapes as _shared/moolre.ts so callers are provider-agnostic.
+ * The only payment provider. `moolreRef` in the result shape is a legacy
+ * field name kept so callers did not all have to change when the other
+ * providers were removed; it carries NaloPay's order_id.
  */
 
 const BASE     = () => (Deno.env.get('NALO_BASE_URL') ?? 'https://api.nalopay.com').replace(/\/$/, '')
@@ -66,7 +68,7 @@ export function naloPhone(phone: string): string {
   return d
 }
 
-// Common result shapes (match moolre.ts)
+// Result shapes
 export type PromptResult =
   | { kind: 'prompted'; moolreRef: string; ussd?: string }  // ussd = dial-code the member approves with
   | { kind: 'otp_required'; message: string }

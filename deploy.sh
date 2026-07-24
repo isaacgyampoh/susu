@@ -14,6 +14,11 @@ supabase functions deploy payments-verify
 supabase functions deploy payments-bulk
 supabase functions deploy payments-otp
 supabase functions deploy admin-reconcile-payments
+supabase functions deploy admin-paid-today
+supabase functions deploy admin-sms-log
+supabase functions deploy admin-restore-reversals
+supabase functions deploy admin-repair-forced
+supabase functions deploy admin-undo-payment
 supabase functions deploy admin-transactions
 supabase functions deploy admin-analytics
 supabase functions deploy admin-members
@@ -30,6 +35,7 @@ supabase functions deploy groups-activate
 supabase functions deploy admin-send-invites
 supabase functions deploy announcements
 supabase functions deploy flag-late-payments
+supabase functions deploy cron-settle-pending
 supabase functions deploy cron-daily-digest
 supabase functions deploy cron-daily-reminders
 supabase functions deploy cron-payout-reminders

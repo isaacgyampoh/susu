@@ -1,8 +1,6 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
-import { initializeTransaction } from '../_shared/paystack.ts'
-import { requestPayment }        from '../_shared/moolre.ts'
 import { requestPayment as naloRequest } from '../_shared/nalo.ts'
 import { provider, devPaymentsAllowed, paymentsUnavailable, withServiceCharge } from '../_shared/mode.ts'
 
@@ -134,11 +132,11 @@ serveWithCors(async (req) => {
 
     const reference = `BULK-${batchId.slice(0, 8)}-${Date.now()}`
 
-    // Prompt providers (Nalo, Moolre): one prompt for the whole batch — the
+    // One prompt for the whole batch — the
     // point of paying ahead is one approval, not thirty.
-    if (provider() === 'nalo' || provider() === 'moolre') {
+    if (provider() === 'nalo') {
       const prov = provider()
-      const doRequest = prov === 'nalo' ? naloRequest : requestPayment
+      const doRequest = naloRequest
       const momo = (payNumber && String(payNumber).trim()) || member?.mobile_money_number || member?.phone
       if (!momo) return error('No mobile money number on your account. Ask your admin to add one.', 400)
       const net = (payNetwork && String(payNetwork).trim()) || member?.mobile_money_provider || 'MTN'
@@ -187,39 +185,7 @@ serveWithCors(async (req) => {
       return error(res.message, 400)
     }
 
-    const email     = member?.email ?? `${member?.phone?.replace('+', '')}@susu.platform`
-
-    const paystackRes = await initializeTransaction({
-      email,
-      amount:       Math.round(total * 100),
-      reference,
-      callback_url: `${FRONTEND_URL}/member/payments?ref=${reference}`,
-      metadata: {
-        type: 'bulk_contribution',
-        batch_id: batchId,
-        member_id: memberId,
-        contribution_ids: unpaidIds,
-        count: unpaid.length,
-        member_name: member?.full_name,
-      },
-    })
-
-    if (!paystackRes.status) return error('Could not initialize payment', 500)
-
-    // Tag contributions with the batch so the webhook can find them
-    await supabaseAdmin.from('contributions').update({ batch_id: batchId }).in('id', unpaidIds)
-
-    await supabaseAdmin.from('transactions').insert({
-      member_id: memberId, type: 'contribution', amount: total,
-      reference, batch_id: batchId, items_count: unpaid.length,
-      description: `Bulk payment — ${unpaid.length} contributions`,
-      status: 'pending',
-    })
-
-    return json({
-      authorization_url: paystackRes.data.authorization_url,
-      reference, count: unpaid.length, subtotal, penalties, total,
-    })
+    return error('Online payment is not available right now. Please contact your susu admin.', 503)
   } catch (e) {
     console.error(e)
     return error('Internal server error', 500)

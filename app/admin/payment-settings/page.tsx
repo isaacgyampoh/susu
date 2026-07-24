@@ -72,7 +72,7 @@ export default function PaymentSettingsPage() {
         </div>
       )}
 
-      {live && status?.provider !== 'paystack' && (
+      {live && (
         <div className="card p-5 mt-5">
           <h2 className="font-semibold text-ink mb-1">Fire a test prompt</h2>
           <p className="text-xs text-ink-3 mb-4">
@@ -150,9 +150,7 @@ export default function PaymentSettingsPage() {
         {runResult && <p className="mt-3 text-xs text-ink-2 font-mono break-all">{runResult}</p>}
       </div>
 
-      {live && status?.provider === 'paystack' && (
-        <p className="text-sm text-ink-2 mt-5">Paystack uses a redirect checkout — test it from the member portal's pay flow.</p>
-      )}
+
     </div>
   )
 }

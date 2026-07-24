@@ -3,7 +3,6 @@ import { supabaseAdmin }       from '../_shared/supabase-admin.ts'
 import { requireAdmin }        from '../_shared/jwt.ts'
 import { sendSMS }             from '../_shared/africas-talking.ts'
 import { requestPayment as naloRequest } from '../_shared/nalo.ts'
-import { requestPayment as moolreRequest } from '../_shared/moolre.ts'
 import { provider, withServiceCharge } from '../_shared/mode.ts'
 
 /*
@@ -31,10 +30,10 @@ serveWithCors(async (req) => {
   }
 
   const prov = provider()
-  if (prov !== 'nalo' && prov !== 'moolre') {
+  if (prov !== 'nalo') {
     return json({ error: 'reminder needs a phone-prompt provider', provider: prov }, 400)
   }
-  const doReq = prov === 'nalo' ? naloRequest : moolreRequest
+  const doReq = naloRequest
 
   const today = new Date().toISOString().slice(0, 10)
 

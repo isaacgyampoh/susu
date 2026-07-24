@@ -3,7 +3,6 @@ import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { provider }                from '../_shared/mode.ts'
 import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
-import { paymentStatus as moolreStatus } from '../_shared/moolre.ts'
 import { applyPaymentToSchedule }  from '../_shared/settle.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 
@@ -39,10 +38,10 @@ serveWithCors(async (req) => {
   }
 
   const prov = provider()
-  if (prov !== 'nalo' && prov !== 'moolre') {
+  if (prov !== 'nalo') {
     return json({ error: `sweeper needs a phone-prompt provider; active: ${prov}` }, 400)
   }
-  const getStatus = prov === 'nalo' ? naloStatus : moolreStatus
+  const getStatus = naloStatus
 
   const since = new Date(Date.now() - 48 * 3600e3).toISOString()
   const { data: pending, error: dbErr } = await supabaseAdmin

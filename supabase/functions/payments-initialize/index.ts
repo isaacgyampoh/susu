@@ -1,8 +1,6 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
-import { initializeTransaction }   from '../_shared/paystack.ts'
-import { requestPayment as moolreRequest } from '../_shared/moolre.ts'
 import { requestPayment as naloRequest }   from '../_shared/nalo.ts'
 import { provider, devPaymentsAllowed, paymentsUnavailable, withServiceCharge, serviceChargePct } from '../_shared/mode.ts'
 
@@ -45,9 +43,9 @@ serveWithCors(async (req) => {
         return json({ dev_mode: true, message: 'Registration fee recorded (dev mode)' })
       }
 
-      if (provider() === 'nalo' || provider() === 'moolre') {
+      if (provider() === 'nalo') {
         const prov = provider()
-        const doReq = prov === 'nalo' ? naloRequest : moolreRequest
+        const doReq = naloRequest
         const momo = (pay_number && String(pay_number).trim()) || rmember?.mobile_money_number || rmember?.phone
         if (!momo) return error('Enter a mobile money number to pay.', 400)
         const net = (pay_network && String(pay_network).trim()) || rmember?.mobile_money_provider || 'MTN'
@@ -133,9 +131,9 @@ serveWithCors(async (req) => {
     }
 
     // ── PROMPT PROVIDERS (Nalo, Moolre): a prompt on the member's phone ──
-    if (provider() === 'nalo' || provider() === 'moolre') {
+    if (provider() === 'nalo') {
       const prov = provider()
-      const requestPayment = prov === 'nalo' ? naloRequest : moolreRequest
+      const requestPayment = naloRequest
       // The member may pay from a DIFFERENT number than the one on file —
       // e.g. their registration number has no MoMo. Honour a chosen number.
       const momo = (pay_number && String(pay_number).trim())
@@ -188,17 +186,7 @@ serveWithCors(async (req) => {
       return error(res.message, 400)
     }
 
-    // ── PAYSTACK: redirect ──
-    const email = member.email ?? `${String(member.phone).replace('+', '')}@susu.platform`
-    const pay = await initializeTransaction({
-      email, amount: Math.round(charged * 100), reference: ref,
-      callback_url: `${FRONTEND_URL}/m/portal/payments?ref=${ref}`,
-      metadata: { type: 'contribution', contribution_id, member_id: session.sub, member_name: member.full_name },
-    })
-    if (!pay.status) return error('Could not start payment', 500)
-
-    await recordIntent()
-    return json({ provider: 'paystack', authorization_url: pay.data.authorization_url, reference: ref, amount: due })
+    return error('Online payment is not available right now. Please contact your susu admin.', 503)
   } catch (e) {
     console.error(e)
     return error('Internal server error', 500)

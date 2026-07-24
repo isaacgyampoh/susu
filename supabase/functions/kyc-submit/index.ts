@@ -1,7 +1,6 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
-import { initializeTransaction } from '../_shared/paystack.ts'
-import { paystackConfigured, devPaymentsAllowed, provider } from '../_shared/mode.ts'
+import { devPaymentsAllowed } from '../_shared/mode.ts'
 
 
 /** Validate an uploaded image when present (absent files are fine). */
@@ -145,31 +144,16 @@ serveWithCors(async (req) => {
     }
     if (kycErr || !kyc) return error(kycErr?.message ?? 'Could not save application', 500)
 
-    // Registration fee online only via Paystack's redirect. Nalo/Moolre are
-    // phone-prompt providers that need an authenticated member, which an
-    // applicant is not yet — so under those, the fee is collected manually
-    // (admin 'Mark paid' on the KYC list once the MoMo lands).
-    let paystackData = null
-    if (provider() === 'paystack' && paystackConfigured() && group.registration_fee > 0) {
-      const reference  = `KYC-${kyc.id}-${ts}`
-      const paystackRes = await initializeTransaction({
-        email:        (formData.get('email') as string) ?? `${normPhone.replace('+', '')}@susu.platform`,
-        amount:       Math.round(group.registration_fee * 100),
-        reference,
-        callback_url: `${Deno.env.get('FRONTEND_URL') ?? ''}/join/${selected_group_id}?ref=${reference}`,
-        metadata:     { kyc_id: kyc.id, group_id: selected_group_id, group_ids: selectedGroupIds, type: 'registration_fee' },
-      })
-      if (paystackRes.status) {
-        paystackData = { authorization_url: paystackRes.data.authorization_url, reference: paystackRes.data.reference }
-      }
-    }
+    // No online payment at application time. NaloPay prompts a phone, which
+    // needs an authenticated member — an applicant is not one yet. The fee is
+    // taken after approval: either the admin marks it paid when the MoMo
+    // lands, or the member pays it from their portal on first sign-in.
 
     return json({
       message:  'KYC application submitted successfully',
       kyc_id:   kyc.id,
       fee:      group.registration_fee,
       fee_paid: devPaymentsAllowed(),
-      paystack: paystackData,
     }, 201)
   } catch (e) {
     console.error(e)

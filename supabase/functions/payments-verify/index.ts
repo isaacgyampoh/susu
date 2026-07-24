@@ -1,9 +1,7 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }         from '../_shared/supabase-admin.ts'
 import { requireMember }         from '../_shared/jwt.ts'
-import { paymentStatus as moolreStatus } from '../_shared/moolre.ts'
 import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
-import { verifyTransaction }     from '../_shared/paystack.ts'
 import { provider, paymentsUnavailable } from '../_shared/mode.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 import { applyPaymentToSchedule } from '../_shared/settle.ts'
@@ -12,7 +10,7 @@ import { applyPaymentToSchedule } from '../_shared/settle.ts'
  * The member's app polls this after approving a prompt.
  *
  * With no trustworthy webhook, this is not a convenience — it is how a payment
- * gets settled at all. The phone asks "did it land?", we ask Moolre, and the
+ * gets settled at all. The phone asks "did it land?", we ask NaloPay, and the
  * answer decides.
  */
 /** A single payment or a whole batch — settle whatever this reference covers. */
@@ -70,7 +68,7 @@ serveWithCors(async (req) => {
     if (!tx) return error('Payment not found', 404)
     if (tx.status === 'success') return json({ status: 'paid', message: 'Payment confirmed' })
 
-    if (provider() === 'nalo' || provider() === 'moolre') {
+    if (provider() === 'nalo') {
       let lookupRef = reference
       if (provider() === 'nalo') {
         // NaloPay is keyed by its order_id, saved on the transaction at prompt time
@@ -79,7 +77,7 @@ serveWithCors(async (req) => {
         const oid = (txRow?.paystack_data as { provider_order_id?: string } | null)?.provider_order_id
         if (oid) lookupRef = oid
       }
-      const s = provider() === 'nalo' ? await naloStatus(lookupRef) : await moolreStatus(reference)
+      const s = await naloStatus(lookupRef)
       if (!s)        return json({ status: 'pending', message: 'Waiting for confirmation…' })
       if (s.pending) return json({ status: 'pending', message: 'Waiting for you to approve the prompt…' })
       if (!s.settled) {
@@ -118,18 +116,7 @@ serveWithCors(async (req) => {
       return json({ status: 'paid', message: 'Payment confirmed. Thank you.' })
     }
 
-    // Paystack
-    const p = await verifyTransaction(reference)
-    if (!p.status || p.data?.status !== 'success') {
-      return json({ status: 'pending', message: 'Not confirmed yet.' })
-    }
-    if (tx.type === 'contribution' && tx.related_id) {
-      await supabaseAdmin.from('contributions')
-        .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: reference })
-        .eq('id', tx.related_id)
-    }
-    await supabaseAdmin.from('transactions').update({ status: 'success' }).eq('reference', reference)
-    return json({ status: 'paid', message: 'Payment confirmed' })
+    return json({ status: 'pending', message: 'Not confirmed yet.' })
   } catch (e) {
     console.error(e)
     return error('Internal server error', 500)
