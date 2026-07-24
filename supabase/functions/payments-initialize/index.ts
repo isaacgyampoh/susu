@@ -18,7 +18,7 @@ serveWithCors(async (req) => {
   if (blocked) return blocked
 
   try {
-    const { contribution_id, registration_tx_id, pay_number, pay_network, pay_amount } = await req.json()
+    const { contribution_id, registration_tx_id, pay_number, pay_network, pay_amount, this_group_only } = await req.json()
 
     // ── REGISTRATION FEE: pay a pending registration_fee transaction ──
     if (registration_tx_id) {
@@ -157,8 +157,13 @@ serveWithCors(async (req) => {
         // NaloPay verifies by ITS order_id (res.moolreRef), not our ref —
         // persist it so verify/webhook can look the payment up.
         if (res.moolreRef) {
+          // The scope travels with the transaction: settlement happens later,
+          // in the callback or the sweeper, long after this request is gone.
           await supabaseAdmin.from('transactions')
-            .update({ paystack_data: { provider_order_id: res.moolreRef } as never })
+            .update({ paystack_data: {
+              provider_order_id: res.moolreRef,
+              scope: this_group_only ? 'slot' : 'member',
+            } as never })
             .eq('reference', ref)
         }
         return json({

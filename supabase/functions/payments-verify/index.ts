@@ -36,7 +36,7 @@ async function settleLocally(reference: string, tx: any, raw: unknown): Promise<
         .in('contribution_id', ids.map((r: { id: string }) => r.id))
     }
   } else if (tx.type === 'contribution' && tx.related_id) {
-    lastSpread = await applyPaymentToSchedule(tx.related_id, Number(tx.amount), reference)
+    lastSpread = await applyPaymentToSchedule(tx.related_id, Number(tx.amount), reference, ((tx.paystack_data as any)?.scope === 'slot' ? 'slot' : 'member'))
   }
   // If this was a registration fee, flag the member's KYC application paid too
   if (tx.type === 'registration_fee') {

@@ -74,7 +74,7 @@ serveWithCors(async (req) => {
         .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: tx.reference })
         .eq('batch_id', tx.batch_id).neq('status', 'paid')
     } else if (tx.related_id) {
-      await applyPaymentToSchedule(tx.related_id, Number(tx.amount ?? 0), tx.reference)
+      await applyPaymentToSchedule(tx.related_id, Number(tx.amount ?? 0), tx.reference, ((tx.paystack_data as any)?.scope === 'slot' ? 'slot' : 'member'))
     }
 
     if (tx.type === 'registration_fee') {

@@ -87,7 +87,7 @@ async function settle(orderId: string, callbackSaysComplete = false) {
   if (existing.type === 'contribution' && existing.related_id) {
     // Spread the payment: overpayments clear later days of the same slot,
     // shortfalls bank as a part payment — identical to every other path.
-    await applyPaymentToSchedule(existing.related_id, Number(existing.amount ?? 0), ref)
+    await applyPaymentToSchedule(existing.related_id, Number(existing.amount ?? 0), ref, ((existing.paystack_data as any)?.scope === 'slot' ? 'slot' : 'member'))
   }
 
 

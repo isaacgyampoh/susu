@@ -24,6 +24,7 @@ export async function applyPaymentToSchedule(
   startContributionId: string,
   paidAmount: number,
   reference: string,
+  scope: 'member' | 'slot' = 'member',
 ): Promise<{ daysCleared: number; partBanked: number; unallocated: number; groups: string[] }> {
   const now = new Date().toISOString()
 
@@ -54,7 +55,9 @@ export async function applyPaymentToSchedule(
       .limit(200)
     queue = queue.concat(sameSlot ?? [])
   }
-  if (start.member_id) {
+  // 'slot' scope stops here: the member chose to pay this group only, so their
+  // money must not wander into another group's schedule however much is left.
+  if (scope === 'member' && start.member_id) {
     const { data: otherSlots } = await supabaseAdmin
       .from('contributions')
       .select('id, amount, amount_paid, penalty_due, membership_id, member_id, due_date, status')
