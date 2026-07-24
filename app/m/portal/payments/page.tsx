@@ -21,6 +21,7 @@ export default function Payments() {
   const [prev, setPrev]   = useState<any>(null)
   const [loadingPrev, setLP] = useState(false)
   const [bulkBusy, setBB] = useState(false)
+  const groupCount = new Set(rows.map(r => (r as any).group_id ?? (r as any).susu_groups?.name).filter(Boolean)).size
 
   async function load() {
     setL(true)
@@ -39,11 +40,11 @@ export default function Payments() {
 
   function payOne(c: Contribution) { setNumSheet(c) }
 
-  async function doPayOne(c: Contribution, payNumber?: string, payNetwork?: string, payAmount?: number) {
+  async function doPayOne(c: Contribution, payNumber?: string, payNetwork?: string, payAmount?: number, thisGroupOnly?: boolean) {
     setNumSheet(null)
     setP(c.id)
     const { data, error } = await callFunction<any>('payments-initialize',
-      { method: 'POST', body: { contribution_id: c.id, pay_number: payNumber, pay_network: payNetwork, pay_amount: payAmount }, token: getMemberToken()! })
+      { method: 'POST', body: { contribution_id: c.id, pay_number: payNumber, pay_network: payNetwork, pay_amount: payAmount, this_group_only: thisGroupOnly }, token: getMemberToken()! })
     setP(null)
     if (error) return alert(error)
     if (data?.dev_mode) return load()
@@ -196,10 +197,11 @@ export default function Payments() {
       {numSheet && (
         <PayNumberSheet
           amount={Number(numSheet.amount ?? 0)}
+          hasOtherGroups={groupCount > 1}
           groupName={(numSheet as any).susu_groups?.name}
           slotLabel={(numSheet as any).group_memberships?.payout_position ? `Slot ${(numSheet as any).group_memberships.payout_position}` : undefined}
           dueDate={(numSheet as any).due_date}
-          onConfirm={(num, net, amt) => doPayOne(numSheet, num, net, amt)}
+          onConfirm={(num, net, amt, only) => doPayOne(numSheet, num, net, amt, only)}
           onClose={() => setNumSheet(null)}
         />
       )}

@@ -9,7 +9,7 @@ import { useState } from 'react'
  */
 export default function PayNumberSheet({
   defaultNumber, defaultNetwork = 'MTN', amount, feePct = 1.5,
-  groupName, slotLabel, dueDate, onConfirm, onClose,
+  groupName, slotLabel, dueDate, hasOtherGroups, onConfirm, onClose,
 }: {
   defaultNumber?: string
   defaultNetwork?: string
@@ -18,10 +18,12 @@ export default function PayNumberSheet({
   groupName?: string
   slotLabel?: string
   dueDate?: string
-  onConfirm: (payNumber: string, payNetwork: string, payAmount: number) => void
+  hasOtherGroups?: boolean
+  onConfirm: (payNumber: string, payNetwork: string, payAmount: number, thisGroupOnly: boolean) => void
   onClose: () => void
 }) {
   const [payAmount, setPayAmount] = useState(String(amount))
+  const [thisGroupOnly, setThisGroupOnly] = useState(false)
   const base    = Math.max(0, Number(payAmount) || 0)
   const fee     = Math.round(base * (feePct / 100) * 100) / 100
   const charged = Math.round((base + fee) * 100) / 100
@@ -53,9 +55,27 @@ export default function PayNumberSheet({
               value={payAmount} onChange={e => setPayAmount(e.target.value)} />
           </div>
           {extra > 0.001 && (
-            <p className="text-[11.5px] text-ink-2 mt-1.5">
-              GHS {extra.toFixed(2)} more than today — it will clear your next days in this slot.
-            </p>
+            <div className="mt-2.5 p-2.5 rounded-lg bg-bg border border-line">
+              <p className="text-[11.5px] text-ink-2">
+                GHS {extra.toFixed(2)} more than this day&rsquo;s amount.
+              </p>
+              {hasOtherGroups ? (
+                <label className="flex items-start gap-2 mt-2 cursor-pointer">
+                  <input type="checkbox" className="mt-0.5"
+                    checked={thisGroupOnly} onChange={e => setThisGroupOnly(e.target.checked)} />
+                  <span className="text-[11.5px] text-ink-2 leading-snug">
+                    Pay this group only.{' '}
+                    <span className="text-ink-3">
+                      {thisGroupOnly
+                        ? 'The extra will pay your next days in this group; anything left stays as credit here.'
+                        : 'Otherwise the extra clears what you owe in your other groups too, oldest first.'}
+                    </span>
+                  </span>
+                </label>
+              ) : (
+                <p className="text-[11.5px] text-ink-3 mt-0.5">It will clear your next days in this group.</p>
+              )}
+            </div>
           )}
           {extra < -0.001 && (
             <p className="text-[11.5px] text-ink-2 mt-1.5">
@@ -100,7 +120,7 @@ export default function PayNumberSheet({
         )}
 
         <button
-          onClick={() => onConfirm(chosen, useOther || !defaultNumber ? network : defaultNetwork, base)}
+          onClick={() => onConfirm(chosen, useOther || !defaultNumber ? network : defaultNetwork, base, thisGroupOnly)}
           disabled={!valid || base <= 0}
           className="btn-dark w-full mt-5 disabled:opacity-40">
           Send prompt
