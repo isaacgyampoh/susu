@@ -35,6 +35,7 @@ export default function DailyPaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [q, setQ]             = useState('')
   const [busyId, setBusyId]   = useState<string | null>(null)
+  const [showAdvance, setShowAdvance] = useState(false)
   const [syncing, setSyncing] = useState(false)
 
   async function load() {
@@ -229,9 +230,12 @@ export default function DailyPaymentsPage() {
       {summary && (
         <div className="grid lg:grid-cols-2 gap-3 mb-5">
           <div className="card p-4">
-            <p className="t-label">Money received on {prettyDay(day).toLowerCase()}</p>
+            <p className="t-label">Money received {day === todayISO() ? "today" : `on ${prettyDay(day)}`}</p>
             <p className="text-[26px] font-extrabold text-ink mt-1 tnum">
               <span className="text-[13px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(summary.received_total)}
+              <span className="text-ink-2 font-semibold text-[16px] ml-2">
+                from {summary.received_count} payment{summary.received_count === 1 ? '' : 's'}
+              </span>
             </p>
             <div className="text-xs text-ink-2 mt-2 space-y-0.5">
               <p><span className="font-semibold text-ink">GHS {n2(summary.received_in_app)}</span> in-app
@@ -248,16 +252,16 @@ export default function DailyPaymentsPage() {
             ) : (
               <>
                 <p className="text-[26px] font-extrabold text-ink mt-1 tnum">
-                  {summary.paid_count} <span className="text-ink-2 font-semibold text-[18px]">of {summary.expected} settled</span>
+                  {summary.unpaid_count} <span className="text-ink-2 font-semibold text-[18px]">still to pay</span>
                 </p>
                 <div className="h-1.5 bg-line rounded-full overflow-hidden mt-3">
                   <div className="h-full bg-ink rounded-full transition-all"
                     style={{ width: `${Math.round((summary.paid_count / summary.expected) * 100)}%` }} />
                 </div>
                 <p className="text-xs text-ink-2 mt-2">
-                  GHS {n2(summary.outstanding)} still outstanding
+                  GHS {n2(summary.outstanding)} outstanding · {summary.expected} due in total
                   {summary.covered_earlier > 0 && (
-                    <span className="text-ink-3"> · {summary.covered_earlier} settled by money received on an earlier day</span>
+                    <span className="text-ink-3"> · {summary.covered_earlier} paid in advance</span>
                   )}
                 </p>
               </>
@@ -270,7 +274,7 @@ export default function DailyPaymentsPage() {
       {!loading && received.length > 0 && (
         <div className="border border-line rounded-[10px] overflow-hidden mb-5">
           <div className="px-5 py-3 border-b border-line bg-tint">
-            <p className="font-semibold text-ink text-sm">Received on {prettyDay(day).toLowerCase()} · {received.length}</p>
+            <p className="font-semibold text-ink text-sm">Paid {day === todayISO() ? "today" : `on ${prettyDay(day)}`} · {received.length}</p>
           </div>
           <div className="scroll-x">
             <table className="w-full text-sm min-w-[640px] lg:min-w-0">
@@ -318,54 +322,49 @@ export default function DailyPaymentsPage() {
         <p className="text-ink-3 text-sm py-10 text-center">Loading…</p>
       ) : (
         <>
-          {/* PAID */}
-          {paidShown.length > 0 && (
+          {/* Already covered before today — noted, not competing for attention.
+              These members owe nothing today; showing them as a full table
+              made the day look busier than it was. */}
+          {paidShown.filter(r => r.paid_on_another_day).length > 0 && (
             <div className="border border-line rounded-[10px] overflow-hidden mb-5">
-              <div className="px-5 py-3 border-b border-line bg-tint">
-                <p className="font-semibold text-ink text-sm">Dues settled for this day · {paidShown.length}</p>
-              </div>
-              <div className="scroll-x">
-                <table className="w-full text-sm min-w-[600px] lg:min-w-0">
-                  <thead className="border-b border-line">
-                    <tr className="text-ink-2 text-left">
-                      <th className="px-5 py-3 font-medium">Member</th>
-                      <th className="px-5 py-3 font-medium">Group</th>
-                      <th className="px-5 py-3 font-medium">Amount</th>
-                      <th className="px-5 py-3 font-medium">How</th>
-                      <th className="px-5 py-3 font-medium">When</th>
-                      <th className="px-5 py-3 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {paidShown.map(r => (
-                      <tr key={r.contribution_id} className="hover:bg-tint transition-colors">
-                        <td className="px-5 py-3.5">
-                          <Link href={`/admin/members/${r.member_id}`}
-                            className="font-medium text-ink hover:underline underline-offset-2">{r.name}</Link>
-                          <p className="text-[11px] text-ink-3">{r.code}</p>
-                        </td>
-                        <td className="px-5 py-3.5 text-ink-2">{r.group}</td>
-                        <td className="px-5 py-3.5 font-semibold tnum">GHS {n2(r.amount)}</td>
-                        <td className="px-5 py-3.5">
-                          {r.how === 'app'
-                            ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full badge-green">In-app</span>
-                            : <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-tint text-ink-2">Manual{r.method ? ` · ${r.method}` : ''}</span>}
-                        </td>
-                        <td className="px-5 py-3.5 text-ink-2 text-xs whitespace-nowrap">
-                          {r.paid_at ? format(new Date(r.paid_at), 'MMM d, HH:mm') : '—'}
-                          {r.paid_on_another_day && <span className="ml-1 text-[10px] text-ink-3">(not this day)</span>}
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <button onClick={() => undoPayment(r)} disabled={busyId === r.contribution_id}
-                            className="text-[11px] font-semibold text-ink-2 hover:text-red underline underline-offset-2 disabled:opacity-40">
-                            {busyId === r.contribution_id ? '…' : 'Undo'}
-                          </button>
-                        </td>
+              <button onClick={() => setShowAdvance(v => !v)}
+                className="w-full px-5 py-3 bg-tint flex items-center justify-between text-left hover:bg-bg transition-colors">
+                <p className="font-semibold text-ink text-sm">
+                  Already covered in advance · {paidShown.filter(r => r.paid_on_another_day).length}
+                </p>
+                <span className="text-[11.5px] text-ink-2">
+                  {showAdvance ? 'hide' : 'these members owe nothing today — show'}
+                </span>
+              </button>
+              {showAdvance && (
+                <div className="scroll-x">
+                  <table className="w-full text-sm min-w-[560px] lg:min-w-0">
+                    <thead className="border-y border-line">
+                      <tr className="text-ink-2 text-left">
+                        <th className="px-5 py-3 font-medium">Member</th>
+                        <th className="px-5 py-3 font-medium">Group</th>
+                        <th className="px-5 py-3 font-medium">Amount</th>
+                        <th className="px-5 py-3 font-medium">Paid on</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {paidShown.filter(r => r.paid_on_another_day).map(r => (
+                        <tr key={r.contribution_id} className="hover:bg-tint transition-colors">
+                          <td className="px-5 py-3.5">
+                            <Link href={`/admin/members/${r.member_id}`} className="font-medium text-ink hover:underline underline-offset-2">{r.name}</Link>
+                            <p className="text-[11px] text-ink-3">{r.code}</p>
+                          </td>
+                          <td className="px-5 py-3.5 text-ink-2">{r.group}</td>
+                          <td className="px-5 py-3.5 font-semibold tnum">GHS {n2(r.amount)}</td>
+                          <td className="px-5 py-3.5 text-ink-2 text-xs whitespace-nowrap">
+                            {r.paid_at ? format(new Date(r.paid_at), 'MMM d, HH:mm') : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -373,7 +372,7 @@ export default function DailyPaymentsPage() {
           {unpaidShown.length > 0 && (
             <div className="border border-line rounded-[10px] overflow-hidden">
               <div className="px-5 py-3 border-b border-line bg-tint">
-                <p className="font-semibold text-ink text-sm">Not paid · {unpaidShown.length}</p>
+                <p className="font-semibold text-ink text-sm">Still to pay · {unpaidShown.length}</p>
               </div>
               <div className="scroll-x">
                 <table className="w-full text-sm min-w-[520px] lg:min-w-0">
