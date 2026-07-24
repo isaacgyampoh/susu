@@ -26,6 +26,7 @@ const NAV = [
   ]},
   { group: 'Records', items: [
     { href: '/admin/messages',      label: 'Messages' },
+    { href: '/admin/sms-log',       label: 'SMS Log' },
     { href: '/admin/announcements', label: 'Announcements' },
     { href: '/admin/reports',       label: 'Reports' },
     { href: '/admin/audit',         label: 'Audit log' },
