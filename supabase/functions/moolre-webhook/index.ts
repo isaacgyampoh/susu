@@ -1,7 +1,7 @@
 import { handleCors, json, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }         from '../_shared/supabase-admin.ts'
 import { paymentStatus }         from '../_shared/moolre.ts'
-import { sendSMS, smsTemplates } from '../_shared/africas-talking.ts'
+import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 
 /**
  * Moolre callback.
@@ -81,5 +81,6 @@ async function settle(ref: string) {
     .from('members').select('full_name, phone').eq('id', existing.member_id).single()
   if (m) {
     await sendSMS(m.phone, smsTemplates.paymentConfirmed(m.full_name, tx.amount.toFixed(2), tx.transactionid || ref))
+    await notifyAdmins(smsTemplates.adminPaymentReceived(m.full_name, Number(tx.amount).toFixed(2), 'their susu'))
   }
 }

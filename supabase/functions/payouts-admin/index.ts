@@ -1,7 +1,7 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
-import { sendSMS }                 from '../_shared/africas-talking.ts'
+import { sendSMS, notifyAdmins }   from '../_shared/africas-talking.ts'
 
 async function audit(admin: any, action: string, entityId: string, label: string, details: unknown) {
   await supabaseAdmin.from('audit_log').insert({
@@ -132,6 +132,8 @@ serveWithCors(async (req) => {
       const m = payout.members
       await sendSMS(m.phone,
         `Congratulations ${m.full_name}! Your Susu cashout of GHS ${Number(netAmount).toFixed(2)} from ${payout.susu_groups.name} has been sent. Check your MoMo.`)
+      // Money leaving the business is recorded to the admins too
+      await notifyAdmins(`Payout sent: GHS ${Number(netAmount).toFixed(2)} to ${m.full_name} (${payout.susu_groups.name}).`)
 
       await audit(admin, 'payout.marked_paid', payout_id,
         `${m.member_id} — ${m.full_name}`,

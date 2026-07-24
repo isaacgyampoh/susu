@@ -103,6 +103,7 @@ serveWithCors(async (req) => {
 
       if (member) {
         await sendSMS(member.phone, smsTemplates.paymentConfirmed(member.full_name, amountGHS.toFixed(2), reference))
+        await notifyAdmins(smsTemplates.adminPaymentReceived(member.full_name, amountGHS.toFixed(2), 'their susu'))
 
         await supabaseAdmin.from('notifications').insert({
           member_id, type: 'sms',

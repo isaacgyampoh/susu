@@ -70,12 +70,31 @@ async function sendViaAT(recipients: string[], message: string): Promise<boolean
 }
 
 /** Send SMS — BMS Africa first, Africa's Talking fallback, graceful skip if neither configured */
+/** Record what was sent, so a missing notification can be investigated
+ *  rather than argued about. Never blocks or fails the send. */
+async function logSMS(recipients: string[], message: string, ok: boolean, provider: string, err?: string) {
+  try {
+    const { supabaseAdmin } = await import('./supabase-admin.ts')
+    await supabaseAdmin.from('sms_log').insert(
+      recipients.map(r => ({ recipient: r, message, ok, provider, error: err ?? null })))
+  } catch { /* logging must never break delivery */ }
+}
+
 export async function sendSMS(to: string | string[], message: string): Promise<boolean> {
   const recipients = (Array.isArray(to) ? to : [to]).filter(Boolean)
   if (recipients.length === 0) return false
 
-  if (BMS_API_KEY) return sendViaBMS(recipients, message)
-  if (AT_API_KEY)  return sendViaAT(recipients, message)
+  if (BMS_API_KEY) {
+    const ok = await sendViaBMS(recipients, message)
+    await logSMS(recipients, message, ok, 'bms')
+    return ok
+  }
+  if (AT_API_KEY) {
+    const ok = await sendViaAT(recipients, message)
+    await logSMS(recipients, message, ok, 'africastalking')
+    return ok
+  }
+  await logSMS(recipients, message, false, 'none', 'No SMS provider configured')
 
   console.log('[SMS SKIPPED — no BMS_API_KEY or AT_API_KEY] To:', recipients.join(','), '| Msg:', message)
   return true // gracefully skip, don't break the flow

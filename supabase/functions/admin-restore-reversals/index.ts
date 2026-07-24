@@ -2,6 +2,7 @@ import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { applyPaymentToSchedule }  from '../_shared/settle.ts'
+import { notifyAdmins }            from '../_shared/africas-talking.ts'
 
 /*
  * Restore payments the reconcile reversed.
@@ -96,6 +97,13 @@ serveWithCors(async (req) => {
       }).then(() => {}, () => {})
 
       restored.push(row)
+    }
+
+    // One summary to the admins rather than a text per restored day —
+    // members already had their receipt when they first paid.
+    if (!dryRun && restored.length > 0) {
+      const total = restored.reduce((s, r) => s + Number(r.amount ?? 0), 0)
+      await notifyAdmins(`${restored.length} reversed payment(s) restored, GHS ${total.toFixed(2)} total.`)
     }
 
     return json({
