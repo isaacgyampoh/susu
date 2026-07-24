@@ -88,6 +88,27 @@ export default function DailyPaymentsPage() {
     if (!error) load()
   }
 
+  async function repairOverpayments() {
+    const { data: preview, error: pErr } = await callFunction<any>('admin-repair-overpayments', {
+      method: 'POST', token: getAdminToken()!, body: { apply: false },
+    })
+    if (pErr) { alert(pErr); return }
+    if (!preview?.overpayments_found) { alert(preview?.message ?? 'No overpayments found.'); return }
+    const lines = (preview.details ?? []).slice(0, 40)
+      .map((d: any) => `\u2022 ${d.member}: paid GHS ${n2(d.paid)} for a GHS ${n2(d.day_cost)} day \u2014 GHS ${n2(d.surplus)} extra` +
+        (d.will_cover > 0 ? `, clears GHS ${n2(d.will_cover)} elsewhere` : '') +
+        (d.will_credit > 0 ? `, GHS ${n2(d.will_credit)} credit` : '')).join('\n')
+    if (!confirm(
+      `${preview.overpayments_found} overpayment(s) found, GHS ${n2(preview.surplus_total)} in surplus.\n\n${lines}\n\n` +
+      `Spread each surplus across that member's groups (oldest debt first)?`)) return
+    const { data, error } = await callFunction<any>('admin-repair-overpayments', {
+      method: 'POST', token: getAdminToken()!, body: { apply: true },
+    })
+    if (error) { alert(error); return }
+    alert(data?.message ?? 'Done.')
+    load()
+  }
+
   async function restoreReversals() {
     const { data: preview, error: pErr } = await callFunction<any>('admin-restore-reversals', {
       method: 'POST', token: getAdminToken()!, body: { dry_run: true },
@@ -192,6 +213,10 @@ export default function DailyPaymentsPage() {
         <button onClick={restoreReversals}
           className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
           Restore reversed
+        </button>
+        <button onClick={repairOverpayments}
+          className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
+          Fix overpayments
         </button>
         <button onClick={exportCsv}
           className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
