@@ -5,31 +5,35 @@ import { usePathname, useRouter } from 'next/navigation'
 import { clearAdminAuth } from '@/lib/supabase'
 import { useSwipeDrawer } from '@/components/swipe-drawer'
 
-const NAV = [
+type NavItem = { href: string; label: string; exact?: boolean; hint?: string }
+const NAV: { group: string; items: NavItem[] }[] = [
   { group: 'Overview', items: [
     { href: '/admin',               label: 'Dashboard', exact: true },
-    { href: '/admin/analytics',     label: 'Analytics' },
   ]},
-  { group: 'People', items: [
+  // Grouped by what the operator is doing, not by which table it touches.
+  { group: 'Every day', items: [
+    { href: '/admin/transactions',  label: 'Daily Payments', hint: 'who paid today' },
+    { href: '/admin/kyc',           label: 'Applications',   hint: 'new sign-ups' },
+    { href: '/admin/payouts',       label: 'Payouts',        hint: 'who collects' },
+  ]},
+  { group: 'People & groups', items: [
     { href: '/admin/members',       label: 'Members' },
     { href: '/admin/groups',        label: 'Groups' },
-    { href: '/admin/kyc',           label: 'Applications' },
   ]},
-  { group: 'Money', items: [
-    { href: '/admin/transactions',  label: 'Daily Payments' },
-    { href: '/admin/contributions', label: 'Contributions' },
-    { href: '/admin/payouts',       label: 'Payouts' },
-  ]},
-  { group: 'Account', items: [
-    { href: '/admin/payment-settings', label: 'Payments' },
-    { href: '/admin/password', label: 'Change password' },
-  ]},
-  { group: 'Records', items: [
-    { href: '/admin/messages',      label: 'Messages' },
-    { href: '/admin/sms-log',       label: 'SMS Log' },
-    { href: '/admin/announcements', label: 'Announcements' },
+  { group: 'Money detail', items: [
+    { href: '/admin/contributions', label: 'Contributions', hint: 'day-by-day dues' },
+    { href: '/admin/analytics',     label: 'Analytics' },
     { href: '/admin/reports',       label: 'Reports' },
-    { href: '/admin/audit',         label: 'Audit log' },
+  ]},
+  { group: 'Messages', items: [
+    { href: '/admin/announcements', label: 'Announcements', hint: 'text everyone' },
+    { href: '/admin/sms-log',       label: 'SMS Log',       hint: 'what was sent' },
+    { href: '/admin/messages',      label: 'Enquiries',     hint: 'from the website' },
+  ]},
+  { group: 'Settings', items: [
+    { href: '/admin/payment-settings', label: 'Payments' },
+    { href: '/admin/audit',            label: 'Audit log' },
+    { href: '/admin/password',         label: 'Change password' },
   ]},
 ]
 
@@ -57,12 +61,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div key={group}>
             <p className="px-2.5 mb-1.5 text-[11px] font-medium text-ink-3">{group}</p>
             <div className="space-y-0.5">
-              {items.map(({ href, label, exact }) => (
+              {items.map(({ href, label, exact, hint }) => (
                 <Link key={href} href={href}
                   className={`block px-2.5 py-2 rounded-lg text-[13px] transition-colors ${
                     on(href, exact) ? 'bg-ink text-white font-medium' : 'text-ink-2 hover:text-ink hover:bg-bg'
                   }`}>
                   {label}
+                  {hint && (
+                    <span className={`block text-[10.5px] font-normal mt-0.5 ${on(href, exact) ? 'text-white/55' : 'text-ink-3'}`}>
+                      {hint}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>
