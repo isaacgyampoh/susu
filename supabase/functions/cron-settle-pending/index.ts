@@ -3,7 +3,7 @@ import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { provider }                from '../_shared/mode.ts'
 import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
-import { applyPaymentToSchedule }  from '../_shared/settle.ts'
+import { applyPaymentToSchedule, claimTransaction } from '../_shared/settle.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 
 /*
@@ -65,7 +65,10 @@ serveWithCors(async (req) => {
     const s = await getStatus(lookup)
     if (!s || !s.settled) { stillPending++; continue }
 
-    // Settle exactly as every other path does
+    // Claim it first — if another path already settled this payment, stop
+    // here rather than send a second receipt.
+    if (!(await claimTransaction(tx.id, { swept: true }))) { continue }
+
     if (tx.batch_id) {
       await supabaseAdmin.from('contributions')
         .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: tx.reference })
@@ -73,10 +76,6 @@ serveWithCors(async (req) => {
     } else if (tx.related_id) {
       await applyPaymentToSchedule(tx.related_id, Number(tx.amount ?? 0), tx.reference)
     }
-
-    await supabaseAdmin.from('transactions')
-      .update({ status: 'success', paystack_data: { ...(tx.paystack_data ?? {}), swept: true } as never })
-      .eq('id', tx.id)
 
     if (tx.type === 'registration_fee') {
       await supabaseAdmin.from('kyc_applications')

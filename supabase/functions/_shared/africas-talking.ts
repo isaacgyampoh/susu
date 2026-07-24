@@ -115,6 +115,12 @@ export const smsTemplates = {
     `Hi ${name}, your GHS ${amount} Abbie Wealth Susu contribution is due ${dueDate}. Pay before 6:00 PM: ${portalUrl}`,
   paymentConfirmed: (name: string, amount: string, ref: string) =>
     `Hi ${name}, we've received your Abbie Wealth Susu payment of GHS ${amount}. Your contribution is recorded. Ref: ${ref}. Thank you!`,
+  /** When one payment settles several days, possibly across groups. */
+  paymentSpread: (name: string, amount: string, days: number, groups: number, leftover: number) =>
+    `Hi ${name}, your GHS ${amount} payment is confirmed. It covered ${days} day${days === 1 ? '' : 's'}` +
+    (groups > 1 ? ` across ${groups} of your groups` : '') + '.' +
+    (leftover > 0.001 ? ` GHS ${leftover.toFixed(2)} is left over — it will go to your next due day.` : '') +
+    ' Thank you for saving with Abbie Wealth Susu!',
   paymentConfirmedDetailed: (name: string, amount: string, group: string, days: number) =>
     `Hi ${name}, your GHS ${amount} payment for ${group} is confirmed${days > 1 ? ` (${days} days)` : ' for today'}. You're up to date — thank you for saving with Abbie Wealth Susu!`,
   contributionPaid: (name: string, amount: string, groupName: string, dayLabel: string) =>

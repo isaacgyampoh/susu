@@ -4,7 +4,7 @@ import { requireMember }         from '../_shared/jwt.ts'
 import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
 import { provider, paymentsUnavailable } from '../_shared/mode.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
-import { applyPaymentToSchedule } from '../_shared/settle.ts'
+import { applyPaymentToSchedule, claimTransaction } from '../_shared/settle.ts'
 
 /**
  * The member's app polls this after approving a prompt.
@@ -15,7 +15,14 @@ import { applyPaymentToSchedule } from '../_shared/settle.ts'
  */
 /** A single payment or a whole batch — settle whatever this reference covers. */
 
-async function settleLocally(reference: string, tx: any, raw: unknown) {
+// Allocation from the most recent settlement, so the receipt can describe it
+let lastSpread: { daysCleared: number; partBanked: number; unallocated: number; groups: string[] } | null = null
+
+async function settleLocally(reference: string, tx: any, raw: unknown): Promise<boolean> {
+  // Claim first: the callback or the sweeper may already have settled this,
+  // and a second receipt reads to the member as a second charge.
+  if (!(await claimTransaction(tx.id, { settled_raw: raw }))) return false
+
   if (tx.batch_id) {
     // Paying ahead: one approval clears every day in the batch
     await supabaseAdmin.from('contributions')
@@ -29,12 +36,8 @@ async function settleLocally(reference: string, tx: any, raw: unknown) {
         .in('contribution_id', ids.map((r: { id: string }) => r.id))
     }
   } else if (tx.type === 'contribution' && tx.related_id) {
-    await applyPaymentToSchedule(tx.related_id, Number(tx.amount), reference)
+    lastSpread = await applyPaymentToSchedule(tx.related_id, Number(tx.amount), reference)
   }
-  await supabaseAdmin.from('transactions')
-    .update({ status: 'success', paystack_data: { ...(tx.paystack_data ?? {}), settled_raw: raw } as never })
-    .eq('reference', reference)
-
   // If this was a registration fee, flag the member's KYC application paid too
   if (tx.type === 'registration_fee') {
     await supabaseAdmin.from('kyc_applications')
@@ -42,6 +45,7 @@ async function settleLocally(reference: string, tx: any, raw: unknown) {
       .eq('created_member_id', tx.member_id).eq('registration_fee_paid', false)
       .then(({ error }) => { if (error) console.log('kyc flag skipped:', error.message) })
   }
+  return true
 }
 
 serveWithCors(async (req) => {
@@ -90,7 +94,8 @@ serveWithCors(async (req) => {
         return json({ status: 'pending', message: 'Partial payment received. Contact your admin.' })
       }
 
-      await settleLocally(reference, tx, s.raw)
+      const iSettled = await settleLocally(reference, tx, s.raw)
+      if (!iSettled) return json({ status: 'paid', message: 'Payment confirmed. Thank you.' })
 
       // Personalised receipt — this is the path the member's app actually hits
       const { data: m } = await supabaseAdmin
@@ -108,8 +113,14 @@ serveWithCors(async (req) => {
             .from('contributions').select('susu_groups(name)').eq('id', tx.related_id).single()
           group = (c?.susu_groups as { name?: string } | null)?.name ?? group
         }
-        await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
-          m.full_name.split(' ')[0], Number(tx.amount).toFixed(2), group, days))
+        if (lastSpread && (lastSpread.daysCleared > 1 || lastSpread.groups.length > 1 || lastSpread.unallocated > 0.001)) {
+          await sendSMS(m.phone, smsTemplates.paymentSpread(
+            m.full_name.split(' ')[0], Number(tx.amount).toFixed(2),
+            lastSpread.daysCleared, lastSpread.groups.length, lastSpread.unallocated))
+        } else {
+          await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
+            m.full_name.split(' ')[0], Number(tx.amount).toFixed(2), group, days))
+        }
         await notifyAdmins(smsTemplates.adminPaymentReceived(
           m.full_name, Number(tx.amount).toFixed(2), group))
       }
