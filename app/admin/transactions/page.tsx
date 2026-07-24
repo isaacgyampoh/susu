@@ -28,6 +28,7 @@ const prettyDay = (d: string) => {
 
 export default function DailyPaymentsPage() {
   const [day, setDay]         = useState(todayISO())
+  const [received, setReceived] = useState<any[]>([])
   const [paid, setPaid]       = useState<any[]>([])
   const [unpaid, setUnpaid]   = useState<any[]>([])
   const [summary, setSummary] = useState<any>(null)
@@ -39,7 +40,8 @@ export default function DailyPaymentsPage() {
   async function load() {
     setLoading(true)
     const { data } = await callFunction<any>(`admin-paid-today?date=${day}`, { token: getAdminToken()! })
-    setPaid(data?.paid ?? [])
+    setReceived(data?.received ?? [])
+    setPaid(data?.covered ?? [])
     setUnpaid(data?.unpaid ?? [])
     setSummary(data?.summary ?? null)
     setLoading(false)
@@ -49,15 +51,22 @@ export default function DailyPaymentsPage() {
   function exportCsv() {
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
     const lines = [
-      ['Status','Member','ID','Group','Amount (GHS)','How','When'].join(','),
-      ...paid.map(r => [
-        'Paid', esc(r.name), esc(r.code), esc(r.group), Number(r.amount).toFixed(2),
+      ['Section','Member','ID','Group','Amount (GHS)','How','Covers day','Paid at'].join(','),
+      ...received.map(r => [
+        'Money received', esc(r.name), esc(r.code), esc(r.group), Number(r.amount).toFixed(2),
         r.how === 'app' ? 'In-app' : `Manual${r.method ? ' ' + r.method : ''}`,
+        esc(r.due_date),
+        r.paid_at ? format(new Date(r.paid_at), 'yyyy-MM-dd HH:mm') : '',
+      ].join(',')),
+      ...paid.map(r => [
+        'Due settled', esc(r.name), esc(r.code), esc(r.group), Number(r.amount).toFixed(2),
+        r.how === 'app' ? 'In-app' : `Manual${r.method ? ' ' + r.method : ''}`,
+        esc(r.due_date),
         r.paid_at ? format(new Date(r.paid_at), 'yyyy-MM-dd HH:mm') : '',
       ].join(',')),
       ...unpaid.map(r => [
         r.status === 'overdue' ? 'Overdue' : 'Not paid',
-        esc(r.name), esc(r.code), esc(r.group), Number(r.amount).toFixed(2), '', '',
+        esc(r.name), esc(r.code), esc(r.group), Number(r.amount).toFixed(2), '', esc(r.due_date), '',
       ].join(',')),
     ]
     const blob = new Blob(["\ufeff" + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
@@ -216,36 +225,92 @@ export default function DailyPaymentsPage() {
           className="ml-auto px-3 py-1.5 bg-tint border border-line rounded-[8px] text-xs text-ink w-full sm:w-56 focus:outline-none focus:border-ink" />
       </div>
 
-      {/* The day at a glance */}
+      {/* The day at a glance — money in and coverage kept apart */}
       {summary && (
-        <div className="card p-4 mb-5">
-          <p className="t-label">{prettyDay(day)}</p>
-          {summary.expected === 0 ? (
-            <p className="text-ink-2 text-sm mt-2">Nobody was due to pay on this day.</p>
-          ) : (
-            <>
-              <p className="text-[26px] font-extrabold text-ink mt-1 tnum">
-                {summary.paid_count} <span className="text-ink-2 font-semibold text-[18px]">of {summary.expected} paid</span>
-              </p>
-              <div className="h-1.5 bg-line rounded-full overflow-hidden mt-3">
-                <div className="h-full bg-ink rounded-full transition-all"
-                  style={{ width: `${Math.round((summary.paid_count / summary.expected) * 100)}%` }} />
-              </div>
-              <div className="text-xs text-ink-2 mt-2 space-y-0.5">
-                <p>
-                  <span className="font-semibold text-ink">GHS {n2(summary.collected_app)}</span> collected in-app
-                  <span className="text-ink-3"> — compare this with NaloPay</span>
+        <div className="grid lg:grid-cols-2 gap-3 mb-5">
+          <div className="card p-4">
+            <p className="t-label">Money received on {prettyDay(day).toLowerCase()}</p>
+            <p className="text-[26px] font-extrabold text-ink mt-1 tnum">
+              <span className="text-[13px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(summary.received_total)}
+            </p>
+            <div className="text-xs text-ink-2 mt-2 space-y-0.5">
+              <p><span className="font-semibold text-ink">GHS {n2(summary.received_in_app)}</span> in-app
+                <span className="text-ink-3"> — compare with NaloPay for this date</span></p>
+              <p><span className="font-semibold text-ink">GHS {n2(summary.received_manual)}</span> manual
+                <span className="text-ink-3"> — cash or MoMo taken directly</span></p>
+            </div>
+          </div>
+
+          <div className="card p-4">
+            <p className="t-label">{prettyDay(day)}&rsquo;s dues</p>
+            {summary.expected === 0 ? (
+              <p className="text-ink-2 text-sm mt-2">Nobody was due to pay on this day.</p>
+            ) : (
+              <>
+                <p className="text-[26px] font-extrabold text-ink mt-1 tnum">
+                  {summary.paid_count} <span className="text-ink-2 font-semibold text-[18px]">of {summary.expected} settled</span>
                 </p>
-                <p>
-                  <span className="font-semibold text-ink">GHS {n2(summary.collected_recorded)}</span> collected manually
-                  <span className="text-ink-3"> — cash or MoMo taken directly, never passes through NaloPay</span>
+                <div className="h-1.5 bg-line rounded-full overflow-hidden mt-3">
+                  <div className="h-full bg-ink rounded-full transition-all"
+                    style={{ width: `${Math.round((summary.paid_count / summary.expected) * 100)}%` }} />
+                </div>
+                <p className="text-xs text-ink-2 mt-2">
+                  GHS {n2(summary.outstanding)} still outstanding
+                  {summary.covered_earlier > 0 && (
+                    <span className="text-ink-3"> · {summary.covered_earlier} settled by money received on an earlier day</span>
+                  )}
                 </p>
-                {summary.unpaid_count > 0 && (
-                  <p className="text-ink-3">GHS {n2(summary.outstanding)} still outstanding</p>
-                )}
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Money received on this date */}
+      {!loading && received.length > 0 && (
+        <div className="border border-line rounded-[10px] overflow-hidden mb-5">
+          <div className="px-5 py-3 border-b border-line bg-tint">
+            <p className="font-semibold text-ink text-sm">Received on {prettyDay(day).toLowerCase()} · {received.length}</p>
+          </div>
+          <div className="scroll-x">
+            <table className="w-full text-sm min-w-[640px] lg:min-w-0">
+              <thead className="border-b border-line">
+                <tr className="text-ink-2 text-left">
+                  <th className="px-5 py-3 font-medium">Member</th>
+                  <th className="px-5 py-3 font-medium">Group</th>
+                  <th className="px-5 py-3 font-medium">Amount</th>
+                  <th className="px-5 py-3 font-medium">How</th>
+                  <th className="px-5 py-3 font-medium">Covers</th>
+                  <th className="px-5 py-3 font-medium">Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {received.filter(match).map(r => (
+                  <tr key={r.contribution_id} className="hover:bg-tint transition-colors">
+                    <td className="px-5 py-3.5">
+                      <Link href={`/admin/members/${r.member_id}`} className="font-medium text-ink hover:underline underline-offset-2">{r.name}</Link>
+                      <p className="text-[11px] text-ink-3">{r.code}</p>
+                    </td>
+                    <td className="px-5 py-3.5 text-ink-2">{r.group}</td>
+                    <td className="px-5 py-3.5 font-semibold tnum">GHS {n2(r.amount)}</td>
+                    <td className="px-5 py-3.5">
+                      {r.how === 'app'
+                        ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full badge-green">In-app</span>
+                        : <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-tint text-ink-2">Manual{r.method ? ` · ${r.method}` : ''}</span>}
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-ink-2">
+                      {r.covers === 'today' ? 'this day'
+                        : r.covers === 'ahead' ? <>ahead · {r.due_date}</>
+                        : <>arrears · {r.due_date}</>}
+                    </td>
+                    <td className="px-5 py-3.5 text-ink-2 text-xs whitespace-nowrap">
+                      {r.paid_at ? format(new Date(r.paid_at), 'HH:mm') : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -257,7 +322,7 @@ export default function DailyPaymentsPage() {
           {paidShown.length > 0 && (
             <div className="border border-line rounded-[10px] overflow-hidden mb-5">
               <div className="px-5 py-3 border-b border-line bg-tint">
-                <p className="font-semibold text-ink text-sm">Paid · {paidShown.length}</p>
+                <p className="font-semibold text-ink text-sm">Dues settled for this day · {paidShown.length}</p>
               </div>
               <div className="scroll-x">
                 <table className="w-full text-sm min-w-[600px] lg:min-w-0">
@@ -288,7 +353,7 @@ export default function DailyPaymentsPage() {
                         </td>
                         <td className="px-5 py-3.5 text-ink-2 text-xs whitespace-nowrap">
                           {r.paid_at ? format(new Date(r.paid_at), 'MMM d, HH:mm') : '—'}
-                          {r.late && <span className="ml-1 text-[10px] text-ink-3">(late)</span>}
+                          {r.paid_on_another_day && <span className="ml-1 text-[10px] text-ink-3">(not this day)</span>}
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <button onClick={() => undoPayment(r)} disabled={busyId === r.contribution_id}

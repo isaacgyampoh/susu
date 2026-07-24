@@ -90,7 +90,7 @@ export default function Dashboard() {
               style={{ width: `${Math.round((today.paid_count / today.expected) * 100)}%` }} />
           </div>
           <p className="text-xs text-ink-2 mt-2">
-            GHS {n0(today.collected)} collected
+            GHS {n0(today.received_total)} received today
             {today.unpaid_count > 0 && <> &middot; {today.unpaid_count} still to pay</>}
           </p>
         </Link>

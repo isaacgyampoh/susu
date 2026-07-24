@@ -3,21 +3,23 @@ import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 
 /*
- * The day's payment roll-call.
+ * A collection day, told as two separate facts — because conflating them is
+ * how a report starts lying.
  *
- * A day is defined by who was SUPPOSED to pay it — contributions whose
- * due_date is that day — split into those who have paid and those who have
- * not. That is the only honest way to read a collection day.
+ *   MONEY IN   — payments whose paid_at falls on this date, whatever day they
+ *                cover. This is the cash that actually arrived, and the only
+ *                figure that can be reconciled against the provider.
  *
- * Deliberately NOT keyed on paid_at: recording ten past days for a member
- * this morning stamps all ten as "paid now", which made today look like it
- * collected money it never did. Each contribution belongs to its own day.
+ *   COVERAGE   — contributions due on this date and whether they are settled.
+ *                A day can be covered by money received earlier (paying ahead,
+ *                or an overpayment spilling forward), so coverage must never
+ *                be reported as today's takings.
  *
- * Straight from our own database. No provider calls, no reconciliation.
- * A contribution counts as collected only when status = 'paid'; pending and
- * overdue are never mixed in.
+ * The earlier version reported coverage as income: days due today that had
+ * been paid on the 20th showed as money collected today, while the provider
+ * showed nothing. Now the two are counted and shown separately.
  *
- *   ?date=YYYY-MM-DD   the collection day (default: today)
+ *   ?date=YYYY-MM-DD   (default: today)
  */
 serveWithCors(async (req) => {
   const cors = handleCors(req)
@@ -32,72 +34,87 @@ serveWithCors(async (req) => {
       .toISOString().slice(0, 10)
     const day = url.searchParams.get('date') || todayStr
 
-    // Everything due on this day, whatever its state
-    const { data: rows, error: dbErr } = await supabaseAdmin
-      .from('contributions')
-      .select('id, amount, amount_paid, due_date, status, paid_at, payment_method, paystack_ref, ' +
-              'member_id, group_id, members!member_id(id, full_name, member_id, phone), susu_groups(name)')
-      .eq('due_date', day)
+    const howPaid = (c: any) => (c.paystack_ref ? 'app' : 'manual')
+    const shape = (c: any) => ({
+      contribution_id: c.id,
+      member_id: (c as any).members?.id,
+      name: (c as any).members?.full_name ?? '—',
+      code: (c as any).members?.member_id,
+      group: (c as any).susu_groups?.name ?? 'Susu',
+      amount: Number(c.amount),
+      due_date: c.due_date,
+      paid_at: c.paid_at,
+      how: howPaid(c),
+      method: c.payment_method || null,
+    })
+
+    const SELECT =
+      'id, amount, amount_paid, due_date, status, paid_at, payment_method, paystack_ref, ' +
+      'member_id, group_id, members!member_id(id, full_name, member_id, phone), susu_groups(name)'
+
+    // ── MONEY IN: paid_at on this date ──────────────────────────
+    const { data: receivedRows, error: e1 } = await supabaseAdmin
+      .from('contributions').select(SELECT)
+      .eq('status', 'paid')
+      .gte('paid_at', `${day}T00:00:00Z`)
+      .lte('paid_at', `${day}T23:59:59.999Z`)
       .order('paid_at', { ascending: false })
+      .limit(3000)
+    if (e1) return error(e1.message, 500)
+
+    let inApp = 0, manual = 0
+    const received = (receivedRows ?? []).map((c: any) => {
+      const r = shape(c)
+      if (r.how === 'app') inApp += r.amount; else manual += r.amount
+      // Money received today can settle a day due later (paying ahead) or
+      // earlier (catching up on arrears) — say which, so it reads honestly.
+      return { ...r, covers: r.due_date === day ? 'today' : (r.due_date > day ? 'ahead' : 'arrears') }
+    })
+
+    // ── COVERAGE: contributions due on this date ────────────────
+    const { data: dueRows, error: e2 } = await supabaseAdmin
+      .from('contributions').select(SELECT)
+      .eq('due_date', day)
       .limit(5000)
-    if (dbErr) return error(dbErr.message, 500)
+    if (e2) return error(e2.message, 500)
 
-    // How the money arrived: an app payment carries a provider reference,
-    // an admin-recorded one carries the method it was collected by.
-    const howPaid = (c: any) =>
-      c.paystack_ref ? 'app' : (c.payment_method ? 'admin' : 'admin')
-
-    const paid: any[] = []
+    const covered: any[] = []
     const unpaid: any[] = []
-    let collected = 0, collectedApp = 0, collectedRecorded = 0
-
-    for (const c of rows ?? []) {
-      const m = (c as any).members
-      const base = {
-        contribution_id: c.id,
-        member_id: m?.id,
-        name: m?.full_name ?? '—',
-        code: m?.member_id,
-        phone: m?.phone,
-        group: (c as any).susu_groups?.name ?? 'Susu',
-        amount: Number(c.amount),
-      }
-
+    let coveredEarlier = 0
+    for (const c of dueRows ?? []) {
       if (c.status === 'paid') {
-        const how = howPaid(c)
-        collected += Number(c.amount)
-        if (how === 'app') collectedApp += Number(c.amount)
-        else collectedRecorded += Number(c.amount)
-        paid.push({
-          ...base,
-          how,
-          method: c.payment_method || null,
-          paid_at: c.paid_at,
-          late: c.paid_at ? c.paid_at.slice(0, 10) > day : false,
-        })
+        const r = shape(c)
+        const paidDay = c.paid_at ? String(c.paid_at).slice(0, 10) : null
+        const early = !!paidDay && paidDay !== day
+        if (early) coveredEarlier++
+        covered.push({ ...r, paid_on_another_day: early, paid_day: paidDay })
       } else {
         unpaid.push({
-          ...base,
+          ...shape(c),
           part_paid: Number(c.amount_paid ?? 0),
-          status: c.status,                       // pending | overdue
+          status: c.status,
         })
       }
     }
-
-    paid.sort((a, b) => (b.paid_at ?? '').localeCompare(a.paid_at ?? ''))
+    covered.sort((a, b) => (b.paid_at ?? '').localeCompare(a.paid_at ?? ''))
     unpaid.sort((a, b) => a.name.localeCompare(b.name))
 
     return json({
       day,
-      paid,
-      unpaid,
+      received,                 // money that actually arrived on this date
+      covered,                  // days due this date that are settled
+      unpaid,                   // days due this date still owing
       summary: {
-        expected:   (rows ?? []).length,
-        paid_count: paid.length,
+        // money in
+        received_total: Math.round((inApp + manual) * 100) / 100,
+        received_in_app: Math.round(inApp * 100) / 100,
+        received_manual: Math.round(manual * 100) / 100,
+        received_count: received.length,
+        // coverage
+        expected: (dueRows ?? []).length,
+        paid_count: covered.length,
         unpaid_count: unpaid.length,
-        collected:  Math.round(collected * 100) / 100,
-        collected_app:      Math.round(collectedApp * 100) / 100,
-        collected_recorded: Math.round(collectedRecorded * 100) / 100,
+        covered_earlier: coveredEarlier,
         outstanding: Math.round(unpaid.reduce((s, r) => s + r.amount, 0) * 100) / 100,
       },
     })
