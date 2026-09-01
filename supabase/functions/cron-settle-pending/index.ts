@@ -3,7 +3,8 @@ import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { provider }                from '../_shared/mode.ts'
 import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
-import { applyPaymentToSchedule, claimTransaction } from '../_shared/settle.ts'
+import { settlePayment } from '../_shared/settle.ts'
+import { settleRegistrationFee } from '../_shared/registration-fee.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 
 /*
@@ -54,7 +55,7 @@ serveWithCors(async (req) => {
     .limit(300)
   if (dbErr) return error(dbErr.message, 500)
 
-  let settled = 0, stillPending = 0, noOrderId = 0
+  let settled = 0, stillPending = 0, noOrderId = 0, failed = 0
   const settledRows: any[] = []
 
   for (const tx of pending ?? []) {
@@ -65,37 +66,50 @@ serveWithCors(async (req) => {
     const s = await getStatus(lookup)
     if (!s || !s.settled) { stillPending++; continue }
 
-    // Claim it first — if another path already settled this payment, stop
-    // here rather than send a second receipt.
-    if (!(await claimTransaction(tx.id, { swept: true }))) { continue }
-
-    if (tx.batch_id) {
-      await supabaseAdmin.from('contributions')
-        .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: tx.reference })
-        .eq('batch_id', tx.batch_id).neq('status', 'paid')
-    } else if (tx.related_id) {
-      await applyPaymentToSchedule(tx.related_id, Number(tx.amount ?? 0), tx.reference, ((tx.paystack_data as any)?.scope === 'slot' ? 'slot' : 'member'))
-    }
-
+    // Settle through the one canonical engine. It locks the payment and
+    // checks its status inside the settling transaction, so it needs no
+    // separate claim — and a claim beforehand would in fact break it, because
+    // the engine treats an already-successful payment as settled.
+    //
+    // The batch branch is gone: paying ahead used to take a blanket UPDATE
+    // that wrote no allocations and never set amount_paid. Single and bulk
+    // payments now settle identically.
     if (tx.type === 'registration_fee') {
-      await supabaseAdmin.from('kyc_applications')
-        .update({ registration_fee_paid: true })
-        .eq('created_member_id', tx.member_id).eq('registration_fee_paid', false)
-        .then(() => {}, () => {})
+      try {
+        await settleRegistrationFee(tx.reference, s.amount)
+        settled++
+      } catch (e) {
+        console.error(`sweep: registration fee failed for ${tx.reference}:`, (e as Error).message)
+        failed++
+      }
+      continue
     }
+
+    let result
+    try {
+      result = await settlePayment(
+        tx.reference,
+        s.amount,                     // what the PROVIDER says arrived
+        (tx.paystack_data as any)?.scope === 'slot' ? 'slot' : 'member',
+      )
+    } catch (e) {
+      // Leave it pending. The sweep runs again in ten minutes.
+      console.error(`sweep: settlement failed for ${tx.reference}:`, (e as Error).message)
+      failed++
+      continue
+    }
+    if (result.allocations.length === 0) { continue }   // a replay; already settled
+
 
     if (tx.member_id) {
       const { data: m } = await supabaseAdmin
         .from('members').select('full_name, phone').eq('id', tx.member_id).single()
       if (m?.phone) {
-        let group = 'your susu'
-        if (tx.related_id) {
-          const { data: cc } = await supabaseAdmin
-            .from('contributions').select('susu_groups(name)').eq('id', tx.related_id).single()
-          group = (cc?.susu_groups as { name?: string } | null)?.name ?? group
-        }
-        await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
-          m.full_name.split(' ')[0], Number(tx.amount).toFixed(2), group, 1))
+        const group = result.groups[0] ?? 'your susu'
+        const days  = Math.max(result.daysCleared, 1)
+        await sendSMS(m.phone, (result.daysCleared > 1 || result.groups.length > 1)
+          ? smsTemplates.paymentSpread(m.full_name.split(' ')[0], Number(tx.amount).toFixed(2), result.daysCleared, result.groups.length, 0)
+          : smsTemplates.paymentConfirmedDetailed(m.full_name.split(' ')[0], Number(tx.amount).toFixed(2), group, days))
         await notifyAdmins(smsTemplates.adminPaymentReceived(
           m.full_name, Number(tx.amount).toFixed(2), group))
         settledRows.push({ member: m.full_name, amount: Number(tx.amount), group })
@@ -104,10 +118,10 @@ serveWithCors(async (req) => {
     settled++
   }
 
-  console.log(`sweep: checked ${pending?.length ?? 0}, settled ${settled}, still pending ${stillPending}`)
+  console.log(`sweep: checked ${pending?.length ?? 0}, settled ${settled}, still pending ${stillPending}, failed ${failed}`)
   return json({
     checked: pending?.length ?? 0,
-    settled, still_pending: stillPending, no_order_id: noOrderId,
+    settled, still_pending: stillPending, no_order_id: noOrderId, failed,
     details: settledRows,
     message: settled === 0
       ? `Nothing new — ${stillPending} payment(s) still awaiting confirmation from the provider.`

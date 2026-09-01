@@ -1,0 +1,298 @@
+{
+ "time": {
+  "db_now": "2026-09-01T08:19:17.050744+00:00",
+  "db_timezone": "UTC",
+  "db_current_date": "2026-09-01",
+  "db_current_time": "08:19:17.050744+00"
+ },
+ "row_counts": {
+  "members": 82,
+  "payouts": 153,
+  "susu_groups": 18,
+  "transactions": 1924,
+  "contributions": 15707,
+  "groups_active": 11,
+  "members_active": 62,
+  "group_memberships": 266,
+  "payment_penalties": 403,
+  "contributions_paid": 5620,
+  "memberships_active": 195,
+  "payment_allocations": 181,
+  "contributions_overdue": 46,
+  "contributions_pending": 10041
+ },
+ "captured_at": "2026-09-01T08:19:17.050744+00:00",
+ "payout_model": {
+  "by_status": {
+   "paid": 75,
+   "upcoming": 78
+  },
+  "groups_with_null_cashout": 0,
+  "payout_row_amount_mismatch": 0,
+  "duplicate_positions_in_group": 0,
+  "memberships_missing_payout_date": 42,
+  "memberships_missing_payout_amount": 0,
+  "payout_amount_vs_group_cashout_mismatch": 65
+ },
+ "credit_balance": {
+  "max_credit": 0.0,
+  "negative_credit": 0,
+  "total_credit_held": 0.0,
+  "members_with_credit": 0
+ },
+ "f02_smoking_gun": {
+  "examples": [
+   {
+    "due_date": "2026-08-08",
+    "allocated": 28.0,
+    "reference": "CONT-c471eebc-033a-4a08-9077-fe89f5b39be3-1787739651236",
+    "day_amount": 28.0,
+    "group_name": "Daily Payment 28gh Monthly Pick-up 30days",
+    "amount_paid": 0.0,
+    "contribution_status": "pending"
+   },
+   {
+    "due_date": "2026-08-04",
+    "allocated": 65.0,
+    "reference": "CONT-d1a00c3b-4cae-49fd-b30e-765cf65821c5-1787738346459",
+    "day_amount": 65.0,
+    "group_name": "Daily Susu 8days pickup (65) ",
+    "amount_paid": 0.0,
+    "contribution_status": "pending"
+   },
+   {
+    "due_date": "2026-08-05",
+    "allocated": 65.0,
+    "reference": "CONT-d1a00c3b-4cae-49fd-b30e-765cf65821c5-1787738346459",
+    "day_amount": 65.0,
+    "group_name": "Daily Susu 8days pickup (65) ",
+    "amount_paid": 0.0,
+    "contribution_status": "pending"
+   },
+   {
+    "due_date": "2026-08-04",
+    "allocated": 65.0,
+    "reference": "CONT-83a12989-79d8-4400-9edf-1b64656d288f-1786633190831",
+    "day_amount": 65.0,
+    "group_name": "Daily Susu 8days pickup (65) ",
+    "amount_paid": 0.0,
+    "contribution_status": "pending"
+   },
+   {
+    "due_date": "2026-08-07",
+    "allocated": 25.0,
+    "reference": "CONT-83a12989-79d8-4400-9edf-1b64656d288f-1786633190831",
+    "day_amount": 65.0,
+    "group_name": "Daily Susu 8days pickup (65) ",
+    "amount_paid": 25.0,
+    "contribution_status": "pending"
+   },
+   {
+    "due_date": "2026-08-05",
+    "allocated": 65.0,
+    "reference": "CONT-83a12989-79d8-4400-9edf-1b64656d288f-1786633190831",
+    "day_amount": 65.0,
+    "group_name": "Daily Susu 8days pickup (65) ",
+    "amount_paid": 0.0,
+    "contribution_status": "pending"
+   },
+   {
+    "due_date": "2026-08-06",
+    "allocated": 65.0,
+    "reference": "CONT-83a12989-79d8-4400-9edf-1b64656d288f-1786633190831",
+    "day_amount": 65.0,
+    "group_name": "Daily Susu 8days pickup (65) ",
+    "amount_paid": 0.0,
+    "contribution_status": "pending"
+   }
+  ],
+  "value_at_risk": 378.0,
+  "affected_members": 1,
+  "orphan_allocations": 0,
+  "allocations_claiming_unpaid_days": 7
+ },
+ "membership_shape": {
+  "shared_slots": 4,
+  "multi_slot_cases": [
+   {
+    "slots": 6,
+    "group_id": "e57bd2d0-32ce-4dd8-aaff-9221439fd9e7",
+    "member_id": "7fc21d0b-9993-46b5-9773-081d030fd73b"
+   },
+   {
+    "slots": 5,
+    "group_id": "e57bd2d0-32ce-4dd8-aaff-9221439fd9e7",
+    "member_id": "0ec0bbc4-d8e7-46b8-bdc1-4200ddb71639"
+   },
+   {
+    "slots": 4,
+    "group_id": "434df147-cfdf-44ed-861e-d93a38bf222d",
+    "member_id": "02fbc548-bd51-4a4e-8fd5-e00e51a32f1b"
+   },
+   {
+    "slots": 4,
+    "group_id": "e57bd2d0-32ce-4dd8-aaff-9221439fd9e7",
+    "member_id": "b356a653-f52b-4c23-8336-86df3aae0702"
+   },
+   {
+    "slots": 3,
+    "group_id": "0f74d6c5-5eab-47ff-a0fa-664c6f52a236",
+    "member_id": "6607c721-025d-4b54-8fe4-ede3085476c1"
+   },
+   {
+    "slots": 3,
+    "group_id": "e57bd2d0-32ce-4dd8-aaff-9221439fd9e7",
+    "member_id": "6607c721-025d-4b54-8fe4-ede3085476c1"
+   },
+   {
+    "slots": 3,
+    "group_id": "e57bd2d0-32ce-4dd8-aaff-9221439fd9e7",
+    "member_id": "ef8a8550-3c5f-4cc9-a049-3dde2ffdd8dc"
+   },
+   {
+    "slots": 3,
+    "group_id": "e57bd2d0-32ce-4dd8-aaff-9221439fd9e7",
+    "member_id": "9c0f45fe-4583-48dd-b4ca-fdcb61bc6025"
+   },
+   {
+    "slots": 2,
+    "group_id": "434df147-cfdf-44ed-861e-d93a38bf222d",
+    "member_id": "0ec0bbc4-d8e7-46b8-bdc1-4200ddb71639"
+   },
+   {
+    "slots": 2,
+    "group_id": "930213ee-bea4-4d49-9f24-b915cc8d2834",
+    "member_id": "7fc21d0b-9993-46b5-9773-081d030fd73b"
+   },
+   {
+    "slots": 2,
+    "group_id": "b3be9d0b-d5d5-4def-9380-3bfc417780b2",
+    "member_id": "9c0f45fe-4583-48dd-b4ca-fdcb61bc6025"
+   },
+   {
+    "slots": 2,
+    "group_id": "5fbd5711-f3c0-4350-8891-a213a4491eaf",
+    "member_id": "492e1016-4e75-4ea9-9cf0-eb641de79856"
+   },
+   {
+    "slots": 2,
+    "group_id": "434df147-cfdf-44ed-861e-d93a38bf222d",
+    "member_id": "9c0f45fe-4583-48dd-b4ca-fdcb61bc6025"
+   },
+   {
+    "slots": 2,
+    "group_id": "a1974d2d-d3fe-4f94-9928-6db7e17fbd12",
+    "member_id": "7fc21d0b-9993-46b5-9773-081d030fd73b"
+   },
+   {
+    "slots": 2,
+    "group_id": "a1974d2d-d3fe-4f94-9928-6db7e17fbd12",
+    "member_id": "18405b1e-17f4-44c3-8e8f-42d4ec1dafe3"
+   },
+   {
+    "slots": 2,
+    "group_id": "cf1df2bf-2fbf-4103-8442-58ae37de2671",
+    "member_id": "7fc21d0b-9993-46b5-9773-081d030fd73b"
+   },
+   {
+    "slots": 2,
+    "group_id": "e57bd2d0-32ce-4dd8-aaff-9221439fd9e7",
+    "member_id": "446cfdd7-a032-40d5-8f0f-6330e7d4815d"
+   },
+   {
+    "slots": 2,
+    "group_id": "bda254ef-e7cb-4752-86c2-61fd0f4cbe71",
+    "member_id": "446cfdd7-a032-40d5-8f0f-6330e7d4815d"
+   },
+   {
+    "slots": 2,
+    "group_id": "0f74d6c5-5eab-47ff-a0fa-664c6f52a236",
+    "member_id": "4601e280-2617-4497-bc8d-16c49e63cdf5"
+   },
+   {
+    "slots": 2,
+    "group_id": "930213ee-bea4-4d49-9f24-b915cc8d2834",
+    "member_id": "f34b692f-e395-4157-b336-6c87822f5b62"
+   }
+  ],
+  "slot_fraction_used": {
+   "0.50": 5,
+   "1.00": 261
+  },
+  "max_groups_one_member": 18,
+  "memberships_by_status": {
+   "active": 195,
+   "defaulted": 71
+  },
+  "members_by_group_count": {
+   "1": 20,
+   "2": 18,
+   "3": 9,
+   "4": 6,
+   "5": 2,
+   "9": 1,
+   "18": 1
+  }
+ },
+ "registration_model": {
+  "by_status": {
+   "approved": 19,
+   "rejected": 7
+  },
+  "approved_but_fee_unpaid": 13,
+  "approved_fee_unpaid_value": 1320.5,
+  "active_members_from_unpaid_registration": 5
+ },
+ "schedule_integrity": {
+  "duplicate_day_per_membership": 0,
+  "contributions_orphaned_membership": 0,
+  "contributions_with_null_membership": 0,
+  "active_memberships_with_no_contributions": 37
+ },
+ "transaction_health": {
+  "by_type": {
+   "payout": 1,
+   "contribution": 1887,
+   "registration_fee": 36
+  },
+  "by_status": {
+   "failed": 25,
+   "pending": 402,
+   "success": 1497
+  },
+  "pending_value_stuck": 40658.0,
+  "pending_older_than_48h": 402,
+  "duplicate_provider_order_ids": 0,
+  "success_tx_with_no_allocation": 1388
+ },
+ "f02_paystack_ref_index": {
+  "index_exists": true,
+  "distinct_refs": 166,
+  "rows_with_ref": 166,
+  "index_definition": "CREATE UNIQUE INDEX uniq_contribution_ref ON public.contributions USING btree (paystack_ref) WHERE (paystack_ref IS NOT NULL)",
+  "top_multi_day_refs": [],
+  "max_days_on_one_ref": 1,
+  "refs_covering_many_days": 0,
+  "any_unique_index_on_paystack_ref": [
+   "CREATE UNIQUE INDEX uniq_contribution_ref ON public.contributions USING btree (paystack_ref) WHERE (paystack_ref IS NOT NULL)"
+  ]
+ },
+ "f14_passcode_integrity": {
+  "valid_bcrypt": 82,
+  "looks_like_bare_pin": 0,
+  "total_with_passcode": 82,
+  "PLAINTEXT_OR_INVALID": 0,
+  "null_passcode_active": 0,
+  "affected_member_codes": []
+ },
+ "settlement_path_fingerprints": {
+  "paid_manual": 3978,
+  "paid_via_batch": 38,
+  "partially_paid_open": 1,
+  "partially_paid_value": 25.0,
+  "paid_but_amount_paid_zero": 2892,
+  "amount_paid_exceeds_amount": 0,
+  "paid_but_amount_paid_short": 20,
+  "paid_with_no_ref_and_no_method": 1476
+ }
+}

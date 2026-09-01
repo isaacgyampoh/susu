@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import { format } from 'date-fns'
@@ -38,7 +38,7 @@ export default function DailyPaymentsPage() {
   const [showAdvance, setShowAdvance] = useState(false)
   const [syncing, setSyncing] = useState(false)
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     const { data } = await callFunction<any>(`admin-paid-today?date=${day}`, { token: getAdminToken()! })
     setReceived(data?.received ?? [])
@@ -46,8 +46,8 @@ export default function DailyPaymentsPage() {
     setUnpaid(data?.unpaid ?? [])
     setSummary(data?.summary ?? null)
     setLoading(false)
-  }
-  useEffect(() => { load() }, [day])
+  }, [day])
+  useEffect(() => { load() }, [load])
 
   function exportCsv() {
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
@@ -88,95 +88,33 @@ export default function DailyPaymentsPage() {
     if (!error) load()
   }
 
-  async function repairOverpayments() {
-    const { data: preview, error: pErr } = await callFunction<any>('admin-repair-overpayments', {
-      method: 'POST', token: getAdminToken()!, body: { apply: false },
-    })
-    if (pErr) { alert(pErr); return }
-    if (!preview?.overpayments_found) { alert(preview?.message ?? 'No overpayments found.'); return }
-    const lines = (preview.details ?? []).slice(0, 40)
-      .map((d: any) => `\u2022 ${d.member}: paid GHS ${n2(d.paid)} for a GHS ${n2(d.day_cost)} day \u2014 GHS ${n2(d.surplus)} extra` +
-        (d.will_cover > 0 ? `, clears GHS ${n2(d.will_cover)} elsewhere` : '') +
-        (d.will_credit > 0 ? `, GHS ${n2(d.will_credit)} credit` : '')).join('\n')
-    if (!confirm(
-      `${preview.overpayments_found} overpayment(s) found, GHS ${n2(preview.surplus_total)} in surplus.\n\n${lines}\n\n` +
-      `Spread each surplus across that member's groups (oldest debt first)?`)) return
-    const { data, error } = await callFunction<any>('admin-repair-overpayments', {
-      method: 'POST', token: getAdminToken()!, body: { apply: true },
-    })
-    if (error) { alert(error); return }
-    alert(data?.message ?? 'Done.')
-    load()
-  }
-
-  async function restoreReversals() {
-    const { data: preview, error: pErr } = await callFunction<any>('admin-restore-reversals', {
-      method: 'POST', token: getAdminToken()!, body: { dry_run: true },
-    })
-    if (pErr) { alert(pErr); return }
-    if (!preview?.restored) { alert(preview?.message ?? 'Nothing to restore.'); return }
-    const lines = (preview.details ?? [])
-      .map((d: any) => `\u2022 ${d.member} \u2014 GHS ${n2(d.amount)} (${d.group}, ${d.due_date})`).join('\n')
-    if (!confirm(`Restore these ${preview.restored} reversed payment(s)?\n\n${lines}`)) return
-    const { data, error } = await callFunction<any>('admin-restore-reversals', {
-      method: 'POST', token: getAdminToken()!, body: {},
-    })
-    if (error) { alert(error); return }
-    alert(data?.message ?? 'Restored.')
-    load()
-  }
-
-  async function repairForced() {
-    const pasted = prompt(
-      'Reconcile in-app payments against NaloPay.\n\n' +
-      'Open NaloPay \u2192 Reports \u2192 Collection report, filter Status = Successful, ' +
-      'and paste the TRANSACTION IDs here (one per line, or comma separated).\n\n' +
-      'Any in-app payment NOT in that list will be put back to unpaid. ' +
-      'Manual payments are never touched.')
-    if (!pasted?.trim()) return
-    const ids = pasted.split(/[\s,]+/).map(t => t.trim()).filter(Boolean)
-
-    const { data: preview, error: pErr } = await callFunction<any>('admin-repair-forced', {
-      method: 'POST', token: getAdminToken()!,
-      body: { keep_order_ids: ids, dry_run: true },
-    })
-    if (pErr) { alert(pErr); return }
-    if (!preview?.details?.length && !preview?.to_settle) { alert(preview?.message ?? 'Everything already matches.'); return }
-
-    const revLines = (preview.details ?? [])
-      .map((d: any) => `\u2022 ${d.member} \u2014 GHS ${n2(d.amount)} (${d.group}, ${d.due_date})`).join('\n')
-    const setLines = (preview.settle_details ?? [])
-      .map((d: any) => `\u2022 GHS ${n2(d.amount)} (${d.order_id})`).join('\n')
-    let msg = `${preview.confirmed} payment(s) already correct.\n`
-    if (preview.to_settle > 0) msg += `\nWILL BE MARKED PAID (successful at NaloPay but missing here) \u2014 GHS ${n2(preview.settle_total)}:\n${setLines}\n`
-    if (preview.to_reverse > 0) msg += `\n${preview.to_reverse} payment(s) are marked here but NOT in your pasted list \u2014 they will be LEFT ALONE unless you choose to reverse them in the next step.\n`
-    msg += '\nProceed?'
-    if (!confirm(msg)) return
-
-    let alsoReverse = false
-    if (preview.to_reverse > 0) {
-      alsoReverse = confirm(
-        `Also REVERSE these ${preview.to_reverse} payment(s) \u2014 GHS ${n2(preview.reverse_total)}?\n\n${revLines}\n\n` +
-        `ONLY choose OK if you are certain you pasted EVERY page of NaloPay's successful list \u2014 the report is paginated. ` +
-        `If in doubt, choose Cancel: nothing is reversed and you can run this again with the full list.`)
-    }
-
-    const { data, error } = await callFunction<any>('admin-repair-forced', {
-      method: 'POST', token: getAdminToken()!,
-      body: { keep_order_ids: ids, also_reverse: alsoReverse },
-    })
-    if (error) { alert(error); return }
-    alert(data?.message ?? 'Done.')
-    load()
-  }
+  /*
+   * `repairOverpayments`, `restoreReversals` and `repairForced` used to live
+   * here. All three called repair endpoints that moved money OUTSIDE the
+   * canonical settlement engine — blanket batch updates, direct
+   * `status = 'paid'` writes, no allocation ledger. Those endpoints were
+   * emptied to 410s once `settle_payment()` made the defects they corrected
+   * impossible, so these buttons had become elaborate ways to show an error.
+   *
+   * What replaced them is /admin/reconciliation, which asks NaloPay and
+   * settles ONLY on NaloPay's answer, through the same engine a webhook uses.
+   */
 
   async function undoPayment(r: any) {
     const ok = confirm(
       `Mark ${r.name}'s GHS ${n2(r.amount)} for ${day} as NOT paid?\n\n` +
-      `Use this when money was recorded that never actually arrived. ` +
-      `The day goes back to unpaid and the reversal is written to the audit log.`)
+      `Use this when money was recorded that never actually arrived. The day goes back ` +
+      `to unpaid, every payment that claimed it is marked failed, any credit those ` +
+      `payments banked is reversed, and the whole before-state is written to the audit log.`)
     if (!ok) return
-    const reason = prompt('Reason (optional) — e.g. "never completed at NaloPay"') ?? undefined
+    // The reason is required, not optional: reversing money is the one action
+    // whose justification cannot be reconstructed from the data afterwards.
+    // The engine enforces this too — this asks for it in a usable way.
+    const reason = prompt('Why is this being reversed? (at least 10 characters)\ne.g. "never completed at NaloPay, confirmed on the statement"')?.trim()
+    if (!reason || reason.length < 10) {
+      if (reason !== undefined) alert('A reversal needs a reason of at least 10 characters — it is written to the audit log.')
+      return
+    }
     setBusyId(r.contribution_id)
     const { error } = await callFunction<any>('admin-undo-payment', {
       method: 'POST', token: getAdminToken()!,
@@ -210,22 +148,14 @@ export default function DailyPaymentsPage() {
           className="px-3 py-2 bg-ink text-white rounded-[10px] text-xs font-semibold hover:brightness-105 transition-all disabled:opacity-50 whitespace-nowrap">
           {syncing ? 'Checking…' : 'Sync now'}
         </button>
-        <button onClick={restoreReversals}
-          className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
-          Restore reversed
-        </button>
-        <button onClick={repairOverpayments}
-          className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
-          Fix overpayments
-        </button>
         <button onClick={exportCsv}
           className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap">
           Export CSV
         </button>
-        <button onClick={repairForced}
+        <Link href="/admin/reconciliation"
           className="px-3 py-2 border border-line text-ink-2 hover:text-ink hover:bg-tint rounded-[10px] text-xs font-semibold transition-colors whitespace-nowrap shrink-0">
-          Reconcile with NaloPay
-        </button>
+          Reconciliation
+        </Link>
         </div>
       </div>
 

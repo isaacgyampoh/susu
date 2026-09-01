@@ -2,15 +2,32 @@ import { handleCors, json, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }         from '../_shared/supabase-admin.ts'
 import { paymentStatus, parseCallback } from '../_shared/nalo.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
-import { applyPaymentToSchedule, claimTransaction } from '../_shared/settle.ts'
+import { settlePayment } from '../_shared/settle.ts'
+import { settleRegistrationFee } from '../_shared/registration-fee.ts'
 
 /**
- * Nalo payment callback.
+ * NaloPay payment callback.
  *
- * Like Moolre, Nalo's callback carries no signature we can verify, so the
- * payload is a RUMOUR: it tells us which order to look at and nothing more.
- * What settles a contribution is Nalo's own status endpoint, asked by us.
- * A forged callback costs one wasted status lookup and nothing else.
+ * ────────────────────────────────────────────────────────────────────────
+ * The callback carries NO SIGNATURE. There is no way to prove it came from
+ * NaloPay, so the payload is a RUMOUR: it may tell us which payment to look
+ * at, and nothing more. What settles a payment is NaloPay's own status
+ * endpoint, asked by us.
+ *
+ * That was already the stated design. The implementation then undid it:
+ *
+ *     const settled = tx?.settled || callbackSaysComplete
+ *
+ * When the status endpoint was slow, down, or still reporting pending — which
+ * the rest of this codebase says is routine — the unauthenticated request body
+ * decided. Anyone able to POST a success-shaped payload with a valid order id
+ * got free contributions. That is finding F-04, and the `||` is now gone.
+ *
+ * The rule is now absolute: NO PROVIDER CONFIRMATION, NO SETTLEMENT. A
+ * callback we cannot verify costs one wasted status lookup and nothing else.
+ * The 10-minute sweeper will retry for 48 hours, so a genuine payment whose
+ * status endpoint was merely lagging is not lost — it settles a little later.
+ * ────────────────────────────────────────────────────────────────────────
  */
 serveWithCors(async (req) => {
   const c = handleCors(req)
@@ -19,94 +36,116 @@ serveWithCors(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}))
-    console.log('nalo webhook received:', JSON.stringify(body))
-    const { externalref, claimsSuccess } = parseCallback(body)
+    const { externalref } = parseCallback(body)
+
     if (!externalref) {
-      console.warn('nalo webhook: no order_id in payload')
+      console.warn('nalo webhook: no order id in payload')
       return json({ received: true })
     }
-    // NaloPay only calls this webhook when a collection reaches COMPLETED, so
-    // the callback itself is authoritative. We still confirm via the status
-    // endpoint if we can, but if that lags on PENDING we trust the callback.
-    await settle(externalref, claimsSuccess)
+    await handleCallback(externalref)
     return json({ received: true })
   } catch (e) {
+    // Always 200: a provider that gets an error will retry, and a retry storm
+    // helps nobody. The sweeper is the real safety net.
     console.error('nalo webhook:', e)
     return json({ received: true })
   }
 })
 
-async function settle(orderId: string, callbackSaysComplete = false) {
-  const tx = await paymentStatus(orderId)        // best-effort confirmation
-  const settled = tx?.settled || callbackSaysComplete
-  if (!settled) { console.warn(`nalo: ${orderId} not settled (status ${tx?.settled}, callback ${callbackSaysComplete})`); return }
-  const amount = tx?.amount ?? 0
+async function handleCallback(orderId: string) {
+  // ── 1. Ask the provider. This, and only this, may settle a payment. ────
+  const status = await paymentStatus(orderId)
 
-  // Find the transaction by the provider's order id, matched in the database
-  // rather than by scanning pending rows. Scanning was fragile: it only looked
-  // at pending transactions and was capped by the default row limit, so when a
-  // member paid two groups within a minute the second callback could arrive
-  // while the first was mid-settle and match nothing at all — one payment
-  // showed, the other silently vanished.
-  const { data: matches } = await supabaseAdmin
-    .from('transactions')
-    .select('id, status, member_id, related_id, type, amount, reference, paystack_data')
-    .contains('paystack_data', { provider_order_id: orderId })
-    .limit(5)
-
-  let existing = (matches ?? [])[0] ?? null
-
-  // The order id is written just after the prompt is raised, so a very fast
-  // callback can beat it. Give it a moment rather than dropping the payment —
-  // the sweeper would catch it later, but the member should not wait.
-  if (!existing) {
-    await new Promise(r => setTimeout(r, 2500))
-    const { data: retry } = await supabaseAdmin
-      .from('transactions')
-      .select('id, status, member_id, related_id, type, amount, reference, paystack_data')
-      .contains('paystack_data', { provider_order_id: orderId })
-      .limit(5)
-    existing = (retry ?? [])[0] ?? null
-  }
-
-  if (!existing) { console.warn(`nalo: settled ${orderId} with no local record`); return }
-  const ref = existing.reference
-  if (existing.status === 'success') return      // already done
-
-  // The paid amount: from the status endpoint if it gave one, else the
-  // transaction's recorded amount (the webhook only fires on completion).
-  const paidAmount = amount > 0 ? amount : Number(existing.amount ?? 0)
-
-  // Claim before doing anything: the app's polling or the sweeper may have
-  // settled this already, and two receipts read as two charges.
-  if (!(await claimTransaction(existing.id, { webhook_amount: paidAmount }))) {
-    console.log(`nalo: ${orderId} already settled elsewhere`)
+  if (!status?.settled) {
+    console.log(`nalo: ${orderId} not confirmed by the provider — leaving pending for the sweeper`)
     return
   }
 
-  if (existing.type === 'contribution' && existing.related_id) {
-    // Spread the payment: overpayments clear later days of the same slot,
-    // shortfalls bank as a part payment — identical to every other path.
-    await applyPaymentToSchedule(existing.related_id, Number(existing.amount ?? 0), ref, ((existing.paystack_data as any)?.scope === 'slot' ? 'slot' : 'member'))
+  // ── 2. Find our record of it. ─────────────────────────────────────────
+  const { data: matches } = await supabaseAdmin
+    .from('transactions')
+    .select('id, status, member_id, related_id, type, amount, reference, paystack_data, items_count')
+    .contains('paystack_data', { provider_order_id: orderId })
+    .limit(5)
+
+  let tx = (matches ?? [])[0] ?? null
+
+  // The order id is written just after the prompt is raised, so a very fast
+  // callback can beat that write. Give it a moment rather than dropping a
+  // real payment on the floor.
+  if (!tx) {
+    await new Promise(r => setTimeout(r, 2500))
+    const { data: retry } = await supabaseAdmin
+      .from('transactions')
+      .select('id, status, member_id, related_id, type, amount, reference, paystack_data, items_count')
+      .contains('paystack_data', { provider_order_id: orderId })
+      .limit(5)
+    tx = (retry ?? [])[0] ?? null
   }
 
+  if (!tx) {
+    console.warn(`nalo: provider confirmed ${orderId} but we have no matching payment`)
+    return
+  }
+  if (tx.status === 'success') return   // already settled; nothing to do
 
+  // ── 3. Settle atomically. ─────────────────────────────────────────────
+  // The amount the PROVIDER reports is passed through: the engine applies the
+  // lesser of it and the recorded amount, so a short payment cannot
+  // over-credit. The old code settled `existing.amount` regardless of what
+  // actually arrived.
+  // A registration fee is not a contribution and has no obligation to settle
+  // against — routing it through the allocation engine would raise.
+  if (tx.type === 'registration_fee') {
+    try {
+      const r = await settleRegistrationFee(tx.reference, status.amount)
+      if (!r.alreadyDone) console.log(`nalo: registration fee ${tx.reference} settled`)
+    } catch (e) {
+      console.error(`nalo: registration fee settlement failed for ${tx.reference}:`, (e as Error).message)
+    }
+    return
+  }
+
+  const scope = (tx.paystack_data as { scope?: string } | null)?.scope === 'slot' ? 'slot' : 'member'
+
+  let result
+  try {
+    result = await settlePayment(tx.reference, status.amount, scope)
+  } catch (e) {
+    // A settlement that fails must stay visible and stay pending, so the
+    // sweeper retries it. It must never be reported as received.
+    console.error(`nalo: settlement failed for ${tx.reference}:`, (e as Error).message)
+    return
+  }
+
+  if (!result.settled || result.allocations.length === 0) {
+    console.log(`nalo: ${tx.reference} produced no allocations`)
+  }
+
+  // ── 4. Tell the member. Never before the money is recorded. ───────────
+  await notifyMember(tx, status.amount, result.daysCleared, result.groups)
+}
+
+async function notifyMember(
+  tx: { member_id: string; reference: string; type: string; items_count?: number },
+  amount: number,
+  daysCleared: number,
+  groups: string[],
+) {
   const { data: m } = await supabaseAdmin
-    .from('members').select('full_name, phone').eq('id', existing.member_id).single()
-  if (m) {
-    // Personalise: name, group, and how many days this covered
-    let group = 'your susu'
-    let days = 1
-    if (existing.type === 'contribution' && existing.related_id) {
-      const { data: c } = await supabaseAdmin
-        .from('contributions').select('susu_groups(name)').eq('id', existing.related_id).single()
-      group = (c?.susu_groups as { name?: string } | null)?.name ?? group
-    }
-    if (existing.type === 'bulk_contribution' || (existing as any).items_count) {
-      days = Number((existing as any).items_count ?? 1)
-    }
-    await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
-      m.full_name.split(' ')[0], Number(paidAmount).toFixed(2), group, days))
-    await notifyAdmins(smsTemplates.adminPaymentReceived(m.full_name, Number(paidAmount).toFixed(2), group))
+    .from('members').select('full_name, phone').eq('id', tx.member_id).single()
+  if (!m) return
+
+  const first = m.full_name.split(' ')[0]
+  const group = groups[0] ?? 'your susu'
+  const paid = Number(amount).toFixed(2)
+
+  // A payment spanning several days or groups gets a receipt that says so,
+  // rather than a single-line confirmation that hides what it covered.
+  if (daysCleared > 1 || groups.length > 1) {
+    await sendSMS(m.phone, smsTemplates.paymentSpread(first, paid, daysCleared, groups.length, 0))
+  } else {
+    await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(first, paid, group, Math.max(daysCleared, 1)))
   }
+  await notifyAdmins(smsTemplates.adminPaymentReceived(m.full_name, paid, group))
 }

@@ -1,5 +1,6 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
+import { generatePasscode, hashPasscode, passcodeErrorResponse } from '../_shared/passcode.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { sendSMS }                 from '../_shared/africas-talking.ts'
 
@@ -209,8 +210,8 @@ serveWithCors(async (req) => {
       }
 
       if (body.action === 'reset_passcode') {
-        const passcode = String(Math.floor(100000 + Math.random() * 900000))
-        const { data: hash } = await supabaseAdmin.rpc('hash_passcode', { p_passcode: passcode })
+        const passcode = generatePasscode()
+        const hash = await hashPasscode(passcode)
         const { error: upErr } = await supabaseAdmin
           .from('members').update({ passcode_hash: hash, credentials_sent_at: new Date().toISOString() }).eq('id', id)
         if (upErr) return error(upErr.message, 500)
@@ -234,6 +235,41 @@ serveWithCors(async (req) => {
       const body = await req.json().catch(() => ({}))
       if (body.confirm !== 'DELETE ALL MEMBERS') {
         return error("Confirmation phrase missing. Send { confirm: 'DELETE ALL MEMBERS' } to proceed.", 400)
+      }
+
+      /*
+       * ── PHASE 08: THIS MAY NOT RUN AGAINST A LIVE BOOK ────────────────────
+       *
+       * A confirmation phrase is not a preservation strategy. This path deletes
+       * every transaction, contribution, payout, membership and member
+       * unconditionally — and point-in-time recovery is disabled on this
+       * project, so the recovery floor is the last nightly backup. Running it
+       * at noon would cost every payment collected that morning.
+       *
+       * It exists to reset a fresh instance, and that use is preserved: with no
+       * settled money it still works. The moment a single payment has been
+       * received it refuses, and names what it would have destroyed.
+       *
+       * Members who leave are suspended or removed — their money history has to
+       * outlive them.
+       */
+      const [{ count: settledPayments }, { count: paidDays }] = await Promise.all([
+        supabaseAdmin.from('transactions').select('*', { count: 'exact', head: true }).eq('status', 'success'),
+        supabaseAdmin.from('contributions').select('*', { count: 'exact', head: true }).eq('status', 'paid'),
+      ])
+      if ((settledPayments ?? 0) > 0 || (paidDays ?? 0) > 0) {
+        await supabaseAdmin.from('audit_log').insert({
+          admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
+          action: 'members.wipe_refused', entity_type: 'system', entity_id: null,
+          entity_label: 'DELETE ALL MEMBERS',
+          details: { settled_payments: settledPayments, paid_days: paidDays,
+                     note: 'Refused: the book carries settled money.' },
+        }).then(() => {}, () => {})
+        return error(
+          `Refused. This book carries ${settledPayments} settled payment(s) and ${paidDays} paid ` +
+          `contribution day(s). Deleting everything would destroy that record, and point-in-time ` +
+          `recovery is not enabled on this project. Suspend or remove members individually instead.`,
+          409)
       }
 
       // Counts for the audit trail
@@ -281,13 +317,42 @@ serveWithCors(async (req) => {
         .from('members').select('id, member_id, full_name, phone').eq('id', id).single()
       if (!member) return error('Member not found', 404)
 
-      // A member who has RECEIVED money has real financial history — deleting
-      // them would erase the record that the payout happened. Refuse.
-      const { count: paidPayouts } = await supabaseAdmin
-        .from('payouts').select('*', { count: 'exact', head: true })
-        .eq('member_id', id).eq('status', 'paid')
-      if ((paidPayouts ?? 0) > 0) {
-        return error(`${member.full_name} has ${paidPayouts} paid payout${paidPayouts! > 1 ? 's' : ''} on record. Deleting would erase real money history — suspend or remove them instead.`, 409)
+      /*
+       * Money history runs in BOTH directions, and this only ever checked one.
+       *
+       * Refusing on a paid payout catches a member who has RECEIVED money. It
+       * does not catch one who has PAID — someone two years into a daily susu
+       * with GHS 40,000 contributed and no payout yet was deletable, and their
+       * entire payment record would have gone with them.
+       *
+       * The rule is now symmetric: any settled payment, any paid day, or any
+       * paid payout makes this member's history real, and real history is
+       * preserved. Deletion stays available for what it was written for —
+       * duplicates and mistyped entries, which have none of those.
+       */
+      const [{ count: paidPayouts }, { count: settledPayments }, { count: paidDays }] = await Promise.all([
+        supabaseAdmin.from('payouts').select('*', { count: 'exact', head: true })
+          .eq('member_id', id).eq('status', 'paid'),
+        supabaseAdmin.from('transactions').select('*', { count: 'exact', head: true })
+          .eq('member_id', id).eq('status', 'success'),
+        supabaseAdmin.from('contributions').select('*', { count: 'exact', head: true })
+          .eq('member_id', id).eq('status', 'paid'),
+      ])
+      if ((paidPayouts ?? 0) > 0 || (settledPayments ?? 0) > 0 || (paidDays ?? 0) > 0) {
+        const parts = [
+          (settledPayments ?? 0) > 0 && `${settledPayments} settled payment(s)`,
+          (paidDays ?? 0) > 0       && `${paidDays} paid day(s)`,
+          (paidPayouts ?? 0) > 0    && `${paidPayouts} paid payout(s)`,
+        ].filter(Boolean).join(', ')
+        await supabaseAdmin.from('audit_log').insert({
+          admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
+          action: 'member.delete_refused', entity_type: 'member', entity_id: id,
+          entity_label: member.full_name,
+          details: { settled_payments: settledPayments, paid_days: paidDays, paid_payouts: paidPayouts },
+        }).then(() => {}, () => {})
+        return error(
+          `${member.full_name} has ${parts} on record. Deleting would erase real money history — ` +
+          `suspend or remove them instead, which keeps it.`, 409)
       }
 
       // Unwind dependents in FK order (children before parents)
@@ -424,6 +489,8 @@ serveWithCors(async (req) => {
 
     return error('Not found', 404)
   } catch (e) {
+    const pc = passcodeErrorResponse(e, error)
+    if (pc) return pc
     console.error(e)
     return error('Internal server error', 500)
   }

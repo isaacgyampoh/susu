@@ -1,0 +1,7273 @@
+[
+  {
+    "scenario": {
+      "seed": 1,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 1,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-1-g0",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "2450.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 2,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 6,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 15000,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 2,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-2-g2",
+          "due_date": "2026-09-01",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-2-g1",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-2-g2",
+          "due_date": "2026-09-02",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-2-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-2-g1",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-2-g0",
+          "due_date": "2026-09-04",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-2-g1",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-2-g1",
+          "due_date": "2026-09-05",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-2-g1",
+          "due_date": "2026-09-06",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "577.50",
+      "credit_banked": "322.50",
+      "memberships_touched": 3
+    }
+  },
+  {
+    "scenario": {
+      "seed": 3,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 5,
+          "prepaidDays": 0,
+          "partialMinor": 498
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 100,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 3,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-3-g0",
+          "due_date": "2026-09-01",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-3-g1",
+          "due_date": "2026-09-01",
+          "amount": "45.02",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-3-g0",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-3-g1",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-3-g1",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-3-g2",
+          "due_date": "2026-09-03",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-3-g1",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-3-g1",
+          "due_date": "2026-09-05",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "346.02",
+      "credit_banked": "553.98",
+      "memberships_touched": 3
+    }
+  },
+  {
+    "scenario": {
+      "seed": 4,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 458
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 20000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 2800,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 4,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-4-g0",
+          "due_date": "2026-09-01",
+          "amount": "0.92",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-4-g0",
+          "due_date": "2026-09-02",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-4-g1",
+          "due_date": "2026-09-02",
+          "amount": "82.58",
+          "kind": "part"
+        },
+        {
+          "group": "CONF-4-g0",
+          "due_date": "2026-09-03",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-4-g0",
+          "due_date": "2026-09-04",
+          "amount": "5.50",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 5,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 533
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 702
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 6500,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 5,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-5-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.17",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-5-g0",
+          "due_date": "2026-09-04",
+          "amount": "4.83",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 6,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 6,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-6-g0",
+          "due_date": "2026-09-01",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 7,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 20000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 7,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-7-g0",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 8,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 8,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-8-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-8-g0",
+          "due_date": "2026-09-04",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-8-g0",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-8-g0",
+          "due_date": "2026-09-06",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "55.00",
+      "credit_banked": "45.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 9,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 9,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-9-g0",
+          "due_date": "2026-09-04",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-9-g0",
+          "due_date": "2026-09-05",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-9-g0",
+          "due_date": "2026-09-06",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-9-g0",
+          "due_date": "2026-09-07",
+          "amount": "5.50",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "22.00",
+      "credit_banked": "428.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 10,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 550,
+          "days": 5,
+          "prepaidDays": 0,
+          "partialMinor": 898
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 10,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-10-g0",
+          "due_date": "2026-09-04",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-10-g0",
+          "due_date": "2026-09-05",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-10-g0",
+          "due_date": "2026-09-06",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-10-g0",
+          "due_date": "2026-09-07",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-10-g0",
+          "due_date": "2026-09-08",
+          "amount": "102.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "510.00",
+      "credit_banked": "1990.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 11,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 11,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-11-g0",
+          "due_date": "2026-09-03",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-11-g0",
+          "due_date": "2026-09-04",
+          "amount": "35.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 12,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 13
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 12,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-12-g0",
+          "due_date": "2026-09-02",
+          "amount": "64.87",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "64.87",
+      "credit_banked": "385.13",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 13,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 7
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 13,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-13-g0",
+          "due_date": "2026-09-01",
+          "amount": "0.93",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-13-g0",
+          "due_date": "2026-09-02",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-13-g1",
+          "due_date": "2026-09-02",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-13-g0",
+          "due_date": "2026-09-03",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-13-g0",
+          "due_date": "2026-09-04",
+          "amount": "1.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "31.93",
+      "credit_banked": "218.07",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 14,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 4,
+          "prepaidDays": 1,
+          "partialMinor": 383
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 6,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 14,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-14-g0",
+          "due_date": "2026-09-02",
+          "amount": "46.17",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-14-g0",
+          "due_date": "2026-09-03",
+          "amount": "3.83",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 15,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 4,
+          "prepaidDays": 1,
+          "partialMinor": 595
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 15,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-15-g0",
+          "due_date": "2026-09-02",
+          "amount": "22.05",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-15-g0",
+          "due_date": "2026-09-03",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-15-g0",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "78.05",
+      "credit_banked": "2421.95",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 16,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 18
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 16,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-16-g0",
+          "due_date": "2026-09-02",
+          "amount": "100.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 17,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 0,
+          "partialMinor": 685
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 1375,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 568
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 17,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-17-g0",
+          "due_date": "2026-09-01",
+          "amount": "43.15",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-17-g0",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-17-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "143.15",
+      "credit_banked": "306.85",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 18,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 6,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 10200,
+          "days": 5,
+          "prepaidDays": 0,
+          "partialMinor": 493
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 18,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-18-g0",
+          "due_date": "2026-09-01",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 19,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 19,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-19-g0",
+          "due_date": "2026-09-04",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 20,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 4,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 10200,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 1375,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 503
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 20,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-20-g0",
+          "due_date": "2026-09-02",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 21,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 5,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 8,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 21,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-21-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-21-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-21-g0",
+          "due_date": "2026-09-04",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-21-g0",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "55.00",
+      "credit_banked": "395.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 22,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 22,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-22-g0",
+          "due_date": "2026-09-01",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 23,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 193
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 23,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-23-g0",
+          "due_date": "2026-09-02",
+          "amount": "63.07",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "63.07",
+      "credit_banked": "36.93",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 24,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 24,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-24-g0",
+          "due_date": "2026-09-01",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 25,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 95
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 4,
+          "prepaidDays": 1,
+          "partialMinor": 224
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 25,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-25-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 26,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 20000,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 26,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-26-g0",
+          "due_date": "2026-09-01",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-26-g0",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-26-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-26-g0",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-26-g0",
+          "due_date": "2026-09-05",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-26-g0",
+          "due_date": "2026-09-06",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-26-g0",
+          "due_date": "2026-09-07",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "350.00",
+      "credit_banked": "550.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 27,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 27,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-27-g0",
+          "due_date": "2026-09-01",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-27-g0",
+          "due_date": "2026-09-02",
+          "amount": "1.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "2.00",
+      "credit_banked": "98.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 28,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 256
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 28,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-28-g0",
+          "due_date": "2026-09-03",
+          "amount": "99.44",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-28-g0",
+          "due_date": "2026-09-04",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-28-g1",
+          "due_date": "2026-09-04",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-28-g0",
+          "due_date": "2026-09-05",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-28-g1",
+          "due_date": "2026-09-05",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-28-g0",
+          "due_date": "2026-09-06",
+          "amount": "102.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "407.44",
+      "credit_banked": "2092.56",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 29,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 29,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-29-g0",
+          "due_date": "2026-09-01",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-29-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-29-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "41.25",
+      "credit_banked": "8.75",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 30,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 391
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 2800,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 30,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-30-g0",
+          "due_date": "2026-09-01",
+          "amount": "24.09",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g0",
+          "due_date": "2026-09-02",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g0",
+          "due_date": "2026-09-03",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g0",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g1",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g2",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g0",
+          "due_date": "2026-09-05",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g1",
+          "due_date": "2026-09-05",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g2",
+          "due_date": "2026-09-05",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g0",
+          "due_date": "2026-09-06",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g1",
+          "due_date": "2026-09-06",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g2",
+          "due_date": "2026-09-06",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g0",
+          "due_date": "2026-09-07",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g1",
+          "due_date": "2026-09-07",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g2",
+          "due_date": "2026-09-07",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g0",
+          "due_date": "2026-09-08",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-30-g1",
+          "due_date": "2026-09-08",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "472.09",
+      "credit_banked": "427.91",
+      "memberships_touched": 3
+    }
+  },
+  {
+    "scenario": {
+      "seed": 31,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 1375,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 31,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-31-g0",
+          "due_date": "2026-09-01",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 32,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 32,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-32-g0",
+          "due_date": "2026-09-04",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-32-g0",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-32-g0",
+          "due_date": "2026-09-06",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-32-g0",
+          "due_date": "2026-09-07",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "55.00",
+      "credit_banked": "845.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 33,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 33,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-33-g0",
+          "due_date": "2026-09-01",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-33-g0",
+          "due_date": "2026-09-02",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-33-g0",
+          "due_date": "2026-09-03",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-33-g0",
+          "due_date": "2026-09-04",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-33-g0",
+          "due_date": "2026-09-05",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-33-g0",
+          "due_date": "2026-09-06",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-33-g0",
+          "due_date": "2026-09-07",
+          "amount": "65.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "455.00",
+      "credit_banked": "2045.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 34,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 7,
+          "prepaidDays": 1,
+          "partialMinor": 693
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 10200,
+          "days": 5,
+          "prepaidDays": 0,
+          "partialMinor": 885
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 34,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-34-g0",
+          "due_date": "2026-09-02",
+          "amount": "0.01",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-34-g0",
+          "due_date": "2026-09-03",
+          "amount": "4.99",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 35,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 35,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-35-g0",
+          "due_date": "2026-09-04",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 36,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 853
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 36,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-36-g0",
+          "due_date": "2026-09-01",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 37,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 530
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 20000,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 37,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-37-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.01",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-37-g1",
+          "due_date": "2026-09-03",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-37-g0",
+          "due_date": "2026-09-04",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-37-g0",
+          "due_date": "2026-09-05",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-37-g0",
+          "due_date": "2026-09-06",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-37-g0",
+          "due_date": "2026-09-07",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-37-g0",
+          "due_date": "2026-09-08",
+          "amount": "1.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "205.01",
+      "credit_banked": "44.99",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 38,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 5000,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 38,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-38-g0",
+          "due_date": "2026-09-04",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-38-g0",
+          "due_date": "2026-09-05",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-38-g0",
+          "due_date": "2026-09-06",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-38-g0",
+          "due_date": "2026-09-07",
+          "amount": "1.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "4.00",
+      "credit_banked": "96.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 39,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 39,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-39-g0",
+          "due_date": "2026-09-01",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-39-g0",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-39-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-39-g0",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-39-g0",
+          "due_date": "2026-09-05",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "250.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 40,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 685
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 550,
+          "days": 6,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 40,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-40-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.01",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 41,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 20000,
+          "days": 5,
+          "prepaidDays": 1,
+          "partialMinor": 639
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 1375,
+          "days": 7,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 41,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-41-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 42,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 474
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 42,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-42-g0",
+          "due_date": "2026-09-03",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 43,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 0,
+          "partialMinor": 670
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 234
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 20000,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 43,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-43-g0",
+          "due_date": "2026-09-01",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 44,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 5,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 1375,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 44,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-44-g2",
+          "due_date": "2026-09-01",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g1",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g2",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g0",
+          "due_date": "2026-09-03",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g1",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g2",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g1",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g2",
+          "due_date": "2026-09-04",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g1",
+          "due_date": "2026-09-05",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g2",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g2",
+          "due_date": "2026-09-06",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-44-g2",
+          "due_date": "2026-09-07",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "297.25",
+      "credit_banked": "602.75",
+      "memberships_touched": 3
+    }
+  },
+  {
+    "scenario": {
+      "seed": 45,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 8,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 45,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-45-g0",
+          "due_date": "2026-09-02",
+          "amount": "100.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 46,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 247
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 46,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-46-g0",
+          "due_date": "2026-09-04",
+          "amount": "25.53",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-46-g0",
+          "due_date": "2026-09-05",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-46-g0",
+          "due_date": "2026-09-06",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-46-g0",
+          "due_date": "2026-09-07",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-46-g0",
+          "due_date": "2026-09-08",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "137.53",
+      "credit_banked": "112.47",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 47,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 10200,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 508
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 47,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-47-g0",
+          "due_date": "2026-09-02",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 48,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 5,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 550,
+          "days": 7,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 1375,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 48,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-48-g0",
+          "due_date": "2026-09-01",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-48-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-48-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-48-g0",
+          "due_date": "2026-09-04",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-48-g0",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "68.75",
+      "credit_banked": "31.25",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 49,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 6,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 152
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 49,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-49-g0",
+          "due_date": "2026-09-01",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-49-g0",
+          "due_date": "2026-09-02",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-49-g0",
+          "due_date": "2026-09-03",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-49-g0",
+          "due_date": "2026-09-04",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-49-g0",
+          "due_date": "2026-09-05",
+          "amount": "42.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "450.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 50,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 881
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 216
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 50,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-50-g0",
+          "due_date": "2026-09-01",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 51,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 251
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 51,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-51-g0",
+          "due_date": "2026-09-01",
+          "amount": "25.49",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-51-g0",
+          "due_date": "2026-09-02",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "53.49",
+      "credit_banked": "46.51",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 52,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 52,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-52-g0",
+          "due_date": "2026-09-02",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "28.00",
+      "credit_banked": "72.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 53,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 480
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 53,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-53-g0",
+          "due_date": "2026-09-04",
+          "amount": "0.01",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 54,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 6,
+          "prepaidDays": 1,
+          "partialMinor": 625
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 54,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-54-g0",
+          "due_date": "2026-09-02",
+          "amount": "7.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-54-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-54-g0",
+          "due_date": "2026-09-04",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-54-g0",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-54-g0",
+          "due_date": "2026-09-06",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "62.50",
+      "credit_banked": "187.50",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 55,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 199
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 534
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 55,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-55-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 56,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 5,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 56,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-56-g0",
+          "due_date": "2026-09-02",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-56-g0",
+          "due_date": "2026-09-03",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-56-g0",
+          "due_date": "2026-09-04",
+          "amount": "46.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "250.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 57,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 5000,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 57,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-57-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 58,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 6,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 58,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-58-g0",
+          "due_date": "2026-09-01",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 59,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 6,
+          "prepaidDays": 0,
+          "partialMinor": 574
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 173
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 59,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-59-g0",
+          "due_date": "2026-09-01",
+          "amount": "8.01",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-59-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-59-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-59-g0",
+          "due_date": "2026-09-04",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-59-g0",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-59-g0",
+          "due_date": "2026-09-06",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "76.76",
+      "credit_banked": "373.24",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 60,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 60,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-60-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "13.75",
+      "credit_banked": "436.25",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 61,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 181
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 6,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 61,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-61-g1",
+          "due_date": "2026-09-02",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-61-g0",
+          "due_date": "2026-09-03",
+          "amount": "148.19",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-61-g1",
+          "due_date": "2026-09-03",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-61-g0",
+          "due_date": "2026-09-04",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-61-g1",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-61-g0",
+          "due_date": "2026-09-05",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-61-g1",
+          "due_date": "2026-09-05",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-61-g0",
+          "due_date": "2026-09-06",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-61-g1",
+          "due_date": "2026-09-06",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "738.19",
+      "credit_banked": "161.81",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 62,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 251
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 20000,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 554
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 1375,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 62,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-62-g2",
+          "due_date": "2026-09-01",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-62-g0",
+          "due_date": "2026-09-02",
+          "amount": "2.99",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-62-g2",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-62-g0",
+          "due_date": "2026-09-03",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-62-g2",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-62-g1",
+          "due_date": "2026-09-04",
+          "amount": "50.26",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 3
+    }
+  },
+  {
+    "scenario": {
+      "seed": 63,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 63,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-63-g0",
+          "due_date": "2026-09-01",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-63-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "27.50",
+      "credit_banked": "872.50",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 64,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 4,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 8,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 6500,
+          "days": 6,
+          "prepaidDays": 3,
+          "partialMinor": 511
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 64,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-64-g0",
+          "due_date": "2026-09-02",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 65,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 181
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 65,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-65-g0",
+          "due_date": "2026-09-03",
+          "amount": "63.19",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-65-g0",
+          "due_date": "2026-09-04",
+          "amount": "65.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "128.19",
+      "credit_banked": "2371.81",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 66,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 66,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-66-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "13.75",
+      "credit_banked": "886.25",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 67,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 5,
+          "prepaidDays": 1,
+          "partialMinor": 684
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 545
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 15000,
+          "days": 4,
+          "prepaidDays": 1,
+          "partialMinor": 336
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 67,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-67-g0",
+          "due_date": "2026-09-02",
+          "amount": "58.16",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-67-g0",
+          "due_date": "2026-09-03",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-67-g0",
+          "due_date": "2026-09-04",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-67-g0",
+          "due_date": "2026-09-05",
+          "amount": "65.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "253.16",
+      "credit_banked": "196.84",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 68,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 472
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 20000,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 68,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-68-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.78",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "0.78",
+      "credit_banked": "449.22",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 69,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 5,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 20000,
+          "days": 8,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 69,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-69-g0",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 70,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 20000,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 15
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 70,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-70-g0",
+          "due_date": "2026-09-02",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 71,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 550,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 388
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 10200,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 71,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-71-g0",
+          "due_date": "2026-09-03",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-71-g1",
+          "due_date": "2026-09-03",
+          "amount": "1.62",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-71-g2",
+          "due_date": "2026-09-03",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-71-g2",
+          "due_date": "2026-09-04",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-71-g2",
+          "due_date": "2026-09-05",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-71-g2",
+          "due_date": "2026-09-06",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-71-g2",
+          "due_date": "2026-09-07",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-71-g2",
+          "due_date": "2026-09-08",
+          "amount": "102.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "678.62",
+      "credit_banked": "221.38",
+      "memberships_touched": 3
+    }
+  },
+  {
+    "scenario": {
+      "seed": 72,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 0,
+          "partialMinor": 299
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 72,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-72-g0",
+          "due_date": "2026-09-01",
+          "amount": "10.76",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-72-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-72-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "38.26",
+      "credit_banked": "861.74",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 73,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 20000,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 550,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 73,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-73-g0",
+          "due_date": "2026-09-01",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 74,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 20000,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 74,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-74-g0",
+          "due_date": "2026-09-03",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 75,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 75,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-75-g0",
+          "due_date": "2026-09-01",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-75-g0",
+          "due_date": "2026-09-02",
+          "amount": "100.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "250.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 76,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 76,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-76-g0",
+          "due_date": "2026-09-01",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 77,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 744
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 819
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 77,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-77-g0",
+          "due_date": "2026-09-02",
+          "amount": "94.56",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "94.56",
+      "credit_banked": "155.44",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 78,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 8,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 78,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-78-g0",
+          "due_date": "2026-09-03",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-78-g0",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "56.00",
+      "credit_banked": "844.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 79,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 8,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 79,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-79-g0",
+          "due_date": "2026-09-02",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 80,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 6,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 196
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 100,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 464
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 80,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-80-g0",
+          "due_date": "2026-09-01",
+          "amount": "100.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 81,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 176
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 40
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 6500,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 81,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-81-g0",
+          "due_date": "2026-09-03",
+          "amount": "26.24",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-81-g0",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "54.24",
+      "credit_banked": "195.76",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 82,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 20000,
+          "days": 4,
+          "prepaidDays": 1,
+          "partialMinor": 586
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 20000,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 82,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-82-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 83,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 550,
+          "days": 4,
+          "prepaidDays": 1,
+          "partialMinor": 819
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 15000,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 83,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-83-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 84,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 84,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-84-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 85,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 85,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-85-g0",
+          "due_date": "2026-09-01",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-85-g1",
+          "due_date": "2026-09-01",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-85-g0",
+          "due_date": "2026-09-02",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-85-g1",
+          "due_date": "2026-09-02",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-85-g0",
+          "due_date": "2026-09-03",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-85-g1",
+          "due_date": "2026-09-03",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-85-g0",
+          "due_date": "2026-09-04",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-85-g1",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "520.00",
+      "credit_banked": "380.00",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 86,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 86,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-86-g0",
+          "due_date": "2026-09-04",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 87,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 530
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 87,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-87-g0",
+          "due_date": "2026-09-03",
+          "amount": "22.70",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-87-g0",
+          "due_date": "2026-09-04",
+          "amount": "27.30",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 88,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 6,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 256
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 20000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 88,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-88-g0",
+          "due_date": "2026-09-02",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-88-g1",
+          "due_date": "2026-09-02",
+          "amount": "47.44",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-88-g2",
+          "due_date": "2026-09-02",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-88-g0",
+          "due_date": "2026-09-03",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-88-g1",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-88-g0",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-88-g0",
+          "due_date": "2026-09-05",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-88-g0",
+          "due_date": "2026-09-06",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "437.44",
+      "credit_banked": "12.56",
+      "memberships_touched": 3
+    }
+  },
+  {
+    "scenario": {
+      "seed": 89,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 93
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 669
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 550,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 89,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-89-g0",
+          "due_date": "2026-09-03",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 90,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 90,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-90-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-90-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "27.50",
+      "credit_banked": "422.50",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 91,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 20000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 701
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 550,
+          "days": 5,
+          "prepaidDays": 1,
+          "partialMinor": 898
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 91,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-91-g0",
+          "due_date": "2026-09-02",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 92,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 20000,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 653
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 92,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-92-g0",
+          "due_date": "2026-09-03",
+          "amount": "193.47",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-92-g1",
+          "due_date": "2026-09-03",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-92-g0",
+          "due_date": "2026-09-04",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-92-g1",
+          "due_date": "2026-09-04",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-92-g0",
+          "due_date": "2026-09-05",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-92-g1",
+          "due_date": "2026-09-05",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-92-g0",
+          "due_date": "2026-09-06",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-92-g1",
+          "due_date": "2026-09-06",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-92-g1",
+          "due_date": "2026-09-07",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-92-g1",
+          "due_date": "2026-09-08",
+          "amount": "150.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "1693.47",
+      "credit_banked": "806.53",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 93,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 93,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-93-g0",
+          "due_date": "2026-09-04",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-93-g0",
+          "due_date": "2026-09-05",
+          "amount": "35.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 94,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 94,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-94-g0",
+          "due_date": "2026-09-02",
+          "amount": "150.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "150.00",
+      "credit_banked": "300.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 95,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 6,
+          "prepaidDays": 3,
+          "partialMinor": 865
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 95,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-95-g0",
+          "due_date": "2026-09-04",
+          "amount": "5.10",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-95-g0",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-95-g0",
+          "due_date": "2026-09-06",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "32.60",
+      "credit_banked": "2467.40",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 96,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 96,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-96-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "13.75",
+      "credit_banked": "436.25",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 97,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 437
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 702
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 97,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-97-g1",
+          "due_date": "2026-09-01",
+          "amount": "42.98",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-97-g1",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-97-g0",
+          "due_date": "2026-09-03",
+          "amount": "145.63",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-97-g1",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-97-g1",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "338.61",
+      "credit_banked": "111.39",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 98,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 478
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 6,
+          "prepaidDays": 1,
+          "partialMinor": 655
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 98,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-98-g0",
+          "due_date": "2026-09-01",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 99,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 736
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 99,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-99-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 100,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 100,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-100-g0",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "400.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 101,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 101,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-101-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-101-g0",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-101-g0",
+          "due_date": "2026-09-05",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-101-g0",
+          "due_date": "2026-09-06",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-101-g0",
+          "due_date": "2026-09-07",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "250.00",
+      "credit_banked": "200.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 102,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 10200,
+          "days": 6,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 102,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-102-g2",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-102-g0",
+          "due_date": "2026-09-04",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-102-g1",
+          "due_date": "2026-09-04",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-102-g0",
+          "due_date": "2026-09-05",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-102-g1",
+          "due_date": "2026-09-05",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-102-g1",
+          "due_date": "2026-09-06",
+          "amount": "102.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "560.00",
+      "credit_banked": "340.00",
+      "memberships_touched": 3
+    }
+  },
+  {
+    "scenario": {
+      "seed": 103,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 189
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 103,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-103-g0",
+          "due_date": "2026-09-04",
+          "amount": "3.61",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-103-g0",
+          "due_date": "2026-09-05",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-103-g0",
+          "due_date": "2026-09-06",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-103-g0",
+          "due_date": "2026-09-07",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-103-g0",
+          "due_date": "2026-09-08",
+          "amount": "5.50",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "25.61",
+      "credit_banked": "74.39",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 104,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 50
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 6500,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 104,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-104-g0",
+          "due_date": "2026-09-01",
+          "amount": "100.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 105,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 20000,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 105,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-105-g0",
+          "due_date": "2026-09-04",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 106,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 6,
+          "prepaidDays": 3,
+          "partialMinor": 514
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 106,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-106-g0",
+          "due_date": "2026-09-04",
+          "amount": "0.36",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-106-g0",
+          "due_date": "2026-09-05",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-106-g0",
+          "due_date": "2026-09-06",
+          "amount": "5.50",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "11.36",
+      "credit_banked": "888.64",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 107,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 550,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 302
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 6500,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 107,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-107-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 108,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 729
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 108,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-108-g0",
+          "due_date": "2026-09-04",
+          "amount": "100.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 109,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 454
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 5,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 100,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 109,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-109-g0",
+          "due_date": "2026-09-01",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 110,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 342
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 110,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-110-g0",
+          "due_date": "2026-09-04",
+          "amount": "146.58",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-110-g0",
+          "due_date": "2026-09-05",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-110-g0",
+          "due_date": "2026-09-06",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-110-g0",
+          "due_date": "2026-09-07",
+          "amount": "3.42",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "450.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 111,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 7,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 7,
+          "prepaidDays": 1,
+          "partialMinor": 453
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 1375,
+          "days": 6,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 111,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-111-g0",
+          "due_date": "2026-09-02",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 112,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 6,
+          "prepaidDays": 1,
+          "partialMinor": 642
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 20000,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 112,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-112-g0",
+          "due_date": "2026-09-02",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 113,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 6,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 15000,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 113,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-113-g0",
+          "due_date": "2026-09-02",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 114,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 114,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-114-g0",
+          "due_date": "2026-09-04",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 115,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 20000,
+          "days": 8,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 115,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-115-g0",
+          "due_date": "2026-09-02",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-115-g0",
+          "due_date": "2026-09-03",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-115-g0",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "450.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 116,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 10200,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 15000,
+          "days": 6,
+          "prepaidDays": 1,
+          "partialMinor": 671
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 116,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-116-g0",
+          "due_date": "2026-09-03",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 117,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 20000,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 117,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-117-g0",
+          "due_date": "2026-09-01",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-117-g0",
+          "due_date": "2026-09-02",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-117-g0",
+          "due_date": "2026-09-03",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-117-g0",
+          "due_date": "2026-09-04",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-117-g0",
+          "due_date": "2026-09-05",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-117-g0",
+          "due_date": "2026-09-06",
+          "amount": "200.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-117-g0",
+          "due_date": "2026-09-07",
+          "amount": "200.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "1400.00",
+      "credit_banked": "1100.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 118,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 131
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 118,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-118-g0",
+          "due_date": "2026-09-04",
+          "amount": "0.01",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "449.99",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 119,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 10200,
+          "days": 7,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 1375,
+          "days": 4,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 119,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-119-g0",
+          "due_date": "2026-09-04",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 120,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 2,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 100,
+          "days": 5,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 5000,
+          "days": 8,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 120,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-120-g0",
+          "due_date": "2026-09-01",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 121,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 8,
+          "prepaidDays": 1,
+          "partialMinor": 3
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 121,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-121-g0",
+          "due_date": "2026-09-02",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 122,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 39
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 15000,
+          "days": 6,
+          "prepaidDays": 0,
+          "partialMinor": 621
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 122,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-122-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 123,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 6500,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 10
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 123,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-123-g0",
+          "due_date": "2026-09-01",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-123-g0",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-123-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "150.00",
+      "credit_banked": "100.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 124,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 15000,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 324
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 100,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 124,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-124-g0",
+          "due_date": "2026-09-03",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "28.00",
+      "credit_banked": "222.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 125,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 4,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 10200,
+          "days": 6,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 125,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-125-g0",
+          "due_date": "2026-09-01",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-125-g0",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-125-g2",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "part"
+        },
+        {
+          "group": "CONF-125-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-125-g0",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-125-g0",
+          "due_date": "2026-09-05",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-125-g0",
+          "due_date": "2026-09-06",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-125-g0",
+          "due_date": "2026-09-07",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-125-g0",
+          "due_date": "2026-09-08",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "450.00",
+      "credit_banked": "0",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 126,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 221
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 126,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-126-g0",
+          "due_date": "2026-09-01",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-126-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-126-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-126-g0",
+          "due_date": "2026-09-04",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-126-g0",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-126-g0",
+          "due_date": "2026-09-06",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-126-g0",
+          "due_date": "2026-09-07",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "96.25",
+      "credit_banked": "353.75",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 127,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 10000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 127,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-127-g0",
+          "due_date": "2026-09-03",
+          "amount": "100.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "100.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 128,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 203
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 128,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-128-g0",
+          "due_date": "2026-09-02",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 129,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 129,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-129-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "850.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 130,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 130,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-130-g0",
+          "due_date": "2026-09-01",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 131,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 793
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 131,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-131-g0",
+          "due_date": "2026-09-01",
+          "amount": "0.01",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 132,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 733
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 132,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-132-g1",
+          "due_date": "2026-09-03",
+          "amount": "42.67",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-132-g0",
+          "due_date": "2026-09-04",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-132-g1",
+          "due_date": "2026-09-04",
+          "amount": "3.33",
+          "kind": "part"
+        },
+        {
+          "group": "CONF-132-g0",
+          "due_date": "2026-09-05",
+          "amount": "102.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "250.00",
+      "credit_banked": "0",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 133,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 5,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 133,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-133-g0",
+          "due_date": "2026-09-04",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 134,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 10200,
+          "days": 6,
+          "prepaidDays": 3,
+          "partialMinor": 749
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 550,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 134,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-134-g1",
+          "due_date": "2026-09-02",
+          "amount": "5.50",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-134-g0",
+          "due_date": "2026-09-04",
+          "amount": "94.51",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-134-g0",
+          "due_date": "2026-09-05",
+          "amount": "102.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-134-g0",
+          "due_date": "2026-09-06",
+          "amount": "102.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "304.01",
+      "credit_banked": "145.99",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 135,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 7,
+          "prepaidDays": 1,
+          "partialMinor": 791
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 135,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-135-g0",
+          "due_date": "2026-09-02",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 136,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 5000,
+          "days": 7,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 7,
+          "prepaidDays": 3,
+          "partialMinor": 580
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 136,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-136-g0",
+          "due_date": "2026-09-02",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-136-g0",
+          "due_date": "2026-09-03",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-136-g0",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-136-g1",
+          "due_date": "2026-09-04",
+          "amount": "7.95",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-136-g0",
+          "due_date": "2026-09-05",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-136-g1",
+          "due_date": "2026-09-05",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-136-g0",
+          "due_date": "2026-09-06",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-136-g1",
+          "due_date": "2026-09-06",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-136-g0",
+          "due_date": "2026-09-07",
+          "amount": "50.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-136-g1",
+          "due_date": "2026-09-07",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "349.20",
+      "credit_banked": "550.80",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 137,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 100,
+          "days": 4,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 20000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 137,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-137-g0",
+          "due_date": "2026-09-01",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-137-g0",
+          "due_date": "2026-09-02",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-137-g0",
+          "due_date": "2026-09-03",
+          "amount": "1.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-137-g0",
+          "due_date": "2026-09-04",
+          "amount": "1.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "4.00",
+      "credit_banked": "1.00",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 138,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 7,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 138,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-138-g0",
+          "due_date": "2026-09-03",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-138-g0",
+          "due_date": "2026-09-04",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-138-g0",
+          "due_date": "2026-09-05",
+          "amount": "150.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "450.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 139,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 3,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 45000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 139,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-139-g0",
+          "due_date": "2026-09-01",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-139-g0",
+          "due_date": "2026-09-02",
+          "amount": "150.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-139-g0",
+          "due_date": "2026-09-03",
+          "amount": "150.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "450.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 140,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 250000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 140,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-140-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "13.75",
+      "credit_banked": "2486.25",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 141,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 6500,
+          "days": 7,
+          "prepaidDays": 0,
+          "partialMinor": 384
+        }
+      ],
+      "paymentMinor": 50,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 141,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-141-g0",
+          "due_date": "2026-09-03",
+          "amount": "0.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.50",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 142,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 6,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 6500,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 142,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-142-g1",
+          "due_date": "2026-09-03",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-142-g0",
+          "due_date": "2026-09-04",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-142-g0",
+          "due_date": "2026-09-05",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-142-g0",
+          "due_date": "2026-09-06",
+          "amount": "28.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "149.00",
+      "credit_banked": "751.00",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 143,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 5,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 1375,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 332
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 10200,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 500,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 143,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-143-g0",
+          "due_date": "2026-09-03",
+          "amount": "5.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "5.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 144,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 2800,
+          "days": 5,
+          "prepaidDays": 0,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 144,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-144-g0",
+          "due_date": "2026-09-01",
+          "amount": "28.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-144-g0",
+          "due_date": "2026-09-02",
+          "amount": "22.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 145,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 6,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 8,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 1,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 145,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-145-g0",
+          "due_date": "2026-09-04",
+          "amount": "0.01",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "0.01",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 146,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 550,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 25000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 146,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-146-g0",
+          "due_date": "2026-09-02",
+          "amount": "5.50",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "5.50",
+      "credit_banked": "244.50",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 147,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 1375,
+          "days": 3,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 3,
+          "prepaidDays": 2,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "member"
+    },
+    "result": {
+      "seed": 147,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-147-g0",
+          "due_date": "2026-09-02",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-147-g0",
+          "due_date": "2026-09-03",
+          "amount": "13.75",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-147-g1",
+          "due_date": "2026-09-03",
+          "amount": "22.50",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 2
+    }
+  },
+  {
+    "scenario": {
+      "seed": 148,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 6500,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 448
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 5000,
+          "days": 8,
+          "prepaidDays": 0,
+          "partialMinor": 326
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 148,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-148-g0",
+          "due_date": "2026-09-01",
+          "amount": "60.52",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-148-g0",
+          "due_date": "2026-09-02",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-148-g0",
+          "due_date": "2026-09-03",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-148-g0",
+          "due_date": "2026-09-04",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-148-g0",
+          "due_date": "2026-09-05",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-148-g0",
+          "due_date": "2026-09-06",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-148-g0",
+          "due_date": "2026-09-07",
+          "amount": "65.00",
+          "kind": "full"
+        },
+        {
+          "group": "CONF-148-g0",
+          "due_date": "2026-09-08",
+          "amount": "65.00",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "515.52",
+      "credit_banked": "384.48",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 149,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 15000,
+          "days": 5,
+          "prepaidDays": 3,
+          "partialMinor": 0
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 2800,
+          "days": 8,
+          "prepaidDays": 3,
+          "partialMinor": 538
+        }
+      ],
+      "paymentMinor": 5000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 149,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-149-g0",
+          "due_date": "2026-09-04",
+          "amount": "50.00",
+          "kind": "part"
+        }
+      ],
+      "total_allocated": "50.00",
+      "credit_banked": "0",
+      "memberships_touched": 1
+    }
+  },
+  {
+    "scenario": {
+      "seed": 150,
+      "memberships": [
+        {
+          "tag": "g0",
+          "dailyMinor": 20000,
+          "days": 4,
+          "prepaidDays": 3,
+          "partialMinor": 321
+        },
+        {
+          "tag": "g1",
+          "dailyMinor": 20000,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 673
+        },
+        {
+          "tag": "g2",
+          "dailyMinor": 550,
+          "days": 2,
+          "prepaidDays": 1,
+          "partialMinor": 0
+        }
+      ],
+      "paymentMinor": 90000,
+      "scope": "slot"
+    },
+    "result": {
+      "seed": 150,
+      "today": "2026-09-01",
+      "allocations": [
+        {
+          "group": "CONF-150-g0",
+          "due_date": "2026-09-04",
+          "amount": "196.79",
+          "kind": "full"
+        }
+      ],
+      "total_allocated": "196.79",
+      "credit_banked": "703.21",
+      "memberships_touched": 1
+    }
+  }
+]

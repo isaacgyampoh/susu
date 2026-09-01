@@ -1,6 +1,9 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { devPaymentsAllowed } from '../_shared/mode.ts'
+import { issueRegistrationToken, TOKEN_TTL_DAYS } from '../_shared/registration-token.ts'
+import { sendSMS } from '../_shared/africas-talking.ts'
+import { registrationPaymentUrl } from '../_shared/urls.ts'
 
 
 /** Validate an uploaded image when present (absent files are fine). */
@@ -108,6 +111,11 @@ serveWithCors(async (req) => {
       }
     }
 
+    // The applicant's payment link. Issued here — before the row exists — so
+    // that an application is never created without a way to pay for it, which
+    // is precisely how the 13 historical unpaid registrations happened.
+    const link = await issueRegistrationToken()
+
     // Create KYC record
     const kycRow: Record<string, unknown> = ({
         full_name, phone: normPhone,
@@ -128,32 +136,56 @@ serveWithCors(async (req) => {
         // Only ever true without a real payment when dev mode is explicitly on
         registration_fee_paid: devPaymentsAllowed() || group.registration_fee === 0,
         status: 'pending',
+        // Only the hash is stored. A reader of this table cannot reconstruct
+        // any applicant's link.
+        payment_token_hash:       link.hash,
+        payment_token_issued_at:  new Date().toISOString(),
+        payment_token_expires_at: link.expiresAt,
       })
-    let { data: kyc, error: kycErr } = await supabaseAdmin
+    // ── One insert, no retries ───────────────────────────────────────────
+    // This used to catch the insert, regex the error MESSAGE for a column
+    // name, delete that field and try again — twice. It was written when the
+    // v9 and v13 migrations might not have been applied yet. Both have been
+    // applied for months, and every column below exists in production, so the
+    // fallbacks could no longer fire for the reason they were written; they
+    // could only fire on some UNRELATED failure that happened to mention
+    // `selected_slots`, and then silently save an application missing the
+    // slot counts the fee was calculated from. Schema is a deployment
+    // guarantee, not something to discover from an error string at runtime.
+    const { data: kyc, error: kycErr } = await supabaseAdmin
       .from('kyc_applications').insert(kycRow).select('id').single()
-    if (kycErr && /selected_slots/.test(kycErr.message)) {
-      delete kycRow.selected_slots
-      ;({ data: kyc, error: kycErr } = await supabaseAdmin
-        .from('kyc_applications').insert(kycRow).select('id').single())
+    if (kycErr || !kyc) {
+      console.error('kyc-submit: insert failed', kycErr?.message)
+      return error('Could not save your application. Please try again.', 500)
     }
-    if (kycErr && /selected_group_ids/.test(kycErr.message)) {
-      // v9 migration not applied — keep the first choice, drop the array
-      delete kycRow.selected_group_ids
-      ;({ data: kyc, error: kycErr } = await supabaseAdmin
-        .from('kyc_applications').insert(kycRow).select('id').single())
-    }
-    if (kycErr || !kyc) return error(kycErr?.message ?? 'Could not save application', 500)
 
-    // No online payment at application time. NaloPay prompts a phone, which
-    // needs an authenticated member — an applicant is not one yet. The fee is
-    // taken after approval: either the admin marks it paid when the MoMo
-    // lands, or the member pays it from their portal on first sign-in.
+    // ── The applicant can now pay, before approval ───────────────────────
+    // Previously this returned "submitted" and stopped: NaloPay prompts a
+    // phone, prompting needed an authenticated member, and an applicant is not
+    // one — so the fee could only ever be recorded by an admin after the fact.
+    // The payment link is a capability, not an account: it pays THIS
+    // application's fee and does nothing else.
+    const payUrl = registrationPaymentUrl(link.token)
+    const feeDue = !devPaymentsAllowed() && group.registration_fee > 0
+
+    if (feeDue) {
+      // Sent as well as shown. An applicant who closes the tab has lost the
+      // only copy of a token we deliberately cannot recover.
+      await sendSMS(normPhone,
+        `Hi ${full_name.split(' ')[0]}, your susu application is received. `
+      + `Pay your GHS ${group.registration_fee.toFixed(2)} registration fee here (valid ${TOKEN_TTL_DAYS} days): ${payUrl}`)
+        .catch(() => {})
+    }
 
     return json({
       message:  'KYC application submitted successfully',
       kyc_id:   kyc.id,
       fee:      group.registration_fee,
-      fee_paid: devPaymentsAllowed(),
+      fee_paid: devPaymentsAllowed() || group.registration_fee === 0,
+      // The raw token is returned exactly once, here. It is not stored and
+      // cannot be re-derived; a lost link has to be re-issued by an admin.
+      payment_url: feeDue ? payUrl : null,
+      payment_link_expires_at: feeDue ? link.expiresAt : null,
     }, 201)
   } catch (e) {
     console.error(e)

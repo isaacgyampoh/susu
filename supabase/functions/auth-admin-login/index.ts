@@ -35,6 +35,25 @@ serveWithCors(async (req) => {
     await supabaseAdmin.rpc('record_login_attempt', { p_identifier: ident, p_kind: 'admin', p_ok: true })
 
     const admin = data[0]
+
+    /*
+     * ── A DEFAULT PASSWORD MUST NOT BUY A WORKING ADMIN TOKEN ─────────────
+     *
+     * `Admin@1234` is published in this repository's history. Phase 07 made the
+     * CONSOLE redirect to /admin/password until it is changed — which protects
+     * somebody using the console, and nobody using curl. Anyone who read the
+     * repo could call this endpoint and receive a full-privilege token that
+     * every admin endpoint honoured.
+     *
+     * The token is now STAMPED: while `must_change_password` is set, it carries
+     * `pw: 'must_change'`, and `requireAdmin()` refuses it everywhere except the
+     * password-change endpoint. The credential still opens the door, and the
+     * only room it reaches is the one where you change it.
+     *
+     * This is not a substitute for rotating the password. It is what closes the
+     * window until somebody does.
+     */
+    const mustChange = admin.must_change_password ?? false
     const token = await signJWT({
       sub:       admin.id,
       email:     admin.email,
@@ -42,6 +61,7 @@ serveWithCors(async (req) => {
       role:      admin.role,
       tv:        admin.token_version ?? 0,
       type:      'admin',
+      ...(mustChange ? { pw: 'must_change' } : {}),
     })
 
     return json({

@@ -592,7 +592,7 @@ export default function MemberDetailPage() {
                   <p className="text-sm text-ink-2 text-center">Not in any group yet — use Add to Group first.</p>
                 ) : (
                   <>
-                    <p className="text-sm text-ink-2 text-center">No payment days found. Here's why, per plan:</p>
+                    <p className="text-sm text-ink-2 text-center">No payment days found. Here&rsquo;s why, per plan:</p>
                     {payPlans.map((pl: any) => (
                       <div key={pl.id} className="border border-line rounded-[10px] p-3.5">
                         <p className="text-sm font-semibold text-ink">
@@ -737,7 +737,7 @@ export default function MemberDetailPage() {
                     </a>
                   )}
                 </div>
-                <p className="text-[11px] text-ink-3">Tip: tap "Open WhatsApp" (message is copied) then paste it to the member.</p>
+                <p className="text-[11px] text-ink-3">Tip: tap &ldquo;Open WhatsApp&rdquo; (message is copied) then paste it to the member.</p>
 
                 <div className="border-t border-line pt-3">
                   <p className="text-xs text-ink-2 mb-2">Member lost their passcode?</p>

@@ -26,6 +26,28 @@ serveWithCors(async (req) => {
   const admin = await requireAdmin(req)
   if (!admin) return error('Unauthorized', 401)
 
+  // ── DISABLED IN PHASE 04 ────────────────────────────────────────────────
+  // This tool existed to un-reverse payments that had been reversed — repair work made necessary by
+  // finding F-02, where the unique index on contributions.paystack_ref
+  // silently rejected every day after the first in a multi-day settlement.
+  //
+  // That defect is fixed at source (v26 removed the constraint) and its
+  // historical damage was reconciled by v27 with a full audit trail. The tool
+  // is therefore obsolete.
+  //
+  // It is disabled rather than deleted for two reasons. It moves money
+  // OUTSIDE the canonical settle_payment() engine, so leaving it callable
+  // would mean two active settlement mechanisms — exactly what this phase set
+  // out to end. And its call into the settlement module now uses a signature
+  // that no longer exists, so it could not work correctly even if invoked.
+  //
+  // If a future reconciliation genuinely needs this, rebuild it on
+  // settle_payment() so it inherits atomicity, locking and an audit trail.
+  return error(
+    'This repair tool is disabled. Settlement now runs through the canonical ' +
+    'transactional engine, which makes the defect it corrected impossible. ' +
+    'See docs/phase-03/financial-reconciliation.md.', 410)
+
   try {
     const body = await req.json().catch(() => ({}))
     const dryRun = body.dry_run === true

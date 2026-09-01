@@ -75,7 +75,7 @@ export default function ReportsPage() {
             <h3 className="font-bold text-ink">{label}</h3>
             <p className="text-ink-2 text-sm mt-1 flex-1">{desc}</p>
             {id === 'members' && groupId && (
-              <p className="text-xs text-ink-3 mt-2 italic">Group filter doesn't apply to this report</p>
+              <p className="text-xs text-ink-3 mt-2 italic">Group filter doesn&rsquo;t apply to this report</p>
             )}
             <button onClick={() => download(id)} disabled={downloading === id}
               className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-tint hover:bg-ink hover:text-white text-ink font-medium rounded-lg text-[13px] transition-colors disabled:opacity-50">

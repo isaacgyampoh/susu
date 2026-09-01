@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Contribution, SusuGroup } from '@/types'
 import { format } from 'date-fns'
@@ -55,9 +55,8 @@ export default function ContributionsPage() {
       .then(({ data }) => setGroups(data?.groups ?? []))
   }, [])
 
-  useEffect(() => { loadContributions() }, [statusFilter, groupFilter, page])
 
-  async function loadContributions() {
+  const loadContributions = useCallback(async () => {
     setLoading(true)
     const token = getAdminToken()
     const params = new URLSearchParams({ page: String(page) })
@@ -71,7 +70,9 @@ export default function ContributionsPage() {
     setTotal(data?.total ?? 0)
     setPicked(new Set())
     setLoading(false)
-  }
+  }, [statusFilter, groupFilter, page])
+
+  useEffect(() => { loadContributions() }, [loadContributions])
 
   // ── Record Payment: member search ──
   useEffect(() => {
@@ -330,7 +331,7 @@ export default function ContributionsPage() {
           <div className="bg-white border border-line rounded-[10px] w-full max-w-lg p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div>
               <h2 className="font-bold text-ink text-lg">Record Payment</h2>
-              <p className="text-ink-2 text-sm mt-0.5">Cash, direct MoMo, or bank — settle a member's oldest days first.</p>
+              <p className="text-ink-2 text-sm mt-0.5">Cash, direct MoMo, or bank — settle a member&rsquo;s oldest days first.</p>
             </div>
 
             {!recMember ? (
@@ -370,7 +371,7 @@ export default function ContributionsPage() {
                   <p className="text-sm text-ink-2 text-center">Not in any group yet — use Add to Group first.</p>
                 ) : (
                   <>
-                    <p className="text-sm text-ink-2 text-center">No payment days found. Here's why, per plan:</p>
+                    <p className="text-sm text-ink-2 text-center">No payment days found. Here&rsquo;s why, per plan:</p>
                     {recPlans.map((pl: any) => (
                       <div key={pl.id} className="border border-line rounded-[10px] p-3.5">
                         <p className="text-sm font-semibold text-ink">
@@ -428,7 +429,7 @@ export default function ContributionsPage() {
                         className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:border-ink" />
                       {remainder > 0.009 && (
                         <p className="text-xs text-gold mt-1.5">
-                          GHS {remainder.toFixed(2)} left over doesn't cover a full day — untick or adjust, the leftover won't be recorded.
+                          GHS {remainder.toFixed(2)} left over doesn&rsquo;t cover a full day — untick or adjust, the leftover won&rsquo;t be recorded.
                         </p>
                       )}
                     </div>

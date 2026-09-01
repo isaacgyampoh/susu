@@ -1,0 +1,5715 @@
+{
+ "enums": {
+  "tx_type": [
+   "registration_fee",
+   "contribution",
+   "payout"
+  ],
+  "tx_status": [
+   "pending",
+   "success",
+   "failed"
+  ],
+  "kyc_status": [
+   "pending",
+   "approved",
+   "rejected"
+  ],
+  "notif_type": [
+   "sms",
+   "whatsapp",
+   "in_app"
+  ],
+  "group_status": [
+   "open",
+   "full",
+   "active",
+   "completed"
+  ],
+  "notif_status": [
+   "pending",
+   "sent",
+   "failed"
+  ],
+  "member_status": [
+   "pending",
+   "active",
+   "suspended",
+   "removed"
+  ],
+  "payout_status": [
+   "upcoming",
+   "processing",
+   "paid"
+  ],
+  "contribution_freq": [
+   "daily",
+   "weekly",
+   "monthly"
+  ],
+  "membership_status": [
+   "active",
+   "defaulted",
+   "completed"
+  ],
+  "contribution_status": [
+   "pending",
+   "paid",
+   "overdue"
+  ]
+ },
+ "roles": [
+  {
+   "name": "anon",
+   "can_login": false,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "authenticated",
+   "can_login": false,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "authenticator",
+   "can_login": true,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "dashboard_user",
+   "can_login": false,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "pgbouncer",
+   "can_login": true,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "postgres",
+   "can_login": true,
+   "superuser": false,
+   "bypass_rls": true
+  },
+  {
+   "name": "service_role",
+   "can_login": false,
+   "superuser": false,
+   "bypass_rls": true
+  },
+  {
+   "name": "supabase_admin",
+   "can_login": true,
+   "superuser": true,
+   "bypass_rls": true
+  },
+  {
+   "name": "supabase_auth_admin",
+   "can_login": true,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "supabase_etl_admin",
+   "can_login": true,
+   "superuser": false,
+   "bypass_rls": true
+  },
+  {
+   "name": "supabase_functions_admin",
+   "can_login": true,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "supabase_privileged_role",
+   "can_login": false,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "supabase_read_only_user",
+   "can_login": true,
+   "superuser": false,
+   "bypass_rls": true
+  },
+  {
+   "name": "supabase_realtime_admin",
+   "can_login": false,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "supabase_replication_admin",
+   "can_login": true,
+   "superuser": false,
+   "bypass_rls": false
+  },
+  {
+   "name": "supabase_storage_admin",
+   "can_login": true,
+   "superuser": false,
+   "bypass_rls": false
+  }
+ ],
+ "views": [],
+ "tables": {
+  "members": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "member_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "full_name",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "phone",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "email",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "whatsapp_number",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "ghana_card_number",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "ghana_card_front_url",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "ghana_card_back_url",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 9,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "passcode_hash",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 10,
+    "generated": null
+   },
+   {
+    "type": "member_status",
+    "column": "status",
+    "default": "'pending'::member_status",
+    "identity": null,
+    "not_null": false,
+    "position": 11,
+    "generated": null
+   },
+   {
+    "type": "date",
+    "column": "date_of_birth",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 12,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "occupation",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 13,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "residential_address",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 14,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "bank_name",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 15,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "bank_account_number",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 16,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "bank_account_name",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 17,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "mobile_money_number",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 18,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "mobile_money_provider",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 19,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 20,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "updated_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 21,
+    "generated": null
+   },
+   {
+    "type": "integer",
+    "column": "token_version",
+    "default": "0",
+    "identity": null,
+    "not_null": false,
+    "position": 22,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "credentials_sent_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 23,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "credit_balance",
+    "default": "0",
+    "identity": null,
+    "not_null": true,
+    "position": 24,
+    "generated": null
+   }
+  ],
+  "payouts": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "member_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "group_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "membership_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "total_amount",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "date",
+    "column": "scheduled_date",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "paid_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "payout_status",
+    "column": "status",
+    "default": "'upcoming'::payout_status",
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "paystack_transfer_ref",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 9,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "notes",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 10,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "marked_paid_by",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 11,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 12,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "updated_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 13,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "eligibility_checked_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 14,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "outstanding_at_payout",
+    "default": "0",
+    "identity": null,
+    "not_null": false,
+    "position": 15,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "deductions",
+    "default": "0",
+    "identity": null,
+    "not_null": false,
+    "position": 16,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "net_amount",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 17,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "reminded_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 18,
+    "generated": null
+   }
+  ],
+  "sms_log": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "gen_random_uuid()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "recipient",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "message",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "ok",
+    "default": "false",
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "provider",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "error",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": true,
+    "position": 7,
+    "generated": null
+   }
+  ],
+  "audit_log": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "admin_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "admin_name",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "action",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "entity_type",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "entity_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "entity_label",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "jsonb",
+    "column": "details",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 9,
+    "generated": null
+   }
+  ],
+  "admin_users": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "email",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "password_hash",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "full_name",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "role",
+    "default": "'admin'::text",
+    "identity": null,
+    "not_null": true,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "is_active",
+    "default": "true",
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "updated_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "integer",
+    "column": "token_version",
+    "default": "0",
+    "identity": null,
+    "not_null": false,
+    "position": 9,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "must_change_password",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 10,
+    "generated": null
+   }
+  ],
+  "susu_groups": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "name",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "description",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "contribution_amount",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "contribution_freq",
+    "column": "contribution_frequency",
+    "default": "'daily'::contribution_freq",
+    "identity": null,
+    "not_null": true,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "integer",
+    "column": "cycle_days",
+    "default": "15",
+    "identity": null,
+    "not_null": true,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "integer",
+    "column": "max_members",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "integer",
+    "column": "current_members",
+    "default": "0",
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "registration_fee",
+    "default": "0",
+    "identity": null,
+    "not_null": true,
+    "position": 9,
+    "generated": null
+   },
+   {
+    "type": "group_status",
+    "column": "status",
+    "default": "'open'::group_status",
+    "identity": null,
+    "not_null": false,
+    "position": 10,
+    "generated": null
+   },
+   {
+    "type": "date",
+    "column": "start_date",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 11,
+    "generated": null
+   },
+   {
+    "type": "date",
+    "column": "end_date",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 12,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "rules",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 13,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "image_url",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 14,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "created_by",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 15,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 16,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "updated_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 17,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "cashout_amount",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 18,
+    "generated": null
+   },
+   {
+    "type": "time without time zone",
+    "column": "payment_deadline",
+    "default": "'18:00:00'::time without time zone",
+    "identity": null,
+    "not_null": false,
+    "position": 19,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "penalty_per_late_day",
+    "default": "0",
+    "identity": null,
+    "not_null": false,
+    "position": 20,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "reg_fee_to_cashout",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 21,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "admin_notes",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 22,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "show_on_website",
+    "default": "true",
+    "identity": null,
+    "not_null": true,
+    "position": 23,
+    "generated": null
+   }
+  ],
+  "transactions": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "member_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "tx_type",
+    "column": "type",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "amount",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "reference",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "description",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "tx_status",
+    "column": "status",
+    "default": "'pending'::tx_status",
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "jsonb",
+    "column": "paystack_data",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "related_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 9,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 10,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "batch_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 11,
+    "generated": null
+   },
+   {
+    "type": "integer",
+    "column": "items_count",
+    "default": "1",
+    "identity": null,
+    "not_null": false,
+    "position": 12,
+    "generated": null
+   }
+  ],
+  "announcements": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "title",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "content",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "group_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "is_global",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "created_by",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   }
+  ],
+  "contributions": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "member_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "group_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "membership_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "amount",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "date",
+    "column": "due_date",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "paid_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "contribution_status",
+    "column": "status",
+    "default": "'pending'::contribution_status",
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "paystack_ref",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 9,
+    "generated": null
+   },
+   {
+    "type": "jsonb",
+    "column": "paystack_data",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 10,
+    "generated": null
+   },
+   {
+    "type": "integer",
+    "column": "cycle_number",
+    "default": "1",
+    "identity": null,
+    "not_null": true,
+    "position": 11,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 12,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "updated_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 13,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "is_late",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 14,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "is_flagged",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 15,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "flagged_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 16,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "penalty_due",
+    "default": "0",
+    "identity": null,
+    "not_null": false,
+    "position": 17,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "penalty_paid",
+    "default": "0",
+    "identity": null,
+    "not_null": false,
+    "position": 18,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "batch_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 19,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "is_backfilled",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 20,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "payment_method",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 21,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "payment_note",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 22,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "amount_paid",
+    "default": "0",
+    "identity": null,
+    "not_null": true,
+    "position": 23,
+    "generated": null
+   }
+  ],
+  "notifications": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "member_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "notif_type",
+    "column": "type",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "message",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "notif_status",
+    "column": "status",
+    "default": "'pending'::notif_status",
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "sent_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "error_message",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   }
+  ],
+  "login_attempts": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "identifier",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "kind",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "succeeded",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "attempted_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   }
+  ],
+  "contact_messages": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "member_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "subject",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "message",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "is_read",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "reply_text",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "replied_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   }
+  ],
+  "kyc_applications": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "full_name",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "phone",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "email",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "date",
+    "column": "date_of_birth",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "occupation",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "residential_address",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "ghana_card_number",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "ghana_card_front_url",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 9,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "ghana_card_back_url",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 10,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "selected_group_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 11,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "mobile_money_number",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 12,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "mobile_money_provider",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 13,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "bank_name",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 14,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "bank_account_number",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 15,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "bank_account_name",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 16,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "registration_fee_paid",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 17,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "registration_fee_ref",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 18,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "registration_fee_amount",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 19,
+    "generated": null
+   },
+   {
+    "type": "kyc_status",
+    "column": "status",
+    "default": "'pending'::kyc_status",
+    "identity": null,
+    "not_null": false,
+    "position": 20,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "rejection_reason",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 21,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "reviewer_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 22,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "created_member_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 23,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "submitted_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 24,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "reviewed_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 25,
+    "generated": null
+   },
+   {
+    "type": "uuid[]",
+    "column": "selected_group_ids",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 26,
+    "generated": null
+   },
+   {
+    "type": "jsonb",
+    "column": "selected_slots",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 27,
+    "generated": null
+   }
+  ],
+  "group_memberships": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "member_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "group_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "integer",
+    "column": "payout_position",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "date",
+    "column": "payout_date",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "payout_amount",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "payout_received",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "membership_status",
+    "column": "status",
+    "default": "'active'::membership_status",
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "joined_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 9,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "updated_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 10,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "forfeited_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 11,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "forfeit_reason",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 12,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "replaced_by",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 13,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "onboarded_existing",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 14,
+    "generated": null
+   },
+   {
+    "type": "numeric(3,2)",
+    "column": "slot_fraction",
+    "default": "1",
+    "identity": null,
+    "not_null": true,
+    "position": 15,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "shared_slot_key",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 16,
+    "generated": null
+   }
+  ],
+  "payment_penalties": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "member_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "group_id",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "contribution_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "amount",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "reason",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "boolean",
+    "column": "is_paid",
+    "default": "false",
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "paid_at",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 9,
+    "generated": null
+   }
+  ],
+  "document_access_log": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "uuid_generate_v4()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "admin_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "admin_name",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "subject",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "object_path",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   }
+  ],
+  "payment_allocations": [
+   {
+    "type": "uuid",
+    "column": "id",
+    "default": "gen_random_uuid()",
+    "identity": null,
+    "not_null": true,
+    "position": 1,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "reference",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 2,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "member_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 3,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "contribution_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 4,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "membership_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 5,
+    "generated": null
+   },
+   {
+    "type": "uuid",
+    "column": "group_id",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 6,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "group_name",
+    "default": null,
+    "identity": null,
+    "not_null": false,
+    "position": 7,
+    "generated": null
+   },
+   {
+    "type": "numeric(10,2)",
+    "column": "amount",
+    "default": null,
+    "identity": null,
+    "not_null": true,
+    "position": 8,
+    "generated": null
+   },
+   {
+    "type": "text",
+    "column": "kind",
+    "default": "'full'::text",
+    "identity": null,
+    "not_null": true,
+    "position": 9,
+    "generated": null
+   },
+   {
+    "type": "timestamp with time zone",
+    "column": "created_at",
+    "default": "now()",
+    "identity": null,
+    "not_null": true,
+    "position": 10,
+    "generated": null
+   }
+  ]
+ },
+ "indexes": [
+  {
+   "name": "admin_users_email_key",
+   "table": "admin_users",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX admin_users_email_key ON public.admin_users USING btree (email)",
+   "is_partial": false
+  },
+  {
+   "name": "admin_users_pkey",
+   "table": "admin_users",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX admin_users_pkey ON public.admin_users USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "announcements_pkey",
+   "table": "announcements",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX announcements_pkey ON public.announcements USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "audit_log_pkey",
+   "table": "audit_log",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX audit_log_pkey ON public.audit_log USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_audit_admin",
+   "table": "audit_log",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_audit_admin ON public.audit_log USING btree (admin_id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_audit_created",
+   "table": "audit_log",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_audit_created ON public.audit_log USING btree (created_at DESC)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_audit_entity",
+   "table": "audit_log",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id)",
+   "is_partial": false
+  },
+  {
+   "name": "contact_messages_pkey",
+   "table": "contact_messages",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX contact_messages_pkey ON public.contact_messages USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_contact_member",
+   "table": "contact_messages",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_contact_member ON public.contact_messages USING btree (member_id)",
+   "is_partial": false
+  },
+  {
+   "name": "contributions_pkey",
+   "table": "contributions",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX contributions_pkey ON public.contributions USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_contributions_backfilled",
+   "table": "contributions",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_contributions_backfilled ON public.contributions USING btree (is_backfilled) WHERE is_backfilled",
+   "is_partial": true
+  },
+  {
+   "name": "idx_contributions_due",
+   "table": "contributions",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_contributions_due ON public.contributions USING btree (due_date)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_contributions_group",
+   "table": "contributions",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_contributions_group ON public.contributions USING btree (group_id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_contributions_member",
+   "table": "contributions",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_contributions_member ON public.contributions USING btree (member_id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_contributions_payment_method",
+   "table": "contributions",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_contributions_payment_method ON public.contributions USING btree (payment_method) WHERE (payment_method IS NOT NULL)",
+   "is_partial": true
+  },
+  {
+   "name": "idx_contributions_status",
+   "table": "contributions",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_contributions_status ON public.contributions USING btree (status)",
+   "is_partial": false
+  },
+  {
+   "name": "uniq_contribution_ref",
+   "table": "contributions",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX uniq_contribution_ref ON public.contributions USING btree (paystack_ref) WHERE (paystack_ref IS NOT NULL)",
+   "is_partial": true
+  },
+  {
+   "name": "document_access_log_pkey",
+   "table": "document_access_log",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX document_access_log_pkey ON public.document_access_log USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_doc_access",
+   "table": "document_access_log",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_doc_access ON public.document_access_log USING btree (created_at DESC)",
+   "is_partial": false
+  },
+  {
+   "name": "group_memberships_group_id_payout_position_key",
+   "table": "group_memberships",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX group_memberships_group_id_payout_position_key ON public.group_memberships USING btree (group_id, payout_position)",
+   "is_partial": false
+  },
+  {
+   "name": "group_memberships_pkey",
+   "table": "group_memberships",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX group_memberships_pkey ON public.group_memberships USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_gm_shared_slot",
+   "table": "group_memberships",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_gm_shared_slot ON public.group_memberships USING btree (shared_slot_key) WHERE (shared_slot_key IS NOT NULL)",
+   "is_partial": true
+  },
+  {
+   "name": "idx_membership_lookup",
+   "table": "group_memberships",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_membership_lookup ON public.group_memberships USING btree (group_id, status)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_memberships_group",
+   "table": "group_memberships",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_memberships_group ON public.group_memberships USING btree (group_id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_memberships_member",
+   "table": "group_memberships",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_memberships_member ON public.group_memberships USING btree (member_id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_kyc_status",
+   "table": "kyc_applications",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_kyc_status ON public.kyc_applications USING btree (status)",
+   "is_partial": false
+  },
+  {
+   "name": "kyc_applications_pkey",
+   "table": "kyc_applications",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX kyc_applications_pkey ON public.kyc_applications USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_attempts_lookup",
+   "table": "login_attempts",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_attempts_lookup ON public.login_attempts USING btree (identifier, attempted_at DESC)",
+   "is_partial": false
+  },
+  {
+   "name": "login_attempts_pkey",
+   "table": "login_attempts",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX login_attempts_pkey ON public.login_attempts USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_members_member_id",
+   "table": "members",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_members_member_id ON public.members USING btree (member_id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_members_phone",
+   "table": "members",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_members_phone ON public.members USING btree (phone)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_members_status",
+   "table": "members",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_members_status ON public.members USING btree (status)",
+   "is_partial": false
+  },
+  {
+   "name": "members_ghana_card_number_key",
+   "table": "members",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX members_ghana_card_number_key ON public.members USING btree (ghana_card_number)",
+   "is_partial": false
+  },
+  {
+   "name": "members_member_id_key",
+   "table": "members",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX members_member_id_key ON public.members USING btree (member_id)",
+   "is_partial": false
+  },
+  {
+   "name": "members_phone_key",
+   "table": "members",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX members_phone_key ON public.members USING btree (phone)",
+   "is_partial": false
+  },
+  {
+   "name": "members_pkey",
+   "table": "members",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX members_pkey ON public.members USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_notifs_member",
+   "table": "notifications",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_notifs_member ON public.notifications USING btree (member_id)",
+   "is_partial": false
+  },
+  {
+   "name": "notifications_pkey",
+   "table": "notifications",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_alloc_member",
+   "table": "payment_allocations",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_alloc_member ON public.payment_allocations USING btree (member_id, created_at DESC)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_alloc_reference",
+   "table": "payment_allocations",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_alloc_reference ON public.payment_allocations USING btree (reference)",
+   "is_partial": false
+  },
+  {
+   "name": "payment_allocations_pkey",
+   "table": "payment_allocations",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX payment_allocations_pkey ON public.payment_allocations USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_penalties_group",
+   "table": "payment_penalties",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_penalties_group ON public.payment_penalties USING btree (group_id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_penalties_member",
+   "table": "payment_penalties",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_penalties_member ON public.payment_penalties USING btree (member_id)",
+   "is_partial": false
+  },
+  {
+   "name": "payment_penalties_pkey",
+   "table": "payment_penalties",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX payment_penalties_pkey ON public.payment_penalties USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_payouts_date",
+   "table": "payouts",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_payouts_date ON public.payouts USING btree (scheduled_date)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_payouts_member",
+   "table": "payouts",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_payouts_member ON public.payouts USING btree (member_id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_payouts_status",
+   "table": "payouts",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_payouts_status ON public.payouts USING btree (status)",
+   "is_partial": false
+  },
+  {
+   "name": "payouts_pkey",
+   "table": "payouts",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX payouts_pkey ON public.payouts USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_sms_log_created",
+   "table": "sms_log",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_sms_log_created ON public.sms_log USING btree (created_at DESC)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_sms_log_recipient",
+   "table": "sms_log",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_sms_log_recipient ON public.sms_log USING btree (recipient)",
+   "is_partial": false
+  },
+  {
+   "name": "sms_log_pkey",
+   "table": "sms_log",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX sms_log_pkey ON public.sms_log USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "susu_groups_pkey",
+   "table": "susu_groups",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX susu_groups_pkey ON public.susu_groups USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_transactions_member",
+   "table": "transactions",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_transactions_member ON public.transactions USING btree (member_id)",
+   "is_partial": false
+  },
+  {
+   "name": "idx_transactions_ref",
+   "table": "transactions",
+   "is_unique": false,
+   "definition": "CREATE INDEX idx_transactions_ref ON public.transactions USING btree (reference)",
+   "is_partial": false
+  },
+  {
+   "name": "transactions_pkey",
+   "table": "transactions",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX transactions_pkey ON public.transactions USING btree (id)",
+   "is_partial": false
+  },
+  {
+   "name": "transactions_reference_key",
+   "table": "transactions",
+   "is_unique": true,
+   "definition": "CREATE UNIQUE INDEX transactions_reference_key ON public.transactions USING btree (reference)",
+   "is_partial": false
+  }
+ ],
+ "database": "postgres",
+ "triggers": [
+  {
+   "name": "trg_admin_users_updated_at",
+   "table": "admin_users",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_admin_users_updated_at BEFORE UPDATE ON public.admin_users FOR EACH ROW EXECUTE FUNCTION fn_updated_at()"
+  },
+  {
+   "name": "trg_contributions_updated_at",
+   "table": "contributions",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_contributions_updated_at BEFORE UPDATE ON public.contributions FOR EACH ROW EXECUTE FUNCTION fn_updated_at()"
+  },
+  {
+   "name": "trg_group_member_count",
+   "table": "group_memberships",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_group_member_count AFTER INSERT OR DELETE ON public.group_memberships FOR EACH ROW EXECUTE FUNCTION fn_group_member_count()"
+  },
+  {
+   "name": "trg_memberships_updated_at",
+   "table": "group_memberships",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_memberships_updated_at BEFORE UPDATE ON public.group_memberships FOR EACH ROW EXECUTE FUNCTION fn_updated_at()"
+  },
+  {
+   "name": "trg_members_updated_at",
+   "table": "members",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_members_updated_at BEFORE UPDATE ON public.members FOR EACH ROW EXECUTE FUNCTION fn_updated_at()"
+  },
+  {
+   "name": "trg_revoke_on_suspend",
+   "table": "members",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_revoke_on_suspend BEFORE UPDATE OF status ON public.members FOR EACH ROW EXECUTE FUNCTION fn_revoke_on_suspend()"
+  },
+  {
+   "name": "trg_set_member_id",
+   "table": "members",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_set_member_id BEFORE INSERT ON public.members FOR EACH ROW EXECUTE FUNCTION fn_set_member_id()"
+  },
+  {
+   "name": "trg_payouts_updated_at",
+   "table": "payouts",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_payouts_updated_at BEFORE UPDATE ON public.payouts FOR EACH ROW EXECUTE FUNCTION fn_updated_at()"
+  },
+  {
+   "name": "trg_groups_updated_at",
+   "table": "susu_groups",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_groups_updated_at BEFORE UPDATE ON public.susu_groups FOR EACH ROW EXECUTE FUNCTION fn_updated_at()"
+  },
+  {
+   "name": "trg_require_cashout",
+   "table": "susu_groups",
+   "enabled": "O",
+   "definition": "CREATE TRIGGER trg_require_cashout BEFORE INSERT OR UPDATE OF status, cashout_amount ON public.susu_groups FOR EACH ROW EXECUTE FUNCTION fn_require_cashout_when_open()"
+  }
+ ],
+ "cron_jobs": "see separate query below",
+ "functions": [
+  {
+   "kind": "function",
+   "name": "activate_group",
+   "owner": "postgres",
+   "returns": "void",
+   "body_md5": "27dae29e71dd1d0e7c21a948cc94cbfb",
+   "language": "plpgsql",
+   "signature": "activate_group(uuid,date,boolean,boolean,boolean)",
+   "body_lines": 92,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "change_admin_password",
+   "owner": "postgres",
+   "returns": "boolean",
+   "body_md5": "0bd487e3eff0fee9e3d309f92188b703",
+   "language": "plpgsql",
+   "signature": "change_admin_password(uuid,text,text)",
+   "body_lines": 24,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "check_login_allowed",
+   "owner": "postgres",
+   "returns": "TABLE(allowed boolean, retry_after_seconds integer)",
+   "body_md5": "db5286e56ca820ae674542db9e2ac259",
+   "language": "plpgsql",
+   "signature": "check_login_allowed(text,text)",
+   "body_lines": 18,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "check_payout_eligibility",
+   "owner": "postgres",
+   "returns": "TABLE(eligible boolean, reason text, gross_amount numeric, outstanding_contrib numeric, outstanding_penalty numeric, registration_fee numeric, net_amount numeric, contributions_paid integer, contributions_due integer)",
+   "body_md5": "e1a6c7de23c5f1fe9f48d403edd5ddb9",
+   "language": "plpgsql",
+   "signature": "check_payout_eligibility(uuid)",
+   "body_lines": 60,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "flag_late_contributions",
+   "owner": "postgres",
+   "returns": "integer",
+   "body_md5": "0fe73efcf1b2efed62ac3ab3c7d5a47b",
+   "language": "plpgsql",
+   "signature": "flag_late_contributions()",
+   "body_lines": 41,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "fn_group_member_count",
+   "owner": "postgres",
+   "returns": "trigger",
+   "body_md5": "efc1f5799fe9619c80a6652de1744e55",
+   "language": "plpgsql",
+   "signature": "fn_group_member_count()",
+   "body_lines": 22,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": false
+  },
+  {
+   "kind": "function",
+   "name": "fn_require_cashout_when_open",
+   "owner": "postgres",
+   "returns": "trigger",
+   "body_md5": "fc047f7fce2834057a8e44afa1e77853",
+   "language": "plpgsql",
+   "signature": "fn_require_cashout_when_open()",
+   "body_lines": 9,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": false
+  },
+  {
+   "kind": "function",
+   "name": "fn_revoke_on_suspend",
+   "owner": "postgres",
+   "returns": "trigger",
+   "body_md5": "3302566a67c1aeb9cfa138937f2bf54f",
+   "language": "plpgsql",
+   "signature": "fn_revoke_on_suspend()",
+   "body_lines": 8,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": false
+  },
+  {
+   "kind": "function",
+   "name": "fn_set_member_id",
+   "owner": "postgres",
+   "returns": "trigger",
+   "body_md5": "69cd1fb5b6be7e3892381e2028e846bd",
+   "language": "plpgsql",
+   "signature": "fn_set_member_id()",
+   "body_lines": 8,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": false
+  },
+  {
+   "kind": "function",
+   "name": "fn_updated_at",
+   "owner": "postgres",
+   "returns": "trigger",
+   "body_md5": "e7a0919a4073eaabf72630cc53a76237",
+   "language": "plpgsql",
+   "signature": "fn_updated_at()",
+   "body_lines": 3,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": false
+  },
+  {
+   "kind": "function",
+   "name": "forfeit_membership",
+   "owner": "postgres",
+   "returns": "void",
+   "body_md5": "f4c0a4b64cc6a197f13e201cff1742f0",
+   "language": "plpgsql",
+   "signature": "forfeit_membership(uuid,text,uuid)",
+   "body_lines": 36,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "generate_membership_schedule",
+   "owner": "postgres",
+   "returns": "integer",
+   "body_md5": "68077d178145b1c991fafeae358233f1",
+   "language": "plpgsql",
+   "signature": "generate_membership_schedule(uuid)",
+   "body_lines": 41,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "get_collection_trend",
+   "owner": "postgres",
+   "returns": "TABLE(day date, expected numeric, collected numeric, rate numeric)",
+   "body_md5": "1fe76f71e58b14ad9af1cbaa31030488",
+   "language": "plpgsql",
+   "signature": "get_collection_trend(integer)",
+   "body_lines": 15,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "get_group_financials",
+   "owner": "postgres",
+   "returns": "TABLE(expected_total numeric, collected_total numeric, outstanding_total numeric, overdue_total numeric, penalties_total numeric, reg_fees_total numeric, paid_out_total numeric, pending_payouts numeric, balance numeric, collection_rate numeric, member_count integer, active_members integer, defaulted_members integer)",
+   "body_md5": "3c6c3405e568e11221b3d687d6083a5f",
+   "language": "plpgsql",
+   "signature": "get_group_financials(uuid)",
+   "body_lines": 47,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "get_member_plan_balance",
+   "owner": "postgres",
+   "returns": "TABLE(total_paid numeric, total_remaining numeric, total_overdue numeric, penalty_balance numeric, contributions_paid integer, contributions_total integer)",
+   "body_md5": "9bd9b5b3a61a3dc8d6fdd8af0e1eb72a",
+   "language": "plpgsql",
+   "signature": "get_member_plan_balance(uuid,uuid)",
+   "body_lines": 15,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "get_member_statement",
+   "owner": "postgres",
+   "returns": "TABLE(entry_date date, entry_type text, description text, debit numeric, credit numeric, status text, reference text)",
+   "body_md5": "e73ff521cac241c3b1b288b18091c586",
+   "language": "plpgsql",
+   "signature": "get_member_statement(uuid)",
+   "body_lines": 46,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "get_membership_balance",
+   "owner": "postgres",
+   "returns": "TABLE(total_paid numeric, total_remaining numeric, total_overdue numeric, penalty_balance numeric, contributions_paid integer, contributions_total integer)",
+   "body_md5": "ab29b1ef3bfc3eff482f0387c5c6f7a3",
+   "language": "plpgsql",
+   "signature": "get_membership_balance(uuid)",
+   "body_lines": 16,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "get_platform_analytics",
+   "owner": "postgres",
+   "returns": "TABLE(collected_today numeric, collected_this_week numeric, collected_this_month numeric, due_today numeric, paid_today_count integer, due_today_count integer, collection_rate_today numeric, total_outstanding numeric, total_overdue numeric, active_members integer, defaulted_members integer, payouts_due_7d numeric, payouts_due_30d numeric)",
+   "body_md5": "c91f0724912bf055c8fb4c8ee187e586",
+   "language": "plpgsql",
+   "signature": "get_platform_analytics()",
+   "body_lines": 34,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "hash_passcode",
+   "owner": "postgres",
+   "returns": "text",
+   "body_md5": "dc29551007f724e44a77f929e18a32bf",
+   "language": "plpgsql",
+   "signature": "hash_passcode(text)",
+   "body_lines": 5,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "mark_overdue_contributions",
+   "owner": "postgres",
+   "returns": "integer",
+   "body_md5": "1b6f708a3d599baf8af3aa0c3a98d5f2",
+   "language": "plpgsql",
+   "signature": "mark_overdue_contributions()",
+   "body_lines": 10,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "record_login_attempt",
+   "owner": "postgres",
+   "returns": "void",
+   "body_md5": "7eaf13646ee0bf6b86dd2f6b6088a478",
+   "language": "plpgsql",
+   "signature": "record_login_attempt(text,text,boolean)",
+   "body_lines": 12,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "record_partial_payment",
+   "owner": "postgres",
+   "returns": "TABLE(paid_so_far numeric, fully_paid boolean, amount_due numeric)",
+   "body_md5": "9f3fa7af70086a35c79397a80076a9d9",
+   "language": "plpgsql",
+   "signature": "record_partial_payment(uuid,numeric,text,text)",
+   "body_lines": 23,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "revoke_admin_sessions",
+   "owner": "postgres",
+   "returns": "void",
+   "body_md5": "41f42a7e93a7ef8a71b06f019112e462",
+   "language": "plpgsql",
+   "signature": "revoke_admin_sessions(uuid)",
+   "body_lines": 5,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "revoke_member_sessions",
+   "owner": "postgres",
+   "returns": "void",
+   "body_md5": "fe1f0c22b70e487ab90a14056a3720ef",
+   "language": "plpgsql",
+   "signature": "revoke_member_sessions(uuid)",
+   "body_lines": 5,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "session_is_current",
+   "owner": "postgres",
+   "returns": "boolean",
+   "body_md5": "c7c6a8e2b160d7baf22733c37cdccce5",
+   "language": "plpgsql",
+   "signature": "session_is_current(uuid,text,integer)",
+   "body_lines": 12,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "verify_admin_password",
+   "owner": "postgres",
+   "returns": "TABLE(id uuid, email text, full_name text, role text, token_version integer, must_change_password boolean)",
+   "body_md5": "868f8481267c9c776948aeeeaa76eeba",
+   "language": "plpgsql",
+   "signature": "verify_admin_password(text,text)",
+   "body_lines": 11,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  },
+  {
+   "kind": "function",
+   "name": "verify_member_passcode",
+   "owner": "postgres",
+   "returns": "TABLE(id uuid, member_id text, full_name text, phone text, status member_status, whatsapp_number text, token_version integer)",
+   "body_md5": "4c38d9cb4fa824bf4ef9f1a6379a49e4",
+   "language": "plpgsql",
+   "signature": "verify_member_passcode(text,text)",
+   "body_lines": 11,
+   "volatility": "volatile",
+   "search_path": null,
+   "from_extension": false,
+   "security_definer": true
+  }
+ ],
+ "sequences": [
+  {
+   "name": "member_id_seq",
+   "increment": 1,
+   "last_value": 102
+  }
+ ],
+ "extensions": [
+  {
+   "name": "pg_cron",
+   "schema": "pg_catalog",
+   "version": "1.6.4"
+  },
+  {
+   "name": "pg_net",
+   "schema": "public",
+   "version": "0.20.3"
+  },
+  {
+   "name": "pg_stat_statements",
+   "schema": "extensions",
+   "version": "1.11"
+  },
+  {
+   "name": "pgcrypto",
+   "schema": "extensions",
+   "version": "1.3"
+  },
+  {
+   "name": "plpgsql",
+   "schema": "pg_catalog",
+   "version": "1.0"
+  },
+  {
+   "name": "supabase_vault",
+   "schema": "vault",
+   "version": "0.3.1"
+  },
+  {
+   "name": "uuid-ossp",
+   "schema": "extensions",
+   "version": "1.1"
+  }
+ ],
+ "pg_version": "PostgreSQL 17.6 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+ "rls_status": {
+  "members": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "payouts": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "sms_log": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "audit_log": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "admin_users": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "susu_groups": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 1
+  },
+  "transactions": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "announcements": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "contributions": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "notifications": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "login_attempts": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "contact_messages": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "kyc_applications": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "group_memberships": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "payment_penalties": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "document_access_log": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  },
+  "payment_allocations": {
+   "rls_forced": false,
+   "rls_enabled": true,
+   "policy_count": 0
+  }
+ },
+ "captured_at": "2026-09-01T08:18:47.653584+00:00",
+ "constraints": [
+  {
+   "name": "admin_users_role_check",
+   "type": "CHECK",
+   "table": "admin_users",
+   "definition": "CHECK ((role = ANY (ARRAY['admin'::text, 'super_admin'::text])))"
+  },
+  {
+   "name": "admin_users_pkey",
+   "type": "PRIMARY KEY",
+   "table": "admin_users",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "admin_users_email_key",
+   "type": "UNIQUE",
+   "table": "admin_users",
+   "definition": "UNIQUE (email)"
+  },
+  {
+   "name": "announcements_created_by_fkey",
+   "type": "FOREIGN KEY",
+   "table": "announcements",
+   "definition": "FOREIGN KEY (created_by) REFERENCES admin_users(id)"
+  },
+  {
+   "name": "announcements_group_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "announcements",
+   "definition": "FOREIGN KEY (group_id) REFERENCES susu_groups(id)"
+  },
+  {
+   "name": "announcements_pkey",
+   "type": "PRIMARY KEY",
+   "table": "announcements",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "audit_log_admin_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "audit_log",
+   "definition": "FOREIGN KEY (admin_id) REFERENCES admin_users(id)"
+  },
+  {
+   "name": "audit_log_pkey",
+   "type": "PRIMARY KEY",
+   "table": "audit_log",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "contact_messages_member_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "contact_messages",
+   "definition": "FOREIGN KEY (member_id) REFERENCES members(id)"
+  },
+  {
+   "name": "contact_messages_pkey",
+   "type": "PRIMARY KEY",
+   "table": "contact_messages",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "contributions_group_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "contributions",
+   "definition": "FOREIGN KEY (group_id) REFERENCES susu_groups(id)"
+  },
+  {
+   "name": "contributions_member_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "contributions",
+   "definition": "FOREIGN KEY (member_id) REFERENCES members(id)"
+  },
+  {
+   "name": "contributions_membership_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "contributions",
+   "definition": "FOREIGN KEY (membership_id) REFERENCES group_memberships(id)"
+  },
+  {
+   "name": "contributions_pkey",
+   "type": "PRIMARY KEY",
+   "table": "contributions",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "document_access_log_admin_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "document_access_log",
+   "definition": "FOREIGN KEY (admin_id) REFERENCES admin_users(id)"
+  },
+  {
+   "name": "document_access_log_pkey",
+   "type": "PRIMARY KEY",
+   "table": "document_access_log",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "group_memberships_slot_fraction_check",
+   "type": "CHECK",
+   "table": "group_memberships",
+   "definition": "CHECK ((slot_fraction = ANY (ARRAY[0.25, 0.5, (1)::numeric])))"
+  },
+  {
+   "name": "group_memberships_group_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "group_memberships",
+   "definition": "FOREIGN KEY (group_id) REFERENCES susu_groups(id) ON DELETE CASCADE"
+  },
+  {
+   "name": "group_memberships_member_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "group_memberships",
+   "definition": "FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE"
+  },
+  {
+   "name": "group_memberships_replaced_by_fkey",
+   "type": "FOREIGN KEY",
+   "table": "group_memberships",
+   "definition": "FOREIGN KEY (replaced_by) REFERENCES members(id)"
+  },
+  {
+   "name": "group_memberships_pkey",
+   "type": "PRIMARY KEY",
+   "table": "group_memberships",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "group_memberships_group_id_payout_position_key",
+   "type": "UNIQUE",
+   "table": "group_memberships",
+   "definition": "UNIQUE (group_id, payout_position)"
+  },
+  {
+   "name": "kyc_applications_created_member_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "kyc_applications",
+   "definition": "FOREIGN KEY (created_member_id) REFERENCES members(id)"
+  },
+  {
+   "name": "kyc_applications_reviewer_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "kyc_applications",
+   "definition": "FOREIGN KEY (reviewer_id) REFERENCES admin_users(id)"
+  },
+  {
+   "name": "kyc_applications_selected_group_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "kyc_applications",
+   "definition": "FOREIGN KEY (selected_group_id) REFERENCES susu_groups(id)"
+  },
+  {
+   "name": "kyc_applications_pkey",
+   "type": "PRIMARY KEY",
+   "table": "kyc_applications",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "login_attempts_pkey",
+   "type": "PRIMARY KEY",
+   "table": "login_attempts",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "members_pkey",
+   "type": "PRIMARY KEY",
+   "table": "members",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "members_ghana_card_number_key",
+   "type": "UNIQUE",
+   "table": "members",
+   "definition": "UNIQUE (ghana_card_number)"
+  },
+  {
+   "name": "members_member_id_key",
+   "type": "UNIQUE",
+   "table": "members",
+   "definition": "UNIQUE (member_id)"
+  },
+  {
+   "name": "members_phone_key",
+   "type": "UNIQUE",
+   "table": "members",
+   "definition": "UNIQUE (phone)"
+  },
+  {
+   "name": "notifications_member_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "notifications",
+   "definition": "FOREIGN KEY (member_id) REFERENCES members(id)"
+  },
+  {
+   "name": "notifications_pkey",
+   "type": "PRIMARY KEY",
+   "table": "notifications",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "payment_allocations_contribution_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "payment_allocations",
+   "definition": "FOREIGN KEY (contribution_id) REFERENCES contributions(id) ON DELETE CASCADE"
+  },
+  {
+   "name": "payment_allocations_member_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "payment_allocations",
+   "definition": "FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE"
+  },
+  {
+   "name": "payment_allocations_pkey",
+   "type": "PRIMARY KEY",
+   "table": "payment_allocations",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "payment_penalties_contribution_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "payment_penalties",
+   "definition": "FOREIGN KEY (contribution_id) REFERENCES contributions(id)"
+  },
+  {
+   "name": "payment_penalties_group_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "payment_penalties",
+   "definition": "FOREIGN KEY (group_id) REFERENCES susu_groups(id)"
+  },
+  {
+   "name": "payment_penalties_member_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "payment_penalties",
+   "definition": "FOREIGN KEY (member_id) REFERENCES members(id)"
+  },
+  {
+   "name": "payment_penalties_pkey",
+   "type": "PRIMARY KEY",
+   "table": "payment_penalties",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "payouts_group_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "payouts",
+   "definition": "FOREIGN KEY (group_id) REFERENCES susu_groups(id)"
+  },
+  {
+   "name": "payouts_marked_paid_by_fkey",
+   "type": "FOREIGN KEY",
+   "table": "payouts",
+   "definition": "FOREIGN KEY (marked_paid_by) REFERENCES admin_users(id)"
+  },
+  {
+   "name": "payouts_member_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "payouts",
+   "definition": "FOREIGN KEY (member_id) REFERENCES members(id)"
+  },
+  {
+   "name": "payouts_membership_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "payouts",
+   "definition": "FOREIGN KEY (membership_id) REFERENCES group_memberships(id)"
+  },
+  {
+   "name": "payouts_pkey",
+   "type": "PRIMARY KEY",
+   "table": "payouts",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "sms_log_pkey",
+   "type": "PRIMARY KEY",
+   "table": "sms_log",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "susu_groups_created_by_fkey",
+   "type": "FOREIGN KEY",
+   "table": "susu_groups",
+   "definition": "FOREIGN KEY (created_by) REFERENCES admin_users(id)"
+  },
+  {
+   "name": "susu_groups_pkey",
+   "type": "PRIMARY KEY",
+   "table": "susu_groups",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "transactions_member_id_fkey",
+   "type": "FOREIGN KEY",
+   "table": "transactions",
+   "definition": "FOREIGN KEY (member_id) REFERENCES members(id)"
+  },
+  {
+   "name": "transactions_pkey",
+   "type": "PRIMARY KEY",
+   "table": "transactions",
+   "definition": "PRIMARY KEY (id)"
+  },
+  {
+   "name": "transactions_reference_key",
+   "type": "UNIQUE",
+   "table": "transactions",
+   "definition": "UNIQUE (reference)"
+  }
+ ],
+ "rls_policies": [
+  {
+   "name": "public_read_groups",
+   "roles": [
+    "public"
+   ],
+   "table": "susu_groups",
+   "using": "(status = ANY (ARRAY['open'::group_status, 'full'::group_status, 'active'::group_status]))",
+   "command": "SELECT",
+   "permissive": "PERMISSIVE",
+   "with_check": null
+  }
+ ],
+ "table_grants": [
+  {
+   "table": "admin_users",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "admin_users",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "announcements",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "announcements",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "announcements",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "announcements",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "announcements",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "announcements",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "announcements",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "announcements",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "announcements",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "announcements",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "announcements",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "announcements",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "announcements",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "announcements",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "announcements",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "announcements",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "announcements",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "announcements",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "announcements",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "announcements",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "announcements",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "audit_log",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "contact_messages",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "contributions",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "contributions",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "contributions",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "contributions",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "contributions",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "contributions",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "contributions",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "contributions",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "contributions",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "contributions",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "contributions",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "contributions",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "contributions",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "contributions",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "contributions",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "contributions",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "contributions",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "contributions",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "contributions",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "contributions",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "contributions",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "document_access_log",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "group_memberships",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "kyc_applications",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "login_attempts",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "members",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "members",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "members",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "members",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "members",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "members",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "members",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "members",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "members",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "members",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "members",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "members",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "members",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "members",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "members",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "members",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "members",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "members",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "members",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "members",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "members",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "notifications",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "notifications",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "notifications",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "notifications",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "notifications",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "notifications",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "notifications",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "notifications",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "notifications",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "notifications",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "notifications",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "notifications",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "notifications",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "notifications",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "notifications",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "notifications",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "notifications",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "notifications",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "notifications",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "notifications",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "notifications",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "payment_allocations",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "payment_penalties",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "payouts",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "payouts",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "payouts",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "payouts",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "payouts",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "payouts",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "payouts",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "payouts",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "payouts",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "payouts",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "payouts",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "payouts",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "payouts",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "payouts",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "payouts",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "payouts",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "payouts",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "payouts",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "payouts",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "payouts",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "payouts",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "sms_log",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "susu_groups",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "transactions",
+   "grantee": "anon",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "transactions",
+   "grantee": "anon",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "transactions",
+   "grantee": "anon",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "transactions",
+   "grantee": "anon",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "transactions",
+   "grantee": "anon",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "transactions",
+   "grantee": "anon",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "transactions",
+   "grantee": "anon",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "transactions",
+   "grantee": "authenticated",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "transactions",
+   "grantee": "authenticated",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "transactions",
+   "grantee": "authenticated",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "transactions",
+   "grantee": "authenticated",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "transactions",
+   "grantee": "authenticated",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "transactions",
+   "grantee": "authenticated",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "transactions",
+   "grantee": "authenticated",
+   "privilege": "UPDATE"
+  },
+  {
+   "table": "transactions",
+   "grantee": "service_role",
+   "privilege": "DELETE"
+  },
+  {
+   "table": "transactions",
+   "grantee": "service_role",
+   "privilege": "INSERT"
+  },
+  {
+   "table": "transactions",
+   "grantee": "service_role",
+   "privilege": "REFERENCES"
+  },
+  {
+   "table": "transactions",
+   "grantee": "service_role",
+   "privilege": "SELECT"
+  },
+  {
+   "table": "transactions",
+   "grantee": "service_role",
+   "privilege": "TRIGGER"
+  },
+  {
+   "table": "transactions",
+   "grantee": "service_role",
+   "privilege": "TRUNCATE"
+  },
+  {
+   "table": "transactions",
+   "grantee": "service_role",
+   "privilege": "UPDATE"
+  }
+ ],
+ "function_privileges": [
+  {
+   "grantee": "anon",
+   "signature": "activate_group(uuid,date,boolean,boolean,boolean)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "activate_group(uuid,date,boolean,boolean,boolean)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "activate_group(uuid,date,boolean,boolean,boolean)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "activate_group(uuid,date,boolean,boolean,boolean)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "change_admin_password(uuid,text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "change_admin_password(uuid,text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "change_admin_password(uuid,text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "change_admin_password(uuid,text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "check_login_allowed(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "check_login_allowed(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "check_login_allowed(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "check_login_allowed(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "check_payout_eligibility(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "check_payout_eligibility(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "check_payout_eligibility(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "check_payout_eligibility(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "flag_late_contributions()",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "flag_late_contributions()",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "flag_late_contributions()",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "flag_late_contributions()",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "forfeit_membership(uuid,text,uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "forfeit_membership(uuid,text,uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "forfeit_membership(uuid,text,uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "forfeit_membership(uuid,text,uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "generate_membership_schedule(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "generate_membership_schedule(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "generate_membership_schedule(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "generate_membership_schedule(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "get_collection_trend(integer)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "get_collection_trend(integer)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "get_collection_trend(integer)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "get_collection_trend(integer)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "get_group_financials(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "get_group_financials(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "get_group_financials(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "get_group_financials(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "get_member_plan_balance(uuid,uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "get_member_plan_balance(uuid,uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "get_member_plan_balance(uuid,uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "get_member_plan_balance(uuid,uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "get_member_statement(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "get_member_statement(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "get_member_statement(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "get_member_statement(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "get_membership_balance(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "get_membership_balance(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "get_membership_balance(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "get_membership_balance(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "get_platform_analytics()",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "get_platform_analytics()",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "get_platform_analytics()",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "get_platform_analytics()",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "hash_passcode(text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "hash_passcode(text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "hash_passcode(text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "hash_passcode(text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "mark_overdue_contributions()",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "mark_overdue_contributions()",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "mark_overdue_contributions()",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "mark_overdue_contributions()",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "record_login_attempt(text,text,boolean)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "record_login_attempt(text,text,boolean)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "record_login_attempt(text,text,boolean)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "record_login_attempt(text,text,boolean)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "record_partial_payment(uuid,numeric,text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "record_partial_payment(uuid,numeric,text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "record_partial_payment(uuid,numeric,text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "record_partial_payment(uuid,numeric,text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "revoke_admin_sessions(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "revoke_admin_sessions(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "revoke_admin_sessions(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "revoke_admin_sessions(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "revoke_member_sessions(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "revoke_member_sessions(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "revoke_member_sessions(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "revoke_member_sessions(uuid)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "session_is_current(uuid,text,integer)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "session_is_current(uuid,text,integer)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "session_is_current(uuid,text,integer)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "session_is_current(uuid,text,integer)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "verify_admin_password(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "verify_admin_password(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "verify_admin_password(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "verify_admin_password(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "anon",
+   "signature": "verify_member_passcode(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "authenticated",
+   "signature": "verify_member_passcode(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "public",
+   "signature": "verify_member_passcode(text,text)",
+   "has_execute": true
+  },
+  {
+   "grantee": "service_role",
+   "signature": "verify_member_passcode(text,text)",
+   "has_execute": true
+  }
+ ]
+}

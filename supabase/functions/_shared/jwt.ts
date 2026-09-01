@@ -1,4 +1,45 @@
-const SECRET = Deno.env.get('JWT_SECRET') ?? 'susu-jwt-secret-change-in-production'
+/*
+ * The signing secret. There is no default, deliberately.
+ *
+ * This used to read:
+ *
+ *     Deno.env.get('JWT_SECRET') ?? 'susu-jwt-secret-change-in-production'
+ *
+ * A missing environment variable therefore did not stop the system — it made
+ * every session token in the platform signable by anyone who had read this
+ * file. Admin impersonation required no vulnerability at all, just the
+ * repository. Combined with the secret having been published in README.md,
+ * that is precisely what happened.
+ *
+ * A money system must not boot in a state where its sessions are forgeable.
+ * Fail closed: a missing or weak secret takes the function down loudly, which
+ * is recoverable, instead of silently accepting forged admin tokens, which is
+ * not.
+ */
+let _secret: string | null = null
+function requireSecret(): string {
+  if (_secret) return _secret
+  const s = Deno.env.get('JWT_SECRET') ?? ''
+  if (!s) {
+    throw new Error(
+      'JWT_SECRET is not set. Refusing to sign or verify sessions with a default secret. ' +
+      'Set it in Supabase → Edge Functions → Manage secrets.',
+    )
+  }
+  if (s.length < 32) {
+    throw new Error(
+      `JWT_SECRET is too short (${s.length} chars). Use at least 32 characters of random data.`,
+    )
+  }
+  if (s === 'susu-jwt-secret-change-in-production' || s === 'a45ff29522fcf5f5347f36b4ca5105ad') {
+    // Both of these have been published in this repository. Anyone can read
+    // them; a token signed with either proves nothing about who sent it.
+    throw new Error('JWT_SECRET is a value published in this repository. Rotate it before serving traffic.')
+  }
+  _secret = s
+  return s
+}
+
 // Seven days was generous for a money product. Two is plenty, and the token
 // now carries a version so it can be killed before then.
 const EXPIRY = 60 * 60 * 24 * 2
@@ -15,7 +56,7 @@ function decode64url(str: string): string {
 async function getKey(usage: KeyUsage[]): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(SECRET),
+    new TextEncoder().encode(requireSecret()),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     usage
@@ -36,6 +77,10 @@ export async function signJWT(payload: Record<string, unknown>): Promise<string>
 }
 
 export async function verifyJWT(token: string): Promise<Record<string, unknown> | null> {
+  // Resolved outside the try on purpose. A misconfigured secret is an operator
+  // problem, not a bad token, and must surface as a 500 that says so rather
+  // than be swallowed into a 401 that sends everyone to the sign-in screen.
+  requireSecret()
   try {
     const parts = token.split('.')
     if (parts.length !== 3) return null
@@ -99,13 +144,26 @@ async function stillValid(payload: Record<string, unknown>, kind: 'admin' | 'mem
   return data === true
 }
 
-export async function requireAdmin(req: Request): Promise<Record<string, unknown> | null> {
+/**
+ * @param allowPasswordChangeOnly  set by `admin-change-password` alone. Every
+ *   other caller leaves it false, so a token issued against a password that
+ *   must be changed is refused before it reaches any business logic.
+ */
+export async function requireAdmin(
+  req: Request,
+  allowPasswordChangeOnly = false,
+): Promise<Record<string, unknown> | null> {
   const auth = req.headers.get('authorization') ?? req.headers.get('x-admin-token')
   if (!auth) return null
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : auth
   const payload = await verifyJWT(token)
   if (!payload || payload.type !== 'admin') return null
   if (!(await stillValid(payload, 'admin'))) return null
+
+  // A token minted against a password still flagged `must_change_password`
+  // opens exactly one door: the one where the password is changed.
+  if (payload.pw === 'must_change' && !allowPasswordChangeOnly) return null
+
   return payload
 }
 

@@ -99,23 +99,25 @@ serveWithCors(async (req) => {
     const unpaidIds = unpaid.map((c: any) => c.id)
 
     // ── DEV MODE: explicit opt-in only ──
+    // Settled through the canonical engine like every other path. This branch
+    // used to do its own blanket UPDATE, which meant dev-mode payments
+    // produced a different financial shape from real ones — no allocations, no
+    // amount_paid — so testing here proved nothing about production.
     if (devPaymentsAllowed()) {
       const ref = `BULK-DEV-${batchId.slice(0, 8)}`
-      await supabaseAdmin.from('contributions')
-        .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: ref, batch_id: batchId })
-        .in('id', unpaidIds)
-
-      // Clear penalties covered by this batch
-      await supabaseAdmin.from('payment_penalties')
-        .update({ is_paid: true, paid_at: new Date().toISOString() })
-        .in('contribution_id', unpaidIds)
-
+      await supabaseAdmin.from('contributions').update({ batch_id: batchId }).in('id', unpaidIds)
       await supabaseAdmin.from('transactions').insert({
         member_id: memberId, type: 'contribution', amount: total,
         reference: ref, batch_id: batchId, items_count: unpaid.length,
+        related_id: unpaidIds[0],
         description: `Bulk payment — ${unpaid.length} contributions (dev mode)`,
-        status: 'success',
+        status: 'pending',
       })
+      const { error: devErr } = await supabaseAdmin.rpc('settle_payment', {
+        p_reference: ref, p_confirmed_amount: total,
+        p_scope: 'member', p_target_contributions: unpaidIds,
+      })
+      if (devErr) return error(`Could not record the payment: ${devErr.message}`, 500)
 
       return json({
         dev_mode: true,
@@ -162,9 +164,9 @@ serveWithCors(async (req) => {
       })
 
       if (res.kind === 'prompted') {
-        if (res.moolreRef) {
+        if (res.providerOrderId) {
           await supabaseAdmin.from('transactions')
-            .update({ paystack_data: { provider_order_id: res.moolreRef } as never })
+            .update({ paystack_data: { provider_order_id: res.providerOrderId } as never })
             .eq('reference', reference)
         }
         return json({ provider: prov, status: 'prompted', reference, count: unpaid.length, total,

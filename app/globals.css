@@ -2,104 +2,247 @@
 @tailwind components;
 @tailwind utilities;
 
-/*
-  A management console. White, black, grey. No colour except red for danger.
-  Small type, generous whitespace, soft surfaces on a light ground.
-*/
+/* ============================================================================
+   TOKENS
+
+   Every colour is stored as raw RGB channels so Tailwind can apply opacity
+   modifiers (`bg-ink/25`) against it. Change a theme here and nowhere else.
+
+   The palette is ink-forward — a ledger, not a landing page — with one brand
+   green for money and a full semantic set for status. Status colour is not
+   decoration in a payments console: an operator scanning two hundred rows
+   reads "paid / due / overdue" by hue before they read the word.
+   ========================================================================= */
 :root {
-  --bg:      #F6F7F8;
-  --surface: #FFFFFF;
-  --ink:     #101012;
-  --ink-2:   #6B6B75;
-  --ink-3:   #9A9AA3;
-  --line:    #E6E6E9;
-  --red:     #C4302B;
+  /* Ground and surfaces */
+  --c-bg:         247 248 250;   /* #F7F8FA page */
+  --c-surface:    255 255 255;   /* #FFFFFF cards */
+  --c-surface-2:  242 244 247;   /* #F2F4F7 wells, inset rows */
+  --c-surface-3:  233 236 241;   /* #E9ECF1 pressed / track */
+  --c-line:       226 229 236;   /* #E2E5EC borders */
+  --c-line-2:     239 241 245;   /* #EFF1F5 hairline dividers */
+
+  /* Text — each step verified ≥4.5:1 on --c-surface */
+  --c-ink:      15  17  21;      /* #0F1115  17.7:1 */
+  --c-ink-2:    91  96 112;      /* #5B6070   6.2:1 */
+  --c-ink-3:   110 116 132;      /* #6E7484   4.7:1 */
+  --c-inverse: 255 255 255;      /* text on ink / accent fills */
+
+  /* Brand accent */
+  --c-accent:        11 122  85; /* #0B7A55  5.9:1 */
+  --c-accent-strong:  8  92  64; /* #085C40 */
+  --c-accent-soft:  231 244 239; /* #E7F4EF */
+  --c-accent-line:  185 224 208; /* #B9E0D0 */
+
+  /* Semantic status */
+  --c-success:       11 122  85; /* #0B7A55 */
+  --c-success-soft: 231 244 239;
+  --c-success-line: 185 224 208;
+
+  --c-warning:      158  95  10; /* #9E5F0A  4.8:1 */
+  --c-warning-soft: 253 243 227; /* #FDF3E3 */
+  --c-warning-line: 240 217 178; /* #F0D9B2 */
+
+  --c-danger:       184  50  40; /* #B83228  5.9:1 */
+  --c-danger-strong:146  37  33; /* #922521 */
+  --c-danger-soft:  253 241 240; /* #FDF1F0 */
+  --c-danger-line:  240 199 196; /* #F0C7C4 */
+
+  --c-info:          23  85 158; /* #17559E  6.7:1 */
+  --c-info-soft:    234 241 251; /* #EAF1FB */
+  --c-info-line:    198 216 243; /* #C6D8F3 */
+
+  --c-shadow:       16  24  40;  /* cool grey, not pure black */
+
+  /* Layout constants referenced from more than one place */
+  --rail:   232px;               /* desktop admin sidebar */
+  --tabbar: 84px;                /* member bottom nav + safe area */
 }
 
+/* ============================================================================
+   BASE
+   ========================================================================= */
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
-  body {
-    @apply bg-bg text-ink antialiased;
-    font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    font-feature-settings: 'cv02','cv03','cv04';
-  }
-  .tnum { font-variant-numeric: tabular-nums; }
 
-  /* iOS zooms the page when a field under 16px gains focus. Keep inputs at
-     16px on touch and let the desktop breakpoint shrink them back. */
+  body {
+    @apply bg-bg text-ink text-base antialiased;
+    font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Money must never reflow as digits change. */
+  .tnum { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1, 'lnum' 1; }
+
+  /* iOS zooms the page when a field under 16px takes focus. Hold 16px on
+     touch, let the desktop breakpoint bring it back down. */
   @media (max-width: 1023px) {
     input, select, textarea { font-size: 16px !important; }
   }
 
-  /* Wide tables scroll inside their own box instead of stretching the page */
-  .scroll-x { @apply overflow-x-auto -mx-5 px-5; -webkit-overflow-scrolling: touch; }
-  @media (prefers-reduced-motion: reduce) {
-    *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+  /* One visible focus ring for the whole app. Never remove it — this is a
+     console people drive from the keyboard all day. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-ink));
+    outline-offset: 2px;
+    border-radius: 4px;
   }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  ::selection { background: rgb(var(--c-accent) / .18); }
+
+  /* Scrollbars: present, but not shouting. */
+  * { scrollbar-width: thin; scrollbar-color: rgb(var(--c-line)) transparent; }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: rgb(var(--c-line));
+    border: 3px solid transparent;
+    border-radius: 99px;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover { background: rgb(var(--c-ink-3) / .5); background-clip: content-box; }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
+/* ============================================================================
+   COMPONENT LAYER
+
+   These are the handful of primitives worth expressing in CSS because they
+   are used in raw markup as well as through React. Anything with behaviour
+   (modals, toasts, tables) lives in components/ui instead.
+   ========================================================================= */
 @layer components {
-  /* Type — small and precise. The scale does the work, not decoration. */
-  .t-title  { @apply text-[26px] font-semibold tracking-[-.02em] leading-tight; }
-  .t-h2     { @apply text-[14px] font-semibold tracking-[-.01em]; }
-  .t-figure { @apply text-[26px] font-semibold tracking-[-.02em] leading-none tnum; }
-  .t-label  { @apply text-[12px] font-medium text-ink-3; }
-  .t-meta   { @apply text-[12.5px] text-ink-2; }
 
-  .card { @apply bg-surface border border-line rounded-xl; }
-  .well { @apply bg-bg rounded-lg; }
+  /* ---- Type ------------------------------------------------------------ */
+  .t-title  { @apply text-2xl font-semibold text-ink; }
+  .t-h2     { @apply text-base font-semibold text-ink; }
+  .t-figure { @apply text-2xl font-semibold leading-none tnum text-ink; }
+  .t-label  { @apply text-xs font-medium text-ink-3; }
+  .t-meta   { @apply text-xs text-ink-2; }
+  .t-body   { @apply text-base text-ink-2 leading-relaxed; }
+  .t-mono   { @apply font-mono text-xs tracking-tight; }
+  /* Small-caps section marker used above groups of fields and table blocks */
+  .t-eyebrow { @apply text-2xs font-semibold uppercase tracking-[.08em] text-ink-3; }
 
-  /* Actions — black is the only accent this system has */
-  .btn      { @apply inline-flex items-center justify-center h-11 lg:h-9 px-4 lg:px-3.5 rounded-lg
-                     text-[14px] lg:text-[13px] font-medium transition-colors
-                     disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap active:scale-[.98]; }
-  .btn-dark { @apply btn bg-ink text-white hover:bg-ink/90; }
-  .btn-line { @apply btn bg-surface border border-line text-ink hover:bg-bg; }
-  .btn-red  { @apply btn bg-red text-white hover:bg-red/90; }
-  .btn-ghost{ @apply btn text-ink-2 hover:text-ink hover:bg-bg; }
-  .btn-lg   { @apply h-11 px-5 text-[14px]; }
-  .btn-sm   { @apply h-9 lg:h-8 px-3 text-[13px] lg:text-[12.5px]; }
+  /* ---- Surfaces -------------------------------------------------------- */
+  .card       { @apply bg-surface border border-line rounded-lg; }
+  .card-hover { @apply transition-[border-color,box-shadow] duration-200 hover:border-ink/20 hover:shadow-sm; }
+  .well       { @apply bg-surface-2 rounded-md; }
 
-  .in      { @apply w-full h-11 lg:h-10 px-3.5 lg:px-3 rounded-lg bg-surface border border-line text-ink text-[13.5px]
-                    placeholder-ink-3 focus:outline-none focus:border-ink focus:ring-2 focus:ring-ink/10 transition-all; }
-  .in-area { @apply in h-auto py-2.5 resize-none; }
-  .in-lbl  { @apply block text-[12.5px] font-medium text-ink-2 mb-1.5; }
+  /* Wide tables scroll inside their own box instead of stretching the page.
+     Bleeding to the gutter edge tells the reader there is more to the right. */
+  .scroll-x { @apply overflow-x-auto overscroll-x-contain -mx-5 px-5 sm:-mx-8 sm:px-8; -webkit-overflow-scrolling: touch; }
 
-  /* Status — words, weighted, never a coloured pill */
-  .pill      { @apply inline-flex items-center px-2 py-0.5 rounded-md text-[11.5px] font-medium; }
-  .pill-on   { @apply pill bg-ink text-white; }
-  .pill-wait { @apply pill bg-bg text-ink-2 border border-line; }
-  .pill-off  { @apply pill bg-bg text-ink-3 border border-line; }
-  .pill-late { @apply pill bg-red/10 text-red; }
-  .st,.st-on { @apply text-[12px] font-medium text-ink; }
-  .st-off    { @apply text-[12px] font-medium text-ink-3; }
-  .st-late   { @apply text-[12px] font-medium text-red; }
+  /* ---- Buttons --------------------------------------------------------- */
+  /* 44px on touch is the minimum comfortable target; desktop tightens to 36. */
+  .btn {
+    @apply relative inline-flex items-center justify-center gap-1.5 h-11 lg:h-9 px-4 lg:px-3.5
+           rounded-md text-base lg:text-sm font-medium whitespace-nowrap select-none
+           transition-[background-color,border-color,color,box-shadow,transform] duration-150
+           active:scale-[.985] disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn-dark   { @apply btn bg-ink text-inverse hover:bg-ink/90 shadow-xs; }
+  .btn-accent { @apply btn bg-accent text-inverse hover:bg-accent-strong shadow-xs; }
+  .btn-line   { @apply btn bg-surface border border-line text-ink hover:bg-surface-2 hover:border-ink/20; }
+  .btn-soft   { @apply btn bg-surface-2 text-ink hover:bg-surface-3; }
+  .btn-ghost  { @apply btn text-ink-2 hover:text-ink hover:bg-surface-2; }
+  .btn-red,
+  .btn-danger { @apply btn bg-danger text-inverse hover:bg-danger-strong shadow-xs; }
+  .btn-danger-line { @apply btn bg-surface border border-danger-line text-danger hover:bg-danger-soft; }
+  .btn-lg { @apply h-12 lg:h-11 px-5 text-md lg:text-base rounded-lg; }
+  .btn-sm { @apply h-9 lg:h-8 px-3 text-sm lg:text-xs rounded-sm; }
+  .btn-icon { @apply w-11 lg:w-9 px-0 shrink-0; }
 
-  .seg      { @apply inline-flex gap-0.5 p-0.5 bg-bg border border-line rounded-lg; }
-  .seg-item { @apply px-3 py-1.5 rounded-md text-[12.5px] font-medium text-ink-2 transition-colors hover:text-ink; }
-  .seg-on   { @apply bg-surface text-ink shadow-sm; }
+  /* ---- Fields ---------------------------------------------------------- */
+  .in {
+    @apply w-full h-11 lg:h-10 px-3.5 rounded-md bg-surface border border-line text-ink text-base
+           placeholder-ink-3 transition-[border-color,box-shadow] duration-150
+           focus:outline-none focus:border-ink focus:shadow-focus
+           disabled:bg-surface-2 disabled:text-ink-3 disabled:cursor-not-allowed;
+  }
+  .in-area    { @apply in h-auto min-h-[88px] py-2.5 leading-relaxed resize-y; }
+  .in-invalid { @apply border-danger focus:border-danger focus:shadow-[0_0_0_3px_rgb(var(--c-danger)/.12)]; }
+  .in-lbl     { @apply block text-sm font-medium text-ink-2 mb-1.5; }
+  /* Native select needs its own chevron once the OS one is suppressed */
+  .in-select {
+    @apply in appearance-none pr-9 bg-no-repeat cursor-pointer;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236E7484' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.75rem center;
+    background-size: 16px;
+  }
+  /* Checkboxes and radios inherit the brand instead of the OS blue */
+  .in-check { @apply w-[18px] h-[18px] rounded-xs accent-accent cursor-pointer shrink-0; }
+  .in-radio { @apply w-[18px] h-[18px] accent-accent cursor-pointer shrink-0; }
 
-  /* Contribution grid */
-  .box       { @apply aspect-square border border-line rounded-md grid place-items-center text-[9px] font-medium text-ink-3 transition-colors bg-surface; }
-  .box-paid  { @apply border-ink bg-ink text-white; }
-  .box-today { @apply border-ink border-dashed text-ink font-semibold; }
-  .box-late  { @apply border-red text-red; }
+  /* ---- Status ---------------------------------------------------------- */
+  .pill { @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs text-2xs font-semibold whitespace-nowrap; }
+  .pill-neutral { @apply pill bg-surface-2 text-ink-2 border border-line; }
+  .pill-on      { @apply pill bg-ink text-inverse; }
+  .pill-good    { @apply pill bg-success-soft text-success border border-success-line; }
+  .pill-warn    { @apply pill bg-warning-soft text-warning border border-warning-line; }
+  .pill-bad     { @apply pill bg-danger-soft  text-danger  border border-danger-line; }
+  .pill-info    { @apply pill bg-info-soft    text-info    border border-info-line; }
+  .pill-off     { @apply pill bg-surface-2 text-ink-3 border border-line; }
+  .pill-wait    { @apply pill-warn; }
+  .pill-late    { @apply pill-bad; }
 
-  /* Aliases so older screens keep their styling */
+  /* ---- Contribution grid ("stamp card") -------------------------------- */
+  .box       { @apply aspect-square border border-line rounded-xs grid place-items-center
+                      text-2xs font-medium text-ink-3 bg-surface transition-colors; }
+  .box-paid  { @apply border-accent bg-accent text-inverse; }
+  .box-today { @apply border-ink border-dashed bg-surface text-ink font-bold; }
+  .box-late  { @apply border-danger-line bg-danger-soft text-danger font-semibold; }
+
+  /* ---- Segmented control ---------------------------------------------- */
+  .seg      { @apply inline-flex gap-0.5 p-0.5 bg-surface-2 border border-line rounded-md; }
+  .seg-item { @apply px-3 h-8 inline-flex items-center rounded-sm text-sm font-medium text-ink-2
+                     transition-colors hover:text-ink; }
+  .seg-on   { @apply bg-surface text-ink shadow-xs; }
+
+  /* Shimmer used by every skeleton, so it is defined once */
+  .skeleton {
+    @apply bg-surface-2 rounded-sm;
+    background-image: linear-gradient(90deg,
+      rgb(var(--c-surface-2)) 0%, rgb(var(--c-surface-3)) 40%,
+      rgb(var(--c-surface-3)) 60%, rgb(var(--c-surface-2)) 100%);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+
+  /* ---- Compatibility aliases -------------------------------------------
+     Screens written against earlier generations of this system. They map onto
+     the tokens above so nothing renders unstyled, and they are the checklist
+     for what is left to migrate. */
   .panel { @apply card; }
   .input { @apply in; }
   .label { @apply in-lbl; }
-  .act,.act-primary,.act-accent,.act-gold { @apply btn-dark; }
-  .act-quiet,.act-soft { @apply btn-line; }
+  .act, .act-primary { @apply btn-dark; }
+  .act-accent, .act-gold { @apply btn-accent; }
+  .act-quiet, .act-soft  { @apply btn-line; }
   .act-sm  { @apply btn-sm; }
-  .badge-green,.badge-blue { @apply pill-on; }
-  .badge-gold,.badge-gray  { @apply pill-off; }
-  .badge-red { @apply pill-late; }
-  .t-display,.t-h1 { @apply t-title; }
-  .rule { @apply border-t border-line; }
+  .badge-green { @apply pill-good; }
+  .badge-gold  { @apply pill-warn; }
+  .badge-blue  { @apply pill-info; }
+  .badge-gray  { @apply pill-off; }
+  .badge-red   { @apply pill-bad; }
+  .st, .st-on  { @apply text-xs font-medium text-ink; }
+  .st-off      { @apply text-xs font-medium text-ink-3; }
+  .st-late     { @apply text-xs font-medium text-danger; }
+  .t-display, .t-h1 { @apply t-title; }
+  .rule    { @apply border-t border-line; }
   .rule-hd { @apply border-b border-line; }
 }

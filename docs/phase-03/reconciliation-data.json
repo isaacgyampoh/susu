@@ -1,0 +1,180 @@
+{
+  "registrations_unpaid": [
+    {
+      "fee": 102.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "42aee6c1-8b56-4506-913b-58a710870e6a",
+      "submitted": "2026-07-19",
+      "member_code": "SSU-0034",
+      "memberships": 2,
+      "member_status": "suspended"
+    },
+    {
+      "fee": 602.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "2ce6c309-138c-4859-8ff7-307ce66d5459",
+      "submitted": "2026-07-19",
+      "member_code": "SSU-0033",
+      "memberships": 5,
+      "member_status": "active"
+    },
+    {
+      "fee": 11.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "da7e31b7-7091-4019-b9e8-ee096bdac9dc",
+      "submitted": "2026-07-19",
+      "member_code": "SSU-0036",
+      "memberships": 1,
+      "member_status": "suspended"
+    },
+    {
+      "fee": 195.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "f1c725e3-3bd9-490d-abbb-fdd5779da9b9",
+      "submitted": "2026-07-21",
+      "member_code": "SSU-0076",
+      "memberships": 1,
+      "member_status": "suspended"
+    },
+    {
+      "fee": 23.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "3904e9c7-2f3d-4231-b6e2-ba1b9d6209ef",
+      "submitted": "2026-07-21",
+      "member_code": "SSU-0078",
+      "memberships": 1,
+      "member_status": "suspended"
+    },
+    {
+      "fee": 23.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "e57068f7-a9c7-48c4-bdb3-a97b38737f80",
+      "submitted": "2026-07-23",
+      "member_code": null,
+      "memberships": 0,
+      "member_status": null
+    },
+    {
+      "fee": 23.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "74405da0-59a8-4c18-b903-76e64eaa8653",
+      "submitted": "2026-07-24",
+      "member_code": "SSU-0081",
+      "memberships": 1,
+      "member_status": "suspended"
+    },
+    {
+      "fee": 60.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "cef8e4f2-ef55-4764-8954-7fe691a72324",
+      "submitted": "2026-07-26",
+      "member_code": "SSU-0086",
+      "memberships": 0,
+      "member_status": "active"
+    },
+    {
+      "fee": 55.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "3879cfee-0fe6-4a62-a098-fbc4c6a60d93",
+      "submitted": "2026-07-27",
+      "member_code": "SSU-0090",
+      "memberships": 0,
+      "member_status": "active"
+    },
+    {
+      "fee": 11.5,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "4d33dbcd-5834-4746-a059-94c15bbd2db9",
+      "submitted": "2026-07-28",
+      "member_code": "SSU-0091",
+      "memberships": 2,
+      "member_status": "suspended"
+    },
+    {
+      "fee": 110.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "6036a9dc-c062-4f50-90cc-abee9ea1665c",
+      "submitted": "2026-07-29",
+      "member_code": "SSU-0093",
+      "memberships": 0,
+      "member_status": "active"
+    },
+    {
+      "fee": 60.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "9d215ab9-a0b7-4b12-ba0b-c86d2ea2b94c",
+      "submitted": "2026-08-05",
+      "member_code": "SSU-0095",
+      "memberships": 0,
+      "member_status": "active"
+    },
+    {
+      "fee": 45.0,
+      "name": "<redacted \u2014 see kyc_id / member_code>",
+      "phone": "<redacted \u2014 see kyc_id / member_code>",
+      "kyc_id": "3439af26-6e69-41cb-9560-0328525ce17c",
+      "submitted": "2026-08-25",
+      "member_code": null,
+      "memberships": 0,
+      "member_status": null
+    }
+  ],
+  "active_group_no_payout_date": [
+    {
+      "group": "Daily Payment 28gh Monthly Pick-up 30days",
+      "joined": "2026-07-20",
+      "member": "SSU-0051",
+      "position": 8,
+      "onboarded": true,
+      "membership_id": "104c25da-6a86-4953-8086-bb20f3b92081"
+    },
+    {
+      "group": "Daily Susu 7days pickup ",
+      "joined": "2026-07-20",
+      "member": "SSU-0047",
+      "position": 6,
+      "onboarded": true,
+      "membership_id": "08cdf09c-9532-4cf4-a023-7fdd1d2f14b9"
+    },
+    {
+      "group": "Daily Payment 28gh Monthly Pick-up 30days",
+      "joined": "2026-07-22",
+      "member": "SSU-0079",
+      "position": 12,
+      "onboarded": true,
+      "membership_id": "6dfd1111-b4d8-4130-a38a-95fcfe10d6ae"
+    },
+    {
+      "group": "Daily (55) Payment Monthly Pickup 2",
+      "joined": "2026-08-24",
+      "member": "SSU-0101",
+      "position": 5,
+      "onboarded": true,
+      "membership_id": "ca597778-0138-494a-a7b8-f2ffd77fa424"
+    },
+    {
+      "group": "Daily (55) Payment Monthly Pickup 2",
+      "joined": "2026-08-24",
+      "member": "SSU-0012",
+      "position": 2,
+      "onboarded": true,
+      "membership_id": "155043b8-8e6c-4e2f-823e-798b56832b29"
+    }
+  ],
+  "no_schedule_by_group_status": {
+    "open": 37
+  },
+  "_note": "Personal details are redacted. This file is analysis, and it lives in a repository with a public remote; the 13 people it describes did not agree to have their names and phone numbers published to make a document more convenient. `kyc_id` and `member_code` resolve the real record for an authorised administrator, which is where those details belong."
+}

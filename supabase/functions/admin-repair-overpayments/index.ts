@@ -32,116 +32,15 @@ serveWithCors(async (req) => {
   const admin = await requireAdmin(req)
   if (!admin) return error('Unauthorized', 401)
 
-  try {
-    const body = await req.json().catch(() => ({}))
-    const doApply  = body.apply === true
-    const onlyMember = body.member_id ? String(body.member_id) : null
-    const since = body.since ? `${body.since}T00:00:00Z`
-                             : new Date(Date.now() - 90 * 864e5).toISOString()
-
-    // Successful contribution payments that could carry a surplus
-    let txq = supabaseAdmin
-      .from('transactions')
-      .select('id, reference, amount, related_id, member_id, paystack_data, created_at')
-      .eq('status', 'success')
-      .eq('type', 'contribution')
-      .not('related_id', 'is', null)
-      .gte('created_at', since)
-      .order('created_at', { ascending: true })
-      .limit(2000)
-    if (onlyMember) txq = txq.eq('member_id', onlyMember)
-
-    const { data: txns, error: txErr } = await txq
-    if (txErr) return error(txErr.message, 500)
-
-    const found: any[] = []
-    let applied = 0
-    let creditTotal = 0
-
-    for (const tx of txns ?? []) {
-      // Skip anything already processed by this repair
-      if ((tx.paystack_data as any)?.overpay_repaired) continue
-
-      const paid = Number(tx.amount)
-
-      // What did the day this payment was for cost?
-      const { data: c } = await supabaseAdmin
-        .from('contributions')
-        .select('id, amount, penalty_due, member_id, membership_id, ' +
-                'members!member_id(full_name), susu_groups(name)')
-        .eq('id', tx.related_id).single()
-      if (!c) continue
-
-      const dayCost = Number(c.amount) + Number(c.penalty_due ?? 0)
-      const surplus = Math.round((paid - dayCost) * 100) / 100
-      if (surplus <= 0.001) continue   // not an overpayment
-
-      // Does the member still owe anywhere? (that's the symptom to fix)
-      const { data: owing } = await supabaseAdmin
-        .from('contributions')
-        .select('id, amount, amount_paid, penalty_due, susu_groups(name)')
-        .eq('member_id', c.member_id)
-        .in('status', ['pending', 'overdue'])
-        .limit(400)
-      const stillOwes = (owing ?? []).reduce(
-        (s: number, r: any) => s + (Number(r.amount) + Number(r.penalty_due ?? 0) - Number(r.amount_paid ?? 0)), 0)
-
-      const row = {
-        member: (c as any).members?.full_name,
-        member_id: c.member_id,
-        started_in: (c as any).susu_groups?.name,
-        paid, day_cost: dayCost, surplus,
-        currently_owes: Math.round(stillOwes * 100) / 100,
-        will_cover: Math.round(Math.min(surplus, stillOwes) * 100) / 100,
-        will_credit: Math.round(Math.max(0, surplus - stillOwes) * 100) / 100,
-      }
-      found.push(row)
-      creditTotal += row.will_credit
-
-      if (!doApply) continue
-
-      // Apply the surplus across the member's groups. We start the allocation
-      // at the member's oldest unpaid day so it flows outward from there.
-      const { data: oldest } = await supabaseAdmin
-        .from('contributions')
-        .select('id')
-        .eq('member_id', c.member_id)
-        .in('status', ['pending', 'overdue'])
-        .order('due_date', { ascending: true })
-        .limit(1)
-      if (oldest && oldest.length > 0) {
-        await applyPaymentToSchedule(oldest[0].id, surplus, tx.reference, 'member')
-      }
-
-      await supabaseAdmin.from('transactions')
-        .update({ paystack_data: { ...(tx.paystack_data ?? {}), overpay_repaired: true, surplus } as never })
-        .eq('id', tx.id)
-
-      await supabaseAdmin.from('audit_log').insert({
-        admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
-        action: 'payment.overpay_spread', entity_type: 'transaction',
-        entity_id: tx.id, entity_label: `GHS ${surplus.toFixed(2)} surplus`,
-        details: row,
-      }).then(() => {}, () => {})
-
-      applied++
-    }
-
-    return json({
-      applied: doApply,
-      overpayments_found: found.length,
-      surplus_total: Math.round(found.reduce((s, r) => s + r.surplus, 0) * 100) / 100,
-      would_credit_total: Math.round(creditTotal * 100) / 100,
-      changed: applied,
-      details: found,
-      message: found.length === 0
-        ? 'No unresolved overpayments found.'
-        : doApply
-          ? `${applied} overpayment(s) spread across members' groups.`
-          : `${found.length} overpayment(s) found. Review, then apply.`,
-    })
-  } catch (e) {
-    console.error(e)
-    return error('Internal server error', 500)
-  }
+  // REMOVED IN PHASE 04, EMPTIED IN PHASE 07.
+  //
+  // A one-time repair for payments that had credited only one of a member's
+  // groups. The defect is fixed at source — settle_payment() is per-membership
+  // and the credit ledger is per-membership — and the historical repair has
+  // been applied. What remained was a second path that wrote contribution and
+  // credit state outside the canonical engine, which is exactly the
+  // duplicate-engine problem this rebuild set out to end.
+  return error(
+    'This repair tool has been removed. Credit is per-membership in the ' +
+    'canonical engine, which makes the defect it corrected impossible.', 410)
 })

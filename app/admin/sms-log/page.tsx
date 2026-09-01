@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import { format } from 'date-fns'
 
@@ -21,20 +21,31 @@ export default function SmsLogPage() {
   const [page, setPage]     = useState(1)
   const [hasMore, setHasMore] = useState(false)
 
-  async function load(reset = true) {
+  /*
+   * The page to fetch is an ARGUMENT, and rows are appended with a functional
+   * update.
+   *
+   * Both used to be read from captured state. "Load more" therefore appended to
+   * whatever `rows` held when the callback was created — so a second page
+   * fetched after a filter change could append onto the OLD list — and
+   * `page + 1` could compute from a stale page. Passing the page in and
+   * appending through `setRows(prev => …)` removes both, and lets the
+   * dependency list say what the callback actually uses.
+   */
+  const load = useCallback(async (reset = true, nextPage = 1) => {
     setLoading(true)
-    const p = reset ? 1 : page + 1
+    const p = reset ? 1 : nextPage
     const { data } = await callFunction<any>(
       `admin-sms-log?q=${encodeURIComponent(q)}&range=${range}&status=${status}&page=${p}`,
       { token: getAdminToken()! })
     setNotice(data?.notice ?? '')
     setSummary(data?.summary ?? null)
     setHasMore(!!data?.has_more)
-    setRows(reset ? (data?.messages ?? []) : [...rows, ...(data?.messages ?? [])])
+    setRows(prev => reset ? (data?.messages ?? []) : [...prev, ...(data?.messages ?? [])])
     setPage(p)
     setLoading(false)
-  }
-  useEffect(() => { load(true) }, [range, status])
+  }, [q, range, status])
+  useEffect(() => { load(true) }, [load])
 
   return (
     <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
@@ -133,7 +144,7 @@ export default function SmsLogPage() {
             </table>
           </div>
           {hasMore && (
-            <button onClick={() => load(false)}
+            <button onClick={() => load(false, page + 1)}
               className="w-full py-3 text-sm text-ink-2 hover:text-ink hover:bg-tint transition-colors border-t border-line">
               Load more
             </button>

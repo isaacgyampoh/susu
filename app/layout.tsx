@@ -1,13 +1,19 @@
 import type { Metadata, Viewport } from 'next'
 import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import RegisterSW from '@/components/register-sw'
+import { Providers } from '@/components/ui'
 
 /*
  * Geist is self-hosted via Vercel's package. A CSS @import to Google Fonts is a
  * render-blocking third-party request — on a slow mobile connection that is a
  * visible wait before any text appears, and it fails outright on networks that
  * block Google. This ships the font with the app.
+ *
+ * Mono carries member IDs, payment references and Ghana Card numbers. Those get
+ * read aloud down a phone line and typed into other systems, so the digits have
+ * to be unambiguous — a proportional 0/O or 1/l is a real transcription error.
  */
 export const metadata: Metadata = {
   title: { default: 'Abbie Wealth Susu — Administrator console', template: '%s · Abbie Wealth' },
@@ -24,7 +30,9 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0A56C4',
+  // Matches the page ground, so the iOS status bar and Android chrome blend
+  // into the app instead of framing it with a colour used nowhere else.
+  themeColor: '#F7F8FA',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -32,9 +40,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={GeistSans.variable}>
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
-        {children}
+        <Providers>{children}</Providers>
         <RegisterSW />
       </body>
     </html>

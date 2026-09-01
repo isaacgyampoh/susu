@@ -105,7 +105,7 @@ export default function AnnouncementsPage() {
 
           {form.send_sms && (
             <div className="p-3 bg-tint border border-line rounded-[10px] text-ink-2 text-xs">
-              SMS will be sent to {form.group_id ? 'all members in the selected group' : 'all active members'}. This will incur Africa's Talking charges.
+              SMS will be sent to {form.group_id ? 'all members in the selected group' : 'all active members'}. This will incur Africa&rsquo;s Talking charges.
             </div>
           )}
 

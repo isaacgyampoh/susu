@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { callFunction, getAdminToken } from '@/lib/supabase'
@@ -25,12 +25,7 @@ export default function MembersPage() {
   const [wipeText, setWipeText]     = useState('')
   const [wiping, setWiping]         = useState(false)
 
-  useEffect(() => {
-    const t = setTimeout(() => load(), search ? 400 : 0)
-    return () => clearTimeout(t)
-  }, [filter, search, page])
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     const token = getAdminToken()
     const params = new URLSearchParams({
@@ -46,7 +41,17 @@ export default function MembersPage() {
     setMembers(data?.members ?? [])
     setTotal(data?.total ?? 0)
     setLoading(false)
-  }
+  }, [filter, search, page])
+
+  // Debounced so typing in the search box does not fire a request per keystroke.
+  // The effect depends on `load` itself rather than restating its inputs: the
+  // callback already declares them, and two lists that must agree eventually
+  // stop agreeing.
+  useEffect(() => {
+    const t = setTimeout(() => load(), search ? 400 : 0)
+    return () => clearTimeout(t)
+  }, [load, search])
+
 
   function statusBadge(s: string) {
     if (s === 'active')    return <span className="badge-green">Active</span>
@@ -197,7 +202,7 @@ export default function MembersPage() {
             <div>
               <h2 className="font-bold text-red text-lg">Delete ALL members?</h2>
               <p className="text-ink-2 text-sm mt-1.5 leading-relaxed">
-                This erases <strong className="text-ink">every member</strong> in the system — those who have paid and those who haven't — along with
+                This erases <strong className="text-ink">every member</strong> in the system — those who have paid and those who haven&rsquo;t — along with
                 all their contributions, payouts, transactions and messages. <strong className="text-ink">Your groups are kept</strong> and
                 re-opened, ready to be filled again. This cannot be undone.
               </p>
@@ -273,7 +278,7 @@ export default function MembersPage() {
                     <input type="radio" name="invscope" checked={invScope === 'all'} onChange={() => setInvScope('all')} className="mt-1 accent-green" />
                     <span className="text-sm text-ink">
                       <strong>All active members ({invCounts.total_active})</strong>
-                      <span className="block text-xs text-red mt-0.5">Re-issues a NEW passcode for everyone — anyone's current passcode (including PINs they set themselves) stops working.</span>
+                      <span className="block text-xs text-red mt-0.5">Re-issues a NEW passcode for everyone — anyone&rsquo;s current passcode (including PINs they set themselves) stops working.</span>
                     </span>
                   </label>
                 </div>

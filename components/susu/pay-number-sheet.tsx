@@ -87,7 +87,7 @@ export default function PayNumberSheet({
         <div className="mt-3 p-3 rounded-lg bg-bg border border-line text-[12.5px]">
           <div className="flex justify-between text-ink-2"><span>Contribution</span><span className="tnum">GHS {base.toFixed(2)}</span></div>
           <div className="flex justify-between text-ink-2 mt-1"><span>Service charge ({feePct}%)</span><span className="tnum">GHS {fee.toFixed(2)}</span></div>
-          <div className="flex justify-between font-semibold text-ink mt-1.5 pt-1.5 border-t border-line"><span>You'll approve</span><span className="tnum">GHS {charged.toFixed(2)}</span></div>
+          <div className="flex justify-between font-semibold text-ink mt-1.5 pt-1.5 border-t border-line"><span>You&rsquo;ll approve</span><span className="tnum">GHS {charged.toFixed(2)}</span></div>
         </div>
         <p className="text-[13px] text-ink-2 mt-3">A prompt will be sent to the number below. Approve it with your MoMo PIN.</p>
 

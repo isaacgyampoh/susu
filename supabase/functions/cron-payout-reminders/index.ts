@@ -28,18 +28,19 @@ serveWithCors(async (req) => {
   const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
   const dateStr = tomorrow.toISOString().slice(0, 10)
 
-  let { data: payouts, error: qErr } = await supabaseAdmin
+  // `reminded_at` (v20) is the idempotency stamp that stops a member being
+  // texted twice about the same payout. There used to be a fallback here that
+  // dropped the column from the SELECT if the error message mentioned it — so
+  // an unrelated database failure could quietly downgrade this job into the
+  // version that reminds everybody again, every run.
+  const { data: payouts, error: qErr } = await supabaseAdmin
     .from('payouts')
     .select('id, total_amount, scheduled_date, reminded_at, members!member_id(full_name, phone), susu_groups(name)')
     .eq('status', 'upcoming')
     .eq('scheduled_date', dateStr)
-  if (qErr && /reminded_at/.test(qErr.message)) {
-    // v20 not applied yet — run without the idempotency stamp
-    ;({ data: payouts } = await supabaseAdmin
-      .from('payouts')
-      .select('id, total_amount, scheduled_date, members!member_id(full_name, phone), susu_groups(name)')
-      .eq('status', 'upcoming')
-      .eq('scheduled_date', dateStr))
+  if (qErr) {
+    console.error('cron-payout-reminders: could not read payouts', qErr.message)
+    return json({ sent: 0, error: 'Could not read the payout schedule.' })
   }
 
   let sent = 0

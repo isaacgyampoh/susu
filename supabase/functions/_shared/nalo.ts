@@ -15,7 +15,7 @@
  *
  * trans_hash = HMAC_SHA256(merchant_id + account_number + amount + reference, secret) hex.
  *
- * The only payment provider. `moolreRef` in the result shape is a legacy
+ * The only payment provider. `providerOrderId` in the result shape is a legacy
  * field name kept so callers did not all have to change when the other
  * providers were removed; it carries NaloPay's order_id.
  */
@@ -70,7 +70,11 @@ export function naloPhone(phone: string): string {
 
 // Result shapes
 export type PromptResult =
-  | { kind: 'prompted'; moolreRef: string; ussd?: string }  // ussd = dial-code the member approves with
+  // `providerOrderId` is NaloPay's own id for the prompt, and the key its
+  // status endpoint answers to. It was called `moolreRef` until Phase 09 —
+  // the name of a provider removed from this platform, still sitting in the
+  // NaloPay adapter's own return type and read by six call sites.
+  | { kind: 'prompted'; providerOrderId: string; ussd?: string }  // ussd = dial-code the member approves with
   | { kind: 'otp_required'; message: string }
   | { kind: 'duplicate' }
   | { kind: 'failed'; code: string; message: string; raw?: unknown }
@@ -195,7 +199,7 @@ export async function requestPayment(args: {
       const ussd = raw && raw.toLowerCase() !== 'none' && /\*?\d+.*#/.test(raw)
         ? raw.replace(/^none/i, '')
         : undefined
-      return { kind: 'prompted', moolreRef: String(r.data.order_id), ussd }
+      return { kind: 'prompted', providerOrderId: String(r.data.order_id), ussd }
     }
     lastRaw = r
     // Keep trying only while it's specifically the hash it rejects

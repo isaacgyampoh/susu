@@ -345,7 +345,7 @@ export default function OnboardMemberPage() {
                     value={plan.slots} onChange={e => setPlan(i, { slots: e.target.value })} />
                   {parseInt(plan.slots || '1') > 1 && (
                     <p className="text-xs text-ink-3 mt-1.5">
-                      Amount paid is split across {plan.slots} slots. Payout date/position apply to the first slot — set the others from the member's page after.
+                      Amount paid is split across {plan.slots} slots. Payout date/position apply to the first slot — set the others from the member&rsquo;s page after.
                     </p>
                   )}
                 </div>

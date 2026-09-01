@@ -1,0 +1,12 @@
+{
+  "extends": "next/core-web-vitals",
+  "ignorePatterns": [
+    "node_modules/",
+    ".next/",
+    "supabase/functions/**"
+  ],
+  "rules": {
+    "@next/next/no-html-link-for-pages": "error",
+    "react-hooks/exhaustive-deps": "warn"
+  }
+}

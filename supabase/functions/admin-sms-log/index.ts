@@ -63,14 +63,11 @@ serveWithCors(async (req) => {
     }
 
     const { data, count, error: dbErr } = await query.range((page - 1) * size, page * size - 1)
-    if (dbErr) {
-      if (/sms_log/i.test(dbErr.message)) {
-        return json({ messages: [], page, has_more: false, total: 0,
-          summary: { sent: 0, failed: 0 },
-          notice: 'The SMS log table does not exist yet — run migration v23.' })
-      }
-      return error(dbErr.message, 500)
-    }
+    // v23 is confirmed applied in production, so the "table might not exist"
+    // branch that used to return an empty log here was dead — and worse than
+    // dead: it turned a real query failure into an empty list, so an operator
+    // checking whether a member was texted would be shown "no messages".
+    if (dbErr) return error(dbErr.message, 500)
 
     // Attach a member name where the number is recognised
     const nums = [...new Set((data ?? []).map((r: any) => r.recipient.replace(/\D/g, '').slice(-9)))]

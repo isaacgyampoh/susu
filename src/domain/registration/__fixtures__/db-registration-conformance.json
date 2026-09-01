@@ -1,0 +1,112 @@
+[
+  {
+    "scenario": "exact payment",
+    "fee": "150.00",
+    "confirmed": "150.00",
+    "replay": false,
+    "settled": true,
+    "already": false,
+    "short": false,
+    "applied": "150.00",
+    "fee_paid_after": true
+  },
+  {
+    "scenario": "grossed up by service charge",
+    "fee": "150.00",
+    "confirmed": "152.25",
+    "replay": false,
+    "settled": true,
+    "already": false,
+    "short": false,
+    "applied": "150.00",
+    "fee_paid_after": true
+  },
+  {
+    "scenario": "one pesewa short",
+    "fee": "150.00",
+    "confirmed": "149.99",
+    "replay": false,
+    "settled": false,
+    "already": false,
+    "short": true,
+    "applied": "149.99",
+    "fee_paid_after": false
+  },
+  {
+    "scenario": "a third short",
+    "fee": "150.00",
+    "confirmed": "100.00",
+    "replay": false,
+    "settled": false,
+    "already": false,
+    "short": true,
+    "applied": "100.00",
+    "fee_paid_after": false
+  },
+  {
+    "scenario": "massively short",
+    "fee": "150.00",
+    "confirmed": "1.00",
+    "replay": false,
+    "settled": false,
+    "already": false,
+    "short": true,
+    "applied": "1.00",
+    "fee_paid_after": false
+  },
+  {
+    "scenario": "generous overpayment",
+    "fee": "150.00",
+    "confirmed": "500.00",
+    "replay": false,
+    "settled": true,
+    "already": false,
+    "short": false,
+    "applied": "150.00",
+    "fee_paid_after": true
+  },
+  {
+    "scenario": "replayed after settling",
+    "fee": "150.00",
+    "confirmed": "152.25",
+    "replay": true,
+    "settled": true,
+    "already": true,
+    "short": false,
+    "applied": "150.00",
+    "fee_paid_after": true
+  },
+  {
+    "scenario": "small fee, exact",
+    "fee": "1.00",
+    "confirmed": "1.00",
+    "replay": false,
+    "settled": true,
+    "already": false,
+    "short": false,
+    "applied": "1.00",
+    "fee_paid_after": true
+  },
+  {
+    "scenario": "large fee, exact",
+    "fee": "995.00",
+    "confirmed": "995.00",
+    "replay": false,
+    "settled": true,
+    "already": false,
+    "short": false,
+    "applied": "995.00",
+    "fee_paid_after": true
+  },
+  {
+    "scenario": "large fee, short by one cedi",
+    "fee": "995.00",
+    "confirmed": "994.00",
+    "replay": false,
+    "settled": false,
+    "already": false,
+    "short": true,
+    "applied": "994.00",
+    "fee_paid_after": false
+  }
+]

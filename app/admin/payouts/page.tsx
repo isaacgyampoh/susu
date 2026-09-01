@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Payout } from '@/types'
 import { format } from 'date-fns'
@@ -30,15 +30,15 @@ export default function PayoutsPage() {
 
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 4000) }
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     const token = getAdminToken()
     const { data } = await callFunction<{ payouts: Payout[] }>(`payouts-admin?status=${filter}`, { token: token! })
     setPayouts(data?.payouts ?? [])
     setLoading(false)
-  }
+  }, [filter])
 
-  useEffect(() => { load() }, [filter])
+  useEffect(() => { load() }, [load])
 
   async function openPayout(p: Payout) {
     setSelected(p); setNotes(''); setRef(''); setOverride(false); setElig(null); setAmountSent('')
@@ -87,7 +87,7 @@ export default function PayoutsPage() {
 
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-ink">Payouts</h1>
-        <p className="text-ink-2 text-sm mt-1">Every payout is checked against the member's balance before you can release it</p>
+        <p className="text-ink-2 text-sm mt-1">Every payout is checked against the member&rsquo;s balance before you can release it</p>
       </div>
 
       <div className="flex gap-2 mb-6">

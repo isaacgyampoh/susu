@@ -1,0 +1,127 @@
+{
+ "money": {
+  "member_credit_total": 0.0,
+  "payouts_paid_amount": 376044.0,
+  "payouts_upcoming_amount": 485171.0,
+  "penalties_unpaid_amount": 2085.0,
+  "allocations_amount_total": 11353.0,
+  "contributions_paid_amount": 530678.0,
+  "contributions_amount_total": 1093030.0,
+  "transactions_pending_amount": 40658.0,
+  "transactions_success_amount": 538449.0,
+  "contributions_overdue_amount": 4286.0,
+  "contributions_pending_amount": 558066.0,
+  "contributions_amount_paid_total": 305862.5
+ },
+ "counts": {
+  "members": 82,
+  "payouts": 153,
+  "audit_log": 523,
+  "susu_groups": 18,
+  "transactions": 1925,
+  "contributions": 15707,
+  "group_memberships": 266,
+  "payment_penalties": 403,
+  "payment_allocations": 181
+ },
+ "hashes": {
+  "payouts": "9614c5e25c7e356c906f20b6f32b1771",
+  "allocations": "42c8ee5adb3455dabb4aa371a0aa2080",
+  "memberships": "df136259301ddf78b4ff04e6924278dd",
+  "transactions": "a0a6a3adac1e8be66ba9161cfe09ae74",
+  "contributions": "582433a4ee1d1a6f5a8e1c156a04a87c"
+ },
+ "by_group": {
+  "Land Group3 (79) ": {
+   "paid": 0,
+   "members": 0,
+   "expected": 0
+  },
+  "Group 2 Rent Susu ": {
+   "paid": 33187.0,
+   "members": 9,
+   "expected": 61677.0
+  },
+  "Weekly Susu Fridays": {
+   "paid": 169890.0,
+   "members": 12,
+   "expected": 193200.0
+  },
+  "Weekly Susu Sundays": {
+   "paid": 0,
+   "members": 0,
+   "expected": 0
+  },
+  "Weekly Susu Saturdays ": {
+   "paid": 0,
+   "members": 0,
+   "expected": 0
+  },
+  "Land Group 2 (30 Days) ": {
+   "paid": 0,
+   "members": 0,
+   "expected": 0
+  },
+  "98gh Daily 2Days Pickup ": {
+   "paid": 0,
+   "members": 0,
+   "expected": 0
+  },
+  "Daily Payment Susu 105gh": {
+   "paid": 42945.0,
+   "members": 20,
+   "expected": 42945.0
+  },
+  "Daily Susu 7days pickup ": {
+   "paid": 31955.0,
+   "members": 10,
+   "expected": 33000.0
+  },
+  "Weekly Payment Fridays (255)": {
+   "paid": 0,
+   "members": 0,
+   "expected": 0
+  },
+  "Daily Susu 8days pickup (65) ": {
+   "paid": 30160.0,
+   "members": 11,
+   "expected": 52780.0
+  },
+  "Land Group Susu1 288gh Daily ": {
+   "paid": 0,
+   "members": 0,
+   "expected": 0
+  },
+  "Daily Payment 10days Cashout (15) ": {
+   "paid": 4290.0,
+   "members": 19,
+   "expected": 33360.0
+  },
+  "Daily Susu Payment 15days Pickup 1": {
+   "paid": 42188.0,
+   "members": 9,
+   "expected": 111663.0
+  },
+  "Daily (55) Payment Monthly Pickup 2": {
+   "paid": 18590.0,
+   "members": 14,
+   "expected": 180400.0
+  },
+  "Daily Payment (102) Everyday Pick-up ": {
+   "paid": 125868.0,
+   "members": 61,
+   "expected": 253980.0
+  },
+  "Daily Susu Group3 Rent 15days Pickup ": {
+   "paid": 21395.0,
+   "members": 13,
+   "expected": 62975.0
+  },
+  "Daily Payment 28gh Monthly Pick-up 30days": {
+   "paid": 10210.0,
+   "members": 13,
+   "expected": 67050.0
+  }
+ },
+ "captured_at": "2026-09-01T16:47:14.156831+00:00"
+}

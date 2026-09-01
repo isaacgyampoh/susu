@@ -2,26 +2,33 @@ import { supabaseAdmin } from './supabase-admin.ts'
 
 /*
  * ────────────────────────────────────────────────────────────────────────
- *  THE SETTLEMENT ENGINE — the one and only place money is applied.
+ *  SETTLEMENT — now a thin call to the canonical database engine.
  * ────────────────────────────────────────────────────────────────────────
  *
- * Every path that settles a payment calls settlePayment(): the provider
- * callback, the member's app polling, the 10-minute sweeper, the reconcile,
- * and manual admin entry. They must all behave identically, so they all come
- * here. Nothing else marks a contribution paid.
+ * This file used to CONTAIN the settlement algorithm: it read the member's
+ * credit, walked their unpaid days, and issued a separate PostgREST call for
+ * every update. That design had four defects that could not be fixed in place:
  *
- * What it does, in order:
- *   1. Adds any credit the member is already carrying to the amount.
- *   2. Clears the day the payment was for, then the rest of that slot
- *      (oldest first), then — unless scope is 'slot' — the member's other
- *      groups (oldest debt first). Arrears before paying ahead, always.
- *   3. Records EACH day it settled in payment_allocations, so the member and
- *      the admin can see exactly what the money covered.
- *   4. Any remainder the member does not owe becomes credit_balance, applied
- *      automatically next time.
+ *   * NOT ATOMIC. Every write was its own request with no transaction. A
+ *     failure part-way left days paid, the allocation ledger short, and credit
+ *     unreconciled, with nothing to roll back.
+ *   * NO LOCKING. It read `credit_balance`, then wrote it back at the end. Two
+ *     concurrent settlements read the same value and both spent it.
+ *   * UNCHECKED WRITES. The result of the contribution UPDATE was discarded.
+ *     When `uniq_contribution_ref` rejected the second day of a multi-day
+ *     payment, the failure vanished while the running total was still
+ *     decremented and the allocation row still written — finding F-02, which
+ *     billed one member twice for the same two days.
+ *   * MEMBER-SCOPED CREDIT. A surplus paid into one group settled another's
+ *     obligation.
  *
- * `amount` is the contribution value the member is saving, not the grossed-up
- * charge — the service charge is the operator's fee, never savings.
+ * All four are properties of *where* the code ran, not of its logic. So the
+ * logic moved into `settle_payment()` in PostgreSQL, where a transaction and
+ * `SELECT … FOR UPDATE` are available, and this module became the call site.
+ *
+ * The database function is now the financial authority. It is conformance-
+ * tested against the pure allocator in src/domain/contribution/allocation.ts,
+ * so the rule it implements is the rule the portal previews.
  */
 
 export interface Allocation {
@@ -31,136 +38,129 @@ export interface Allocation {
   kind: 'full' | 'part'
   due_date: string
 }
+
 export interface SettleResult {
   daysCleared: number
   allocations: Allocation[]
-  creditAdded: number      // left over, banked to the member's credit
-  creditUsed: number       // pre-existing credit consumed
-  groups: string[]         // distinct group names touched
+  creditAdded: number
+  creditUsed: number
+  groups: string[]
+  /** True when this call performed the settlement; false when it was a replay. */
+  settled: boolean
 }
 
+const EMPTY: SettleResult = {
+  daysCleared: 0, allocations: [], creditAdded: 0, creditUsed: 0, groups: [], settled: false,
+}
+
+/**
+ * Settle a payment by its reference.
+ *
+ * IDEMPOTENT. Calling this ten times for one payment settles once and returns
+ * the same allocations every time — the database locks the transaction row and
+ * checks its status inside the same transaction, so a replay cannot race the
+ * original. Callers no longer need to claim the payment first; doing so would
+ * in fact break it, because the engine treats an already-successful
+ * transaction as a completed settlement.
+ *
+ * @param reference       OUR payment reference — the identity of the payment.
+ * @param confirmedAmount what the provider says actually arrived. The engine
+ *                        applies the LESSER of this and the recorded amount, so
+ *                        a short payment can never over-credit.
+ * @param scope           'slot' honours the member's "pay this group only"
+ *                        choice; 'member' may reach their other memberships.
+ */
 export async function settlePayment(
-  startContributionId: string,
-  amount: number,
   reference: string,
+  confirmedAmount?: number,
   scope: 'member' | 'slot' = 'member',
 ): Promise<SettleResult> {
-  const now = new Date().toISOString()
+  const { data, error } = await supabaseAdmin.rpc('settle_payment', {
+    p_reference: reference,
+    p_confirmed_amount: confirmedAmount ?? null,
+    p_scope: scope,
+  })
 
-  const { data: start } = await supabaseAdmin
-    .from('contributions')
-    .select('id, amount, amount_paid, penalty_due, membership_id, member_id, due_date, status, group_id')
-    .eq('id', startContributionId).single()
-
-  const empty: SettleResult = { daysCleared: 0, allocations: [], creditAdded: 0, creditUsed: 0, groups: [] }
-  if (!start) return empty
-
-  // Fold in any credit the member is already carrying
-  let creditUsed = 0
-  if (start.member_id) {
-    const { data: m } = await supabaseAdmin
-      .from('members').select('credit_balance').eq('id', start.member_id).single()
-    creditUsed = Number(m?.credit_balance ?? 0)
-  }
-  let left = Math.round((amount + creditUsed) * 100) / 100
-
-  // Build the queue of days this money may cover
-  const cols = 'id, amount, amount_paid, penalty_due, membership_id, member_id, due_date, status, group_id, susu_groups(name)'
-  let queue: any[] = []
-  {
-    const { data: s0 } = await supabaseAdmin.from('contributions').select(cols).eq('id', startContributionId).single()
-    if (s0) queue.push(s0)
-  }
-  if (start.membership_id) {
-    const { data: sameSlot } = await supabaseAdmin.from('contributions').select(cols)
-      .eq('membership_id', start.membership_id).in('status', ['pending', 'overdue'])
-      .neq('id', startContributionId).order('due_date', { ascending: true }).limit(300)
-    queue = queue.concat(sameSlot ?? [])
-  }
-  if (scope === 'member' && start.member_id) {
-    const { data: other } = await supabaseAdmin.from('contributions').select(cols)
-      .eq('member_id', start.member_id).in('status', ['pending', 'overdue'])
-      .neq('membership_id', start.membership_id ?? '').order('due_date', { ascending: true }).limit(600)
-    queue = queue.concat(other ?? [])
+  if (error) {
+    // Never swallow this. A settlement that failed must be visible: the whole
+    // reason F-02 went unnoticed for weeks is that its errors were discarded.
+    console.error(`settle_payment failed for ${reference}:`, error.message)
+    throw new Error(`Settlement failed for ${reference}: ${error.message}`)
   }
 
-  const allocations: Allocation[] = []
-  const groups = new Set<string>()
-  let daysCleared = 0
+  const rows = (data ?? []) as {
+    o_contribution_id: string
+    o_membership_id: string
+    o_group_name: string
+    o_due_date: string
+    o_amount_applied: string | number
+    o_kind: 'full' | 'part'
+  }[]
 
-  for (const c of queue) {
-    if (left <= 0.001) break
-    if (c.status === 'paid') continue
-    const owed = Number(c.amount) + Number(c.penalty_due ?? 0) - Number(c.amount_paid ?? 0)
-    if (owed <= 0.001) continue
-    const groupName = (c.susu_groups as { name?: string } | null)?.name ?? 'Susu'
+  if (rows.length === 0) return { ...EMPTY, settled: true }
 
-    if (left + 0.001 >= owed) {
-      await supabaseAdmin.from('contributions')
-        .update({ status: 'paid', paid_at: now, paystack_ref: reference, amount_paid: Number(c.amount) })
-        .eq('id', c.id)
-      await supabaseAdmin.from('payment_penalties')
-        .update({ is_paid: true, paid_at: now }).eq('contribution_id', c.id).then(() => {}, () => {})
-      allocations.push({ contribution_id: c.id, group_name: groupName, amount: Math.round(owed * 100) / 100, kind: 'full', due_date: c.due_date })
-      groups.add(groupName)
-      left = Math.round((left - owed) * 100) / 100
-      daysCleared++
-    } else {
-      await supabaseAdmin.from('contributions')
-        .update({ amount_paid: Math.round((Number(c.amount_paid ?? 0) + left) * 100) / 100 })
-        .eq('id', c.id)
-      allocations.push({ contribution_id: c.id, group_name: groupName, amount: Math.round(left * 100) / 100, kind: 'part', due_date: c.due_date })
-      groups.add(groupName)
-      left = 0
-    }
-  }
-
-  // Persist the allocation breakdown
-  if (allocations.length && start.member_id) {
-    await supabaseAdmin.from('payment_allocations').insert(
-      allocations.map(a => ({
-        reference, member_id: start.member_id, contribution_id: a.contribution_id,
-        group_name: a.group_name, amount: a.amount, kind: a.kind,
-      }))).then(() => {}, () => {})
-  }
-
-  // Reconcile the member's credit: consumed what they had, bank any remainder
-  if (start.member_id) {
-    const newCredit = Math.round(left * 100) / 100
-    if (newCredit !== creditUsed) {
-      await supabaseAdmin.from('members')
-        .update({ credit_balance: newCredit }).eq('id', start.member_id).then(() => {}, () => {})
-    }
-  }
+  const allocations: Allocation[] = rows.map(r => ({
+    contribution_id: r.o_contribution_id,
+    group_name: r.o_group_name,
+    amount: Number(r.o_amount_applied),
+    kind: r.o_kind,
+    due_date: r.o_due_date,
+  }))
 
   return {
-    daysCleared,
+    daysCleared: allocations.filter(a => a.kind === 'full').length,
     allocations,
-    creditAdded: Math.round(left * 100) / 100,
-    creditUsed,
-    groups: [...groups],
+    // Reported by the engine's own log rather than recomputed here, so there
+    // is one source of truth for what a settlement did.
+    creditAdded: await creditBankedFor(reference),
+    creditUsed: 0,
+    groups: [...new Set(allocations.map(a => a.group_name))],
+    settled: true,
   }
 }
 
-/** Back-compat alias — older callers import applyPaymentToSchedule. */
-export const applyPaymentToSchedule = settlePayment
-
-/*
- * Claim a transaction so exactly one settlement path wins.
- *
- * The callback, the app polling and the sweeper can fire for the same payment
- * at the same moment; each used to flip the row and send its own receipt, so
- * members got told twice and thought they were charged twice. The update is
- * conditional on the row still being pending — the first caller wins, the rest
- * stop without messaging.
- */
-export async function claimTransaction(txId: string, extra: Record<string, unknown> = {}): Promise<boolean> {
-  const { data: current } = await supabaseAdmin
-    .from('transactions').select('paystack_data').eq('id', txId).single()
-  const { data, error } = await supabaseAdmin
-    .from('transactions')
-    .update({ status: 'success', paystack_data: { ...((current?.paystack_data as Record<string, unknown>) ?? {}), ...extra } as never })
-    .eq('id', txId).eq('status', 'pending').select('id')
-  if (error) { console.error('claim failed', error.message); return false }
-  return (data ?? []).length > 0
+async function creditBankedFor(reference: string): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from('settlement_log')
+    .select('credit_banked')
+    .eq('reference', reference)
+    .eq('event', 'settlement_completed')
+    .order('created_at', { ascending: false })
+    .limit(1)
+  return Number(data?.[0]?.credit_banked ?? 0)
 }
+
+/** What a payment WOULD cover, without moving anything. */
+export async function previewSettlement(
+  reference: string,
+  amount?: number,
+  scope: 'member' | 'slot' = 'member',
+): Promise<unknown> {
+  const { data, error } = await supabaseAdmin.rpc('preview_settlement', {
+    p_reference: reference,
+    p_confirmed_amount: amount ?? null,
+    p_scope: scope,
+  })
+  if (error) throw new Error(`Preview failed for ${reference}: ${error.message}`)
+  return data
+}
+
+/**
+ * DEPRECATED — kept only so any straggling import still compiles.
+ *
+ * Claiming a payment before settling it is now wrong: `settle_payment()` locks
+ * the transaction row and checks its status inside the settling transaction,
+ * which is strictly stronger than a conditional update issued beforehand. A
+ * caller that claims first marks the payment successful, and the engine then
+ * sees a completed payment and settles nothing.
+ *
+ * Always returns true so an un-migrated caller proceeds to settlement rather
+ * than silently skipping it.
+ */
+export async function claimTransaction(_txId: string, _extra: Record<string, unknown> = {}): Promise<boolean> {
+  console.warn('claimTransaction() is deprecated — settle_payment() claims the payment atomically')
+  return true
+}
+
+/** Back-compat alias. */
+export const applyPaymentToSchedule = settlePayment

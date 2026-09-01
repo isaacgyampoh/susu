@@ -3,9 +3,20 @@ node_modules/
 out/
 .env
 .env.local
+.env.*.local
 .supabase/
 .DS_Store
 *.log
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# Supabase CLI working state. `pooler-url` holds a Postgres connection string,
+# so this directory must never be committed — it is machine-local scratch, not
+# project configuration.
+supabase/.temp/
+
+# Local secrets for edge functions. Names belong in supabase/.env.example;
+# values belong nowhere in this repository.
+supabase/.env
+supabase/functions/.env

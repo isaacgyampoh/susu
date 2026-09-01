@@ -4,14 +4,19 @@ import { callFunction } from '@/lib/supabase'
 import type { SusuGroup } from '@/types'
 
 /*
- * Public application form — no sign-in required. A prospective member
- * picks ONE OR SEVERAL susu groups, fills in their details, uploads
- * their Ghana Card, and submits. The application lands in the admin
- * KYC queue. The registration fee is taken after approval — either the
- * admin records it, or the member pays it from their portal — because a
- * mobile-money prompt needs a member account, which an applicant lacks.
- * (was: if Paystack is configured and fees apply, they're sent
- * to pay the combined registration fee.
+ * Public application form — no sign-in required. A prospective member picks
+ * one or several susu groups, fills in their details, uploads their Ghana
+ * Card, and submits. The application lands in the admin queue.
+ *
+ * The applicant is then handed a PAYMENT LINK for the registration fee.
+ * Until Phase 07 they were not: a mobile-money prompt needs an authenticated
+ * caller and an applicant has no account, so the fee could only be recorded by
+ * an admin after the fact — which is how 13 approved members ended up carrying
+ * an unpaid fee. The link is a capability token (see
+ * supabase/functions/_shared/registration-token.ts); it pays this application's
+ * fee and does nothing else.
+ *
+ * Paying does NOT approve the application. Approval stays a human decision.
  */
 
 const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH')
@@ -24,7 +29,7 @@ export default function JoinPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError]     = useState('')
-  const [done, setDone]       = useState<{ fee: number; paid: boolean } | null>(null)
+  const [done, setDone]       = useState<{ fee: number; paid: boolean; payUrl: string | null } | null>(null)
 
   const [form, setForm] = useState({
     full_name: '', phone: '', email: '', ghana_card_number: '',
@@ -64,13 +69,17 @@ export default function JoinPage() {
     fd.append('selected_group_ids', Array.from(picked).join(','))
 
     const { data, error: err } = await callFunction<{
-      kyc_id: string; fee: number; fee_paid: boolean
+      kyc_id: string; fee: number; fee_paid: boolean; payment_url: string | null
     }>('kyc-submit', { method: 'POST', body: fd })
     setSending(false)
     if (err) { setError(err); return }
 
-    // Fee is handled after approval, so just confirm the application.
-    setDone({ fee: data?.fee ?? 0, paid: !!data?.fee_paid })
+    // The raw token comes back exactly once — it is hashed server-side and
+    // cannot be re-derived. Going straight to the payment page means the
+    // applicant does not have to keep hold of it.
+    if (data?.payment_url) { window.location.href = data.payment_url; return }
+
+    setDone({ fee: data?.fee ?? 0, paid: !!data?.fee_paid, payUrl: null })
     window.scrollTo(0, 0)
   }
 
@@ -85,12 +94,12 @@ export default function JoinPage() {
           <p className="text-ink-2 text-sm mt-3">
             Thank you — your application to join{' '}
             <span className="font-semibold text-ink">{picked.size} group{picked.size > 1 ? 's' : ''}</span> has been submitted.
-            We'll review it and send your sign-in details by SMS once approved.
+            We&rsquo;ll review it and send your sign-in details by SMS once approved.
           </p>
           {done.fee > 0 && !done.paid && (
             <p className="text-ink-2 text-sm mt-3">
-              A registration fee of <span className="font-semibold text-ink">GHS {n0(done.fee)}</span> applies —
-              our team will contact you to collect it.
+              A registration fee of <span className="font-semibold text-ink">GHS {n0(done.fee)}</span> applies.
+              We have sent a payment link to your phone by SMS.
             </p>
           )}
         </div>
@@ -104,7 +113,7 @@ export default function JoinPage() {
         <p className="text-[12px] font-bold tracking-[.14em] uppercase text-ink-3">Abbie Wealth Susu</p>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-ink mt-1.5">Join a Susu Group</h1>
         <p className="text-ink-2 text-sm mt-2">
-          Choose one or more groups below, tell us about yourself, and we'll set you up.
+          Choose one or more groups below, tell us about yourself, and we&rsquo;ll set you up.
         </p>
 
         {error && <div className="p-3 mt-5 bg-tint border border-red/40 rounded-[10px] text-red text-sm">{error}</div>}
@@ -242,7 +251,7 @@ export default function JoinPage() {
               : 'Apply to Join'}
           </button>
           <p className="text-[11px] text-ink-3 text-center -mt-2">
-            By applying you agree to the group's contribution schedule. You'll receive your sign-in details by SMS once approved.
+            By applying you agree to the group&rsquo;s contribution schedule. You&rsquo;ll receive your sign-in details by SMS once approved.
           </p>
         </form>
       </div>
