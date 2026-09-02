@@ -8,6 +8,35 @@ on:
       - '.github/workflows/deploy-supabase.yml'
   workflow_dispatch:
 
+# ─────────────────────────────────────────────────────────────────────────────
+# THIS WORKFLOW NO LONGER SETS SECRETS.
+#
+# It used to run `supabase secrets set JWT_SECRET=…` on every push to main,
+# sourced from a GitHub secret. That is a loaded gun pointed at authentication:
+#
+#   * JWT_SECRET was rotated in Phase 05 directly against the project, because
+#     the published README value was still live. The GitHub secret was never
+#     updated. The next push to main would therefore have OVERWRITTEN the
+#     rotated key with the compromised one — invalidating every session in
+#     production and restoring a signing key anybody could read.
+#
+#   * It pushed MOOLRE_* credentials for a provider removed from this platform,
+#     and did NOT push the NALO_* credentials for the provider actually in use.
+#     Any of those GitHub secrets being unset would have written an empty
+#     string over a working value.
+#
+# The step failed on 2026-09-02 and skipped the deploy, which is the only reason
+# none of that happened.
+#
+# Secrets are now set out of band, deliberately, by a person who knows they are
+# rotating something:
+#
+#   supabase secrets set NALO_SECRET=… --project-ref <ref>
+#
+# A deployment pipeline should ship code. Re-asserting a signing key on every
+# push means a stale value in one place silently undoes a rotation in another.
+# ─────────────────────────────────────────────────────────────────────────────
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -22,31 +51,46 @@ jobs:
         with:
           version: latest
 
-      - name: Push Edge Function secrets
-        run: |
-          supabase secrets set \
-            JWT_SECRET="${{ secrets.SUPABASE_JWT_SECRET }}" \
-            FRONTEND_URL="${{ secrets.SUPABASE_FRONTEND_URL }}" \
-            MEMBER_URL="${{ secrets.SUPABASE_MEMBER_URL }}" \
-            ALLOWED_ORIGINS="${{ secrets.SUPABASE_ALLOWED_ORIGINS }}" \
-            PAYMENT_PROVIDER="${{ secrets.PAYMENT_PROVIDER }}" \
-            MOOLRE_API_USER="${{ secrets.MOOLRE_API_USER }}" \
-            MOOLRE_API_KEY="${{ secrets.MOOLRE_API_KEY }}" \
-            MOOLRE_PUB_KEY="${{ secrets.MOOLRE_PUB_KEY }}" \
-            MOOLRE_ACCOUNT_NUMBER="${{ secrets.MOOLRE_ACCOUNT_NUMBER }}" \
-            MOOLRE_SANDBOX="${{ secrets.MOOLRE_SANDBOX }}" \
-            --project-ref "$PROJECT_REF"
-          echo "✅ Secrets pushed"
-
       - name: Deploy all Edge Functions
         run: |
+          set -euo pipefail
+          # --no-verify-jwt for every function, deliberately and uniformly.
+          #
+          # This platform issues its OWN JWTs and verifies them in
+          # _shared/jwt.ts via requireAdmin/requireMember. Supabase's gateway
+          # check would demand a Supabase-issued token that no client here
+          # holds, so leaving it on simply 401s every real caller.
+          #
+          # It also has to be repeated on every deploy: the flag is not sticky.
+          # Redeploying nalo-webhook without it silently re-enables the gateway
+          # check and NaloPay's callbacks start returning 401 — the single
+          # easiest way to break settlement.
+          failed=""
           for fn in supabase/functions/*/; do
             name=$(basename "$fn")
-            if [ "$name" != "_shared" ]; then
-              echo "▶ Deploying $name..."
-              supabase functions deploy "$name" \
-                --project-ref "$PROJECT_REF" \
-                --no-verify-jwt
-            fi
+            [ "$name" = "_shared" ] && continue
+            echo "▶ $name"
+            supabase functions deploy "$name" \
+              --project-ref "$PROJECT_REF" \
+              --no-verify-jwt || failed="$failed $name"
           done
+          if [ -n "$failed" ]; then
+            echo "::error::Failed to deploy:$failed"
+            exit 1
+          fi
           echo "✅ All functions deployed"
+
+      - name: Verify the webhook is reachable without a JWT
+        run: |
+          set -euo pipefail
+          # If this returns 401 the gateway is verifying JWTs on the callback
+          # URL, NaloPay cannot reach it, and payments stop settling. Fail the
+          # deploy rather than discover it from a member complaint.
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/nalo-webhook" \
+            -H 'Content-Type: application/json' -d '{}')
+          echo "nalo-webhook → HTTP $code"
+          if [ "$code" = "401" ]; then
+            echo "::error::nalo-webhook is behind JWT verification. NaloPay callbacks will fail."
+            exit 1
+          fi
