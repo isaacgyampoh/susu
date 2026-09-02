@@ -124,6 +124,14 @@ export default function Profile() {
   const myMessages  = d.myMessages ?? []
   const collected   = payouts.filter(p => p.status === 'paid')
 
+  // Slots grouped by their group, preserving server order within each.
+  const slotsByGroup = new Map<string, typeof memberships>()
+  for (const m of memberships) {
+    const k = m.group_name ?? 'Group'
+    if (!slotsByGroup.has(k)) slotsByGroup.set(k, [])
+    slotsByGroup.get(k)!.push(m)
+  }
+
   return (
     <div className="portal-w pt-6 space-y-3 animate-fade-in">
 
@@ -139,28 +147,90 @@ export default function Profile() {
       {memberships.length > 0 && (
         <Card pad="lg">
           <p className="t-h2 mb-3">
-            Your groups{memberships.length > 1 ? ` · ${memberships.length}` : ''}
+            Your groups
+            {memberships.length > 1 && (
+              <span className="font-normal text-ink-3"> · {memberships.length} slot
+                {memberships.length === 1 ? '' : 's'} in {slotsByGroup.size} group
+                {slotsByGroup.size === 1 ? '' : 's'}</span>
+            )}
           </p>
+
+          {/*
+            Grouped by group, not listed slot by slot.
+            A member holding 33 slots got 33 rows — the same group name repeated
+            a dozen times, each with a large unlabelled figure beside it. That is
+            a wall, not a list, and the repetition hides the thing that actually
+            varies: which slot, and when it collects.
+
+            Collapsed, a row says what the member has in that group. Opened, it
+            lists every slot with its own position, its own collection date and
+            its own cash-out. Nothing is added up here: a slot's cash-out depends
+            on its fraction, so a single "total" would be a number this screen
+            invented. Each figure shown is the one the server recorded for that
+            slot.
+
+            <details> rather than React state: no JavaScript, keyboard-operable
+            and screen-reader-announced for free.
+          */}
           <div className="divide-y divide-line-2">
-            {memberships.map(m => (
-              <div key={m.membership_id} className="py-3 flex items-start justify-between gap-4 first:pt-0 last:pb-0">
-                <div className="min-w-0">
-                  <p className="text-base font-semibold text-ink truncate">{m.group_name}</p>
-                  <p className="text-xs text-ink-2 mt-0.5 tnum">
-                    Slot {m.payout_position} · GHS {ghs(m.contribution_amount)} {m.frequency}
-                  </p>
-                  {/* Never fabricated: a membership with no date says so. */}
-                  <p className="text-xs text-ink-3 mt-0.5">
-                    {m.payout_date
-                      ? `Collects ${format(new Date(m.payout_date), 'd MMM yyyy')}`
-                      : 'Collection date not yet assigned'}
-                  </p>
-                </div>
-                {m.payout_amount != null
-                  ? <Money value={m.payout_amount} size="sm" className="shrink-0" />
-                  : <span className="text-xs text-ink-3 shrink-0">Not yet set</span>}
-              </div>
-            ))}
+            {[...slotsByGroup.entries()].map(([groupName, slots]) => {
+              const dated = slots
+                .filter(m => m.payout_date)
+                .sort((a, b) => String(a.payout_date).localeCompare(String(b.payout_date)))
+              const undated = slots.length - dated.length
+              const first = slots[0]
+              return (
+                <details key={groupName} className="group py-3 first:pt-0 last:pb-0">
+                  <summary className="flex items-start justify-between gap-4 cursor-pointer list-none
+                                      min-h-[44px] -mx-1 px-1 rounded
+                                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30">
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-ink truncate">{groupName}</p>
+                      <p className="text-xs text-ink-2 mt-0.5 tnum">
+                        {slots.length} slot{slots.length === 1 ? '' : 's'} · GHS {ghs(first.contribution_amount)} {first.frequency}
+                      </p>
+                      <p className="text-xs text-ink-3 mt-0.5">
+                        {dated.length > 0
+                          ? `Next collection ${format(new Date(dated[0].payout_date as string), 'd MMM yyyy')}`
+                          : 'No collection date assigned yet'}
+                        {undated > 0 && dated.length > 0 && ` · ${undated} not yet set`}
+                      </p>
+                    </div>
+                    <ChevronDown
+                      size={16} strokeWidth={2.2} aria-hidden="true"
+                      className="shrink-0 mt-1 text-ink-3 transition-transform group-open:rotate-180"
+                    />
+                  </summary>
+
+                  <ul className="mt-3 ml-0 divide-y divide-line-2 border-t border-line-2">
+                    {slots.map(m => (
+                      <li key={m.membership_id} className="py-2.5 flex items-baseline justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-sm text-ink tnum">Slot {m.payout_position}</p>
+                          <p className="text-xs text-ink-3 mt-0.5">
+                            {m.payout_date
+                              ? `Collects ${format(new Date(m.payout_date), 'd MMM yyyy')}`
+                              : 'Collection date not yet assigned'}
+                          </p>
+                        </div>
+                        {/* Labelled. A bare "GHS 4,700" beside a group name does
+                            not say what the number is. */}
+                        <div className="shrink-0 text-right">
+                          {m.payout_amount != null ? (
+                            <>
+                              <p className="text-2xs text-ink-3">Cash-out</p>
+                              <p className="text-sm font-semibold text-ink tnum">GHS {ghs(m.payout_amount)}</p>
+                            </>
+                          ) : (
+                            <p className="text-xs text-ink-3">Not yet set</p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )
+            })}
           </div>
         </Card>
       )}

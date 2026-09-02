@@ -10,10 +10,10 @@ import MembershipCard from '@/components/susu/membership-card'
 import PayPrompt from '@/components/susu/pay-prompt'
 import PaySheet from '@/components/susu/pay-sheet'
 import {
-  Avatar, Button, Card, EmptyState, IconButton, Money, Notice, Skeleton,
+  Avatar, Button, Card, EmptyState, IconButton, Money, Skeleton,
   useToast, cx,
 } from '@/components/ui'
-import { AppBar, AccountHero, QuickActions } from '@/components/susu/app-bar'
+import { AppBar, AccountHero } from '@/components/susu/app-bar'
 
 /**
  * The member dashboard.
@@ -138,34 +138,70 @@ export default function Dashboard() {
         />
       </AppBar>
 
-      <QuickActions actions={[
-        { href: '/m/portal/payments',  label: 'Pay',       icon: CreditCard },
-        { href: '/m/portal/groups',    label: 'Groups',    icon: Users },
-        { href: '/m/portal/statement', label: 'Statement', icon: FileText },
-        { href: '/m/portal/profile',   label: 'Profile',   icon: Wallet },
-      ]} />
+      {/*
+        ONE primary action.
+        The four-up row duplicated the bottom navigation almost exactly — Pay,
+        Groups, Statement, Profile against Home, Payments, Statement, Profile —
+        so it cost a band of screen and offered nothing new. A member opens this
+        to pay; that is the action, and everything else already has a tab.
+      */}
+      <div className="portal-w -mt-5 relative z-10">
+        <Link
+          href="/m/portal/payments"
+          className="flex items-center justify-between gap-3 h-[54px] px-4
+                     rounded-xl bg-ink text-inverse shadow-sm
+                     transition-transform active:scale-[.995]
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40
+                     focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+        >
+          <span className="flex items-center gap-2.5">
+            <CreditCard size={18} strokeWidth={1.9} aria-hidden="true" />
+            <span className="text-base font-medium">
+              {totals.remaining_today > 0.005 ? 'Pay today\u2019s contribution' : 'Make a contribution'}
+            </span>
+          </span>
+          <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" className="opacity-70" />
+        </Link>
+      </div>
 
       <div className="portal-w pt-5 space-y-4">
 
-      {totals.overdue > 0.005 && (
-        <Notice tone="bad" title={`GHS ${ghs2(totals.overdue)} overdue`}>
-          Across {memberships.filter(m => m.overdue > 0.005).length} group
-          {memberships.filter(m => m.overdue > 0.005).length === 1 ? '' : 's'}. Anything still
-          owing on a collection date is deducted from what you receive.
-        </Notice>
-      )}
-
-      {penalties.length > 0 && (
-        <Notice tone="warn" title="Late payment penalties">
-          GHS {ghs2(penalties.reduce((s, p) => s + Number(p.amount), 0))} outstanding.
-        </Notice>
-      )}
-
-      {totals.advance_credit > 0.005 && (
-        <Notice tone="good" title={`GHS ${ghs2(totals.advance_credit)} advance credit`}>
-          Held against specific groups. Credit in one group is only ever used for
-          that group&rsquo;s contributions.
-        </Notice>
+      {/*
+        One line per fact, on one surface — not three full-width tinted boxes
+        stacked down the screen. Three coloured blocks in a row is most of the
+        colour on this page, and it pushes the groups (the reason the member
+        opened the app) below the fold. Tone is carried by a single marker and
+        the figure, which is enough to separate "owed" from "in credit".
+      */}
+      {(totals.overdue > 0.005 || penalties.length > 0 || totals.advance_credit > 0.005) && (
+        <section aria-label="Account status"
+          className="border border-line rounded-xl bg-surface divide-y divide-line-2">
+          {totals.overdue > 0.005 && (
+            <StatusLine
+              tone="bad"
+              amount={`GHS ${ghs2(totals.overdue)}`}
+              label="overdue"
+              detail={`Across ${memberships.filter(m => m.overdue > 0.005).length} group${
+                memberships.filter(m => m.overdue > 0.005).length === 1 ? '' : 's'}. Anything still owing on a collection date is deducted from what you receive.`}
+            />
+          )}
+          {penalties.length > 0 && (
+            <StatusLine
+              tone="warn"
+              amount={`GHS ${ghs2(penalties.reduce((t, x) => t + Number(x.amount), 0))}`}
+              label="late payment penalties"
+              detail="Charged on contributions settled after their due date."
+            />
+          )}
+          {totals.advance_credit > 0.005 && (
+            <StatusLine
+              tone="good"
+              amount={`GHS ${ghs2(totals.advance_credit)}`}
+              label="paid in advance"
+              detail="Held against specific groups. Credit in one group is only ever spent on that group's contributions."
+            />
+          )}
+        </section>
       )}
 
       {memberships.length === 0 ? (
@@ -195,8 +231,15 @@ export default function Dashboard() {
 
           {settled.length > 0 && (
             <section>
+              {/*
+                This read "Your groups · 22" for a member holding 33 slots: a
+                SECTION count wearing the label of a total. Counting 33 on one
+                screen and 22 on another is the kind of thing that makes someone
+                stop trusting a money screen. The heading now says what the
+                number counts.
+              */}
               <h2 className="t-eyebrow mb-2 mt-5">
-                {owing.length > 0 ? 'Nothing owing today' : 'Your groups'} · {settled.length}
+                Up to date today · {settled.length}
               </h2>
               <div className="space-y-3">
                 {settled.map(m => (
@@ -209,7 +252,9 @@ export default function Dashboard() {
 
           {memberships.filter(m => m.coverage === 'no-schedule').length > 0 && (
             <section>
-              <h2 className="t-eyebrow mb-2 mt-5">Not started yet</h2>
+              <h2 className="t-eyebrow mb-2 mt-5">
+                Not started yet · {memberships.filter(m => m.coverage === 'no-schedule').length}
+              </h2>
               <div className="space-y-3">
                 {memberships.filter(m => m.coverage === 'no-schedule').map(m => (
                   <MembershipCard key={m.membership_id} m={m}
@@ -296,6 +341,29 @@ export default function Dashboard() {
 }
 
 
+/** One fact: a marker, the figure, what it is, and why it matters. */
+function StatusLine({
+  tone, amount, label, detail,
+}: { tone: 'bad' | 'warn' | 'good'; amount: string; label: string; detail: string }) {
+  return (
+    <div className="flex gap-3 p-4">
+      <span aria-hidden="true" className={cx(
+        'mt-[7px] w-1.5 h-1.5 rounded-full shrink-0',
+        tone === 'bad' ? 'bg-danger' : tone === 'warn' ? 'bg-warning' : 'bg-success',
+      )} />
+      <div className="min-w-0">
+        <p className="text-base text-ink">
+          <span className={cx('font-semibold tnum',
+            tone === 'bad' ? 'text-danger' : tone === 'warn' ? 'text-warning' : 'text-success')}>
+            {amount}
+          </span>{' '}{label}
+        </p>
+        <p className="text-xs text-ink-2 mt-1 leading-relaxed">{detail}</p>
+      </div>
+    </div>
+  )
+}
+
 function DashboardSkeleton() {
   return (
     <div role="status" aria-label="Loading your account">
@@ -310,7 +378,7 @@ function DashboardSkeleton() {
           </div>
         </div>
       </div>
-      <div className="h-[64px] border-y border-line bg-surface" />
+      <div className="portal-w -mt-5 relative z-10"><Skeleton className="h-[54px] rounded-xl" /></div>
       <div className="portal-w pt-5 space-y-3">
         <Skeleton className="h-32 rounded-xl" />
         <Skeleton className="h-32 rounded-xl" />
