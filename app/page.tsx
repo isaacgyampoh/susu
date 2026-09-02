@@ -186,7 +186,7 @@ export default function SignIn() {
         centred in whatever is left, the footer pinned — is deterministic at
         every height.
       */}
-      <section className="relative grid grid-rows-[1fr_auto] min-w-0
+      <section className="security-paper relative grid grid-rows-[1fr_auto] min-w-0
                           bg-surface lg:border-l lg:border-line
                           rounded-t-2xl lg:rounded-none
                           -mt-4 lg:mt-0
@@ -197,7 +197,7 @@ export default function SignIn() {
         {/* No cap and no centring on a phone — see the member sign-in for
             what a fixed column does to a 575px screen. */}
         <div className="flex items-center min-h-0">
-         <div className="w-full sm:max-w-[380px] lg:max-w-[336px]">
+         <div className="w-full sm:max-w-[380px] lg:max-w-[360px] lg:mx-auto">
           <span className="block w-8 h-[3px] rounded-full bg-accent mb-5 lg:mb-6" />
 
           <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
@@ -285,7 +285,7 @@ export default function SignIn() {
 
         {/* Both claims are true of this endpoint — no invented certification,
             no security badge. */}
-        <p className="text-2xs text-ink-3 leading-relaxed pt-7 sm:max-w-[380px] lg:max-w-[336px]">
+        <p className="text-2xs text-ink-3 leading-relaxed pt-7 sm:max-w-[380px] lg:max-w-[360px] lg:mx-auto lg:w-full">
           Sign-in attempts are rate limited and recorded. Changing your PIN signs
           out every device.
         </p>

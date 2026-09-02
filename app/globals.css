@@ -185,6 +185,23 @@
        background-repeat: no-repeat; */
   }
 
+  /* ── SECURITY PAPER ────────────────────────────────────────────────────
+     A fine cross-hatch on the sign-in surface, the way engraved lines sit
+     under the print on a banknote or a share certificate. It gives a large
+     pale panel some material quality so it reads as a surface rather than as
+     an absence.
+
+     Pure CSS gradients: no asset to load, no image to go missing, and it
+     scales to any panel size. Kept at 2–3% ink — visible as texture when you
+     look, invisible when you are reading the form on top of it. Anything
+     heavier competes with the type, which is the whole reason the panel was
+     left plain in the first place. */
+  .security-paper {
+    background-image:
+      repeating-linear-gradient(45deg,  rgb(var(--c-ink) / 0.030) 0 1px, transparent 1px 13px),
+      repeating-linear-gradient(-45deg, rgb(var(--c-ink) / 0.020) 0 1px, transparent 1px 19px);
+  }
+
   .portal-w {
     width: 100%;
     min-width: 0;

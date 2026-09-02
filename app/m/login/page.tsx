@@ -110,7 +110,7 @@ export default function MemberSignIn() {
       {/* Two rows: the form centred in what is left, the footer pinned. An
           earlier version put `my-auto` on the form and `mt-auto` on the footer;
           they competed and pooled the spare height into one block. */}
-      <section className="relative grid grid-rows-[1fr_auto] min-w-0 bg-surface
+      <section className="security-paper relative grid grid-rows-[1fr_auto] min-w-0 bg-surface
                           sm:border-l sm:border-line rounded-t-2xl sm:rounded-none -mt-4 sm:mt-0
                           px-[1.125rem] sm:px-10 pt-7 sm:pt-0
                           pb-[max(1.25rem,env(safe-area-inset-bottom))]">
@@ -119,7 +119,7 @@ export default function MemberSignIn() {
             down the right-hand side — the application drawn inside the screen
             instead of as the screen. */}
         <div className="flex items-center min-h-0">
-         <div className="w-full sm:max-w-[380px]">
+         <div className="w-full sm:max-w-[380px] sm:mx-auto">
           <span className="block w-8 h-[3px] rounded-full bg-accent mb-5" />
 
           <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
@@ -168,10 +168,36 @@ export default function MemberSignIn() {
               {busy ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
+
+          {/*
+            Only from `sm` up, where the panel has height to spare. On a phone
+            the form already fills the surface and this would push the button
+            under the fold — the opposite of the point.
+
+            Three plain statements of what the app does. A member signing in for
+            the first time was handed a passcode by their collector and may not
+            know what they are signing in to. Line marks rather than icons in
+            circles: the rule is the mark.
+          */}
+          <ul className="hidden sm:block mt-9 space-y-3 border-t border-line pt-6">
+            {[
+              ['See what you owe today', 'Every group you are in, and what each one needs.'],
+              ['Pay by mobile money',    'Approve on your phone. No cash, no trip to the collector.'],
+              ['Know when you collect',  'Your slot, your date, and what you will receive.'],
+            ].map(([head, body]) => (
+              <li key={head} className="flex gap-3">
+                <span aria-hidden="true" className="mt-[9px] w-4 h-px bg-accent shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink">{head}</p>
+                  <p className="text-xs text-ink-2 mt-0.5 leading-relaxed">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
          </div>
         </div>
 
-        <p className="text-2xs text-ink-3 leading-relaxed pt-7 sm:max-w-[380px]">
+        <p className="text-2xs text-ink-3 leading-relaxed pt-7 sm:max-w-[380px] sm:mx-auto sm:w-full">
           Don&rsquo;t have a passcode? Ask your susu admin — they can send you a new one.
         </p>
       </section>
