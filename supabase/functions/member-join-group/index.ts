@@ -75,10 +75,6 @@ serveWithCors(async (req) => {
           slot_fraction: fraction,
         }
         let { error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow)
-        if (gmErr && /slot_fraction/.test(gmErr.message)) {
-          delete gmRow.slot_fraction
-          ;({ error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow))
-        }
         if (gmErr) { failed.push({ group: group.name, reason: gmErr.message }); ok = false; break }
         positions.push(position)
       }

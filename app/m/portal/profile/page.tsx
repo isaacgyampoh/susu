@@ -1,205 +1,315 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { callFunction, getMemberToken } from '@/lib/supabase'
+import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ChevronDown, KeyRound, LogOut, MessageSquare, type LucideIcon } from 'lucide-react'
+import { callFunction, clearMemberAuth, getMemberToken } from '@/lib/supabase'
 import type { MemberDashboard } from '@/types'
 import { format } from 'date-fns'
-import { ghs as n0 } from '@/lib/money'
-const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-
-function Row({ k, v }: { k: string; v?: string | null }) {
-  if (!v) return null
-  return (
-    <tr>
-      <td className="py-3 pr-4 t-meta whitespace-nowrap align-top">{k}</td>
-      <td className="py-3 text-[13.5px] font-medium text-right">{v}</td>
-    </tr>
-  )
-}
+import { ghs } from '@/lib/money'
+import {
+  Avatar, Button, Card, DetailList, DetailRow, Field, Input, LoadingBlock,
+  Money, Notice, Status, Textarea, useConfirm, useToast, cx,
+} from '@/components/ui'
 
 export default function Profile() {
-  const [d, setD]         = useState<MemberDashboard | null>(null)
-  const [loading, setL]   = useState(true)
-  const [open, setOpen]   = useState(false)
-  const [subj, setSubj]   = useState('')
+  const toast  = useToast()
+  const ask    = useConfirm()
+  const router = useRouter()
+
+  const [d, setD]       = useState<MemberDashboard | null>(null)
+  const [loading, setL] = useState(true)
+
   // Change passcode
-  const [pcOpen, setPcOpen]   = useState(false)
-  const [pcCur, setPcCur]     = useState('')
-  const [pcNew, setPcNew]     = useState('')
-  const [pcNew2, setPcNew2]   = useState('')
-  const [pcBusy, setPcBusy]   = useState(false)
-  const [pcMsg, setPcMsg]     = useState<{ ok: boolean; text: string } | null>(null)
+  const [pcOpen, setPcOpen] = useState(false)
+  const [pcCur, setPcCur]   = useState('')
+  const [pcNew, setPcNew]   = useState('')
+  const [pcNew2, setPcNew2] = useState('')
+  const [pcBusy, setPcBusy] = useState(false)
+  const [pcErr, setPcErr]   = useState('')
+
+  // Message the collector
+  const [msgOpen, setMsgOpen] = useState(false)
+  const [subj, setSubj] = useState('')
+  const [msg, setMsg]   = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    const { data } = await callFunction<MemberDashboard>('member-profile', { token: getMemberToken()! })
+    setD(data); setL(false)
+  }, [])
+  useEffect(() => { load() }, [load])
 
   async function changePasscode(e: React.FormEvent) {
     e.preventDefault()
-    setPcMsg(null)
-    if (!/^\d{6}$/.test(pcNew)) { setPcMsg({ ok: false, text: 'Your new passcode must be exactly 6 digits.' }); return }
-    if (pcNew !== pcNew2)        { setPcMsg({ ok: false, text: 'The two new passcodes do not match.' }); return }
-    setPcBusy(true)
-    const { data, error } = await callFunction<{ message: string }>('member-change-passcode', {
-      method: 'POST', token: getMemberToken()!,
-      body: { current_passcode: pcCur, new_passcode: pcNew },
-    })
-    setPcBusy(false)
-    if (error) { setPcMsg({ ok: false, text: error }); return }
-    setPcMsg({ ok: true, text: data?.message ?? 'Passcode changed.' })
-    setPcCur(''); setPcNew(''); setPcNew2('')
-  }
-  const [msg, setMsg]     = useState('')
-  const [busy, setBusy]   = useState(false)
-  const [sent, setSent]   = useState(false)
+    setPcErr('')
+    if (!/^\d{6}$/.test(pcNew))  { setPcErr('Your new passcode must be exactly 6 digits.'); return }
+    if (pcNew !== pcNew2)        { setPcErr('The two new passcodes do not match.'); return }
+    if (pcNew === pcCur)         { setPcErr('That is the passcode you already have.'); return }
 
-  async function load() {
-    const { data } = await callFunction<MemberDashboard>('member-profile', { token: getMemberToken()! })
-    setD(data); setL(false)
+    setPcBusy(true)
+    const { data, error } = await callFunction<{ message: string; session_ended?: boolean }>(
+      'member-change-passcode', {
+        method: 'POST', token: getMemberToken()!,
+        body: { current_passcode: pcCur, new_passcode: pcNew },
+      })
+    setPcBusy(false)
+    if (error) { setPcErr(error); return }
+    setPcCur(''); setPcNew(''); setPcNew2(''); setPcOpen(false)
+
+    // Changing the passcode ends every session, this one included — that is the
+    // point of it, and it is what makes the change useful to someone whose
+    // passcode was seen. Sitting on a dead token would just fail the next
+    // request with a confusing error, so send them to sign in.
+    if (data?.session_ended) {
+      toast.success('Passcode changed. Please sign in again.')
+      clearMemberAuth()
+      setTimeout(() => router.replace('/m/login'), 900)
+      return
+    }
+    toast.success(data?.message ?? 'Passcode changed.')
   }
-  useEffect(() => { load() }, [])
 
   async function send(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true)
-    const { error } = await callFunction('contact-admin', { method: 'POST', body: { subject: subj, message: msg }, token: getMemberToken()! })
+    e.preventDefault()
+    setBusy(true)
+    const { error } = await callFunction('contact-admin', {
+      method: 'POST', body: { subject: subj, message: msg }, token: getMemberToken()!,
+    })
     setBusy(false)
-    if (error) return alert(error)
-    setSent(true); setSubj(''); setMsg(''); load()
-    setTimeout(() => setSent(false), 5000)
+    if (error) { toast.error({ title: 'Could not send', body: error }); return }
+    toast.success('Sent. Your collector will reply here.')
+    setSubj(''); setMsg('')
+    load()
   }
 
-  if (loading) return <div className="grid place-items-center h-[60vh]">Loading…</div>
-  if (!d)      return <div className="p-10 text-center t-meta">Could not load your profile.</div>
+  async function signOut() {
+    const ok = await ask({
+      title: 'Sign out?',
+      description: 'You will need your phone number and passcode to get back in.',
+      confirmLabel: 'Sign out',
+    })
+    if (!ok) return
+    clearMemberAuth()
+    router.push('/m/login')
+  }
+
+  if (loading) return <LoadingBlock label="Loading your profile" className="h-[60vh]" />
+  if (!d) return (
+    <div className="max-w-md mx-auto px-5 pt-10">
+      <Notice tone="bad" title="Could not load your profile">
+        Check your connection and try again.
+      </Notice>
+    </div>
+  )
 
   const { member, plans, payouts, myMessages } = d
+  const collected = payouts.filter(p => p.status === 'paid')
 
   return (
-    <div className="max-w-[440px] mx-auto px-5 py-7 pb-16 animate-fade-in">
-      <p className="t-label">{member.member_id}</p>
-      <h1 className="t-h1 mt-1.5">{member.full_name}</h1>
-      <p className="t-meta mt-2">{member.phone} — <span className="pill-on">{member.status}</span></p>
+    <div className="max-w-md mx-auto px-5 pt-6 space-y-3 animate-fade-in">
+
+      <div className="flex items-center gap-3 mb-2">
+        <Avatar name={member.full_name} size="lg" tone="ink" />
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold text-ink truncate">{member.full_name}</h1>
+          <p className="text-xs text-ink-3 font-mono mt-0.5">{member.member_id}</p>
+        </div>
+        <Status value={member.status} className="ml-auto shrink-0" />
+      </div>
 
       {plans.length > 0 && (
-        <section className="py-8 border-t border-line mt-7">
-          <h2 className="t-label !text-ink mb-4">Your plans</h2>
-          <div className="divide-y divide-line border-y border-line">
+        <Card pad="lg">
+          <p className="t-h2 mb-3">Your plans</p>
+          <div className="divide-y divide-line-2">
             {plans.map(p => {
               const g = p.susu_groups!
               const cashout = Number(p.payout_amount ?? g.cashout_amount ?? 0)
               return (
-                <div key={p.id} className="py-4 flex items-baseline justify-between gap-4">
+                <div key={p.id} className="py-3 flex items-start justify-between gap-4 first:pt-0 last:pb-0">
                   <div className="min-w-0">
-                    <p className="text-[14px] font-bold truncate">{g.name}</p>
-                    <p className="t-meta">
-                      Slot {p.payout_position} of {g.max_members} — GHS {n0(g.contribution_amount)} {g.contribution_frequency}
+                    <p className="text-base font-semibold text-ink truncate">{g.name}</p>
+                    <p className="text-xs text-ink-2 mt-0.5 tnum">
+                      Slot {p.payout_position} of {g.max_members} · GHS {ghs(g.contribution_amount)} {g.contribution_frequency}
                     </p>
-                    {p.payout_date && <p className="t-meta">Collects {format(new Date(p.payout_date), 'd MMM yyyy')}</p>}
+                    {p.payout_date && (
+                      <p className="text-xs text-ink-3 mt-0.5">
+                        Collects {format(new Date(p.payout_date), 'd MMM yyyy')}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-[16px] font-extrabold tnum whitespace-nowrap">{n0(cashout)}</p>
+                  <Money value={cashout} size="sm" className="shrink-0" />
                 </div>
               )
             })}
           </div>
-        </section>
+        </Card>
       )}
 
-      {payouts.filter(p => p.status === 'paid').length > 0 && (
-        <section className="py-8 border-t border-line">
-          <h2 className="t-label !text-ink mb-4">Collected</h2>
-          <table className="w-full">
-            <tbody className="divide-y divide-line border-y border-line">
-              {payouts.filter(p => p.status === 'paid').map(p => (
-                <tr key={p.id}>
-                  <td className="py-3 pr-3 text-[13.5px] font-medium">{p.susu_groups?.name}</td>
-                  <td className="py-3 pr-3 t-meta">{p.paid_at ? format(new Date(p.paid_at), 'd MMM yyyy') : ''}</td>
-                  <td className="py-3 text-right text-[14px] font-bold tnum">{n0(p.total_amount)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      <section className="py-8 border-t border-line">
-        <h2 className="t-label !text-ink mb-3">Your details</h2>
-        <table className="w-full">
-          <tbody className="divide-y divide-line border-y border-line">
-            <Row k="Phone"        v={member.phone} />
-            <Row k="Email"        v={member.email} />
-            <Row k="MoMo"         v={member.mobile_money_number ? `${member.mobile_money_provider ?? ''} ${member.mobile_money_number}`.trim() : null} />
-            <Row k="Occupation"   v={member.occupation} />
-            <Row k="Address"      v={member.residential_address} />
-            <Row k="Member since" v={format(new Date(member.created_at), 'd MMMM yyyy')} />
-          </tbody>
-        </table>
-        <p className="t-meta mt-3">To change anything, message your collector below.</p>
-      </section>
-
-      <section className="py-8 border-t border-line">
-        <button onClick={() => setPcOpen(!pcOpen)} className="w-full flex items-baseline justify-between group">
-          <div className="text-left">
-            <p className="text-[15px] font-bold group-hover:underline underline-offset-4">Change your passcode</p>
-            <p className="t-meta mt-0.5">Replace the passcode you were given with your own private PIN</p>
-          </div>
-          <span className="t-label">{pcOpen ? 'Close' : 'Open'}</span>
-        </button>
-
-        {pcOpen && (
-          <form onSubmit={changePasscode} className="mt-5 space-y-3 animate-fade-in">
-            {pcMsg && (
-              <p className={`text-[13px] font-medium ${pcMsg.ok ? 'text-ink' : 'text-red'}`}>{pcMsg.text}</p>
-            )}
-            <input className="in tnum" type="password" inputMode="numeric" maxLength={6} required
-              value={pcCur} onChange={e => setPcCur(e.target.value.replace(/\D/g, ''))} placeholder="Current passcode" />
-            <input className="in tnum" type="password" inputMode="numeric" maxLength={6} required
-              value={pcNew} onChange={e => setPcNew(e.target.value.replace(/\D/g, ''))} placeholder="New 6-digit passcode" />
-            <input className="in tnum" type="password" inputMode="numeric" maxLength={6} required
-              value={pcNew2} onChange={e => setPcNew2(e.target.value.replace(/\D/g, ''))} placeholder="Repeat new passcode" />
-            <button type="submit" disabled={pcBusy} className="act-primary w-full">
-              {pcBusy ? '…' : 'Change passcode'}
-            </button>
-            <p className="t-meta">Keep it private — never share it, not even with your collector.</p>
-          </form>
-        )}
-      </section>
-
-      <section className="py-8 border-t border-line">
-        <button onClick={() => setOpen(!open)} className="w-full flex items-baseline justify-between group">
-          <div className="text-left">
-            <p className="text-[15px] font-bold group-hover:underline underline-offset-4">Message your collector</p>
-            <p className="t-meta mt-0.5">Questions about your plan or collection</p>
-          </div>
-          <span className="t-label">{open ? 'Close' : 'Open'}</span>
-        </button>
-
-        {open && (
-          <div className="mt-5 animate-fade-in">
-            {sent && <p className="text-[13px] font-medium mb-4">Sent. Your collector will reply here.</p>}
-            <form onSubmit={send} className="space-y-3">
-              <input className="in" required value={subj} onChange={e => setSubj(e.target.value)} placeholder="Subject" />
-              <textarea className="in-area" required rows={3} value={msg} onChange={e => setMsg(e.target.value)} placeholder="Your message" />
-              <button type="submit" disabled={busy} className="act-primary w-full">
-                {busy ? '…' : 'Send'}
-              </button>
-            </form>
-
-            {myMessages.length > 0 && (
-              <div className="mt-7 divide-y divide-line border-t border-line">
-                {myMessages.map(m => (
-                  <div key={m.id} className="py-4">
-                    <div className="flex justify-between gap-3">
-                      <p className="text-[13px] font-bold">{m.subject}</p>
-                      <span className="t-meta whitespace-nowrap">{format(new Date(m.created_at), 'd MMM')}</span>
-                    </div>
-                    <p className="t-meta mt-1">{m.message}</p>
-                    {m.reply_text && (
-                      <div className="mt-3 pl-3 border-l-2 border-ink">
-                        <p className="t-label !text-ink">Reply</p>
-                        <p className="text-[13px] mt-1">{m.reply_text}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+      {collected.length > 0 && (
+        <Card pad="lg">
+          <p className="t-h2 mb-3">Collected</p>
+          <div className="divide-y divide-line-2">
+            {collected.map(p => (
+              <div key={p.id} className="py-3 flex items-center justify-between gap-4 first:pt-0 last:pb-0">
+                <div className="min-w-0">
+                  <p className="text-base font-medium text-ink truncate">{p.susu_groups?.name}</p>
+                  <p className="text-xs text-ink-3">
+                    {p.paid_at ? format(new Date(p.paid_at), 'd MMM yyyy') : ''}
+                  </p>
+                </div>
+                <Money value={p.total_amount} size="sm" sign="in" className="shrink-0" />
               </div>
-            )}
+            ))}
           </div>
-        )}
-      </section>
+        </Card>
+      )}
+
+      <Card pad="lg">
+        <p className="t-h2 mb-1">Your details</p>
+        <DetailList>
+          <DetailRow label="Phone">{member.phone}</DetailRow>
+          <DetailRow label="Email">{member.email}</DetailRow>
+          <DetailRow label="MoMo">
+            {member.mobile_money_number
+              ? `${member.mobile_money_provider ?? ''} ${member.mobile_money_number}`.trim()
+              : null}
+          </DetailRow>
+          <DetailRow label="Occupation">{member.occupation}</DetailRow>
+          <DetailRow label="Address">{member.residential_address}</DetailRow>
+          <DetailRow label="Member since">{format(new Date(member.created_at), 'd MMMM yyyy')}</DetailRow>
+        </DetailList>
+        <p className="text-xs text-ink-3 mt-3 leading-relaxed">
+          To change anything here, message your collector below.
+        </p>
+      </Card>
+
+      {/* ---- Change passcode ---- */}
+      <Card pad="none">
+        <Disclosure
+          icon={KeyRound}
+          open={pcOpen} onToggle={() => setPcOpen(v => !v)}
+          title="Change your passcode"
+          sub="Replace the passcode you were given with your own private PIN"
+        >
+          <form onSubmit={changePasscode} className="space-y-3">
+            {pcErr && <Notice tone="bad">{pcErr}</Notice>}
+            <Field label="Current passcode">
+              {({ id }) => (
+                <Input id={id} type="password" inputMode="numeric" maxLength={6} required autoComplete="current-password"
+                  className="tnum" value={pcCur} onChange={e => setPcCur(e.target.value.replace(/\D/g, ''))} />
+              )}
+            </Field>
+            <Field label="New passcode" hint="Six digits. Choose something only you would pick.">
+              {({ id, describedBy }) => (
+                <Input id={id} aria-describedby={describedBy} type="password" inputMode="numeric" maxLength={6}
+                  required autoComplete="new-password" className="tnum"
+                  value={pcNew} onChange={e => setPcNew(e.target.value.replace(/\D/g, ''))} />
+              )}
+            </Field>
+            <Field label="Repeat new passcode">
+              {({ id }) => (
+                <Input id={id} type="password" inputMode="numeric" maxLength={6} required autoComplete="new-password"
+                  className="tnum" value={pcNew2} onChange={e => setPcNew2(e.target.value.replace(/\D/g, ''))}
+                  invalid={!!pcNew2 && pcNew2 !== pcNew} />
+              )}
+            </Field>
+            <Button type="submit" full loading={pcBusy}>Change passcode</Button>
+            <p className="text-xs text-ink-3 leading-relaxed">
+              Keep it private — never share it, not even with your collector.
+            </p>
+          </form>
+        </Disclosure>
+      </Card>
+
+      {/* ---- Message the collector ---- */}
+      <Card pad="none">
+        <Disclosure
+          icon={MessageSquare}
+          open={msgOpen} onToggle={() => setMsgOpen(v => !v)}
+          title="Message your collector"
+          sub="Questions about your plan or your collection"
+          badge={myMessages.length || undefined}
+        >
+          <form onSubmit={send} className="space-y-3">
+            <Field label="Subject">
+              {({ id }) => <Input id={id} required value={subj} onChange={e => setSubj(e.target.value)}
+                placeholder="What is it about?" />}
+            </Field>
+            <Field label="Message">
+              {({ id }) => <Textarea id={id} required rows={4} value={msg} onChange={e => setMsg(e.target.value)}
+                placeholder="Type your message" />}
+            </Field>
+            <Button type="submit" full loading={busy}>Send</Button>
+          </form>
+
+          {myMessages.length > 0 && (
+            <div className="mt-6 divide-y divide-line-2 border-t border-line pt-1">
+              {myMessages.map(m => (
+                <div key={m.id} className="py-3.5">
+                  <div className="flex justify-between gap-3">
+                    <p className="text-sm font-semibold text-ink">{m.subject}</p>
+                    <span className="text-xs text-ink-3 whitespace-nowrap shrink-0">
+                      {format(new Date(m.created_at), 'd MMM')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-ink-2 mt-1 leading-relaxed">{m.message}</p>
+                  {m.reply_text && (
+                    <div className="mt-3 pl-3 border-l-2 border-accent">
+                      <p className="t-eyebrow text-accent">Reply</p>
+                      <p className="text-sm text-ink mt-1 leading-relaxed">{m.reply_text}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Disclosure>
+      </Card>
+
+      {/* Sign out lives here, not in the tab bar. A destructive control
+          sitting beside four navigation targets gets hit by accident. */}
+      <Button variant="outline" icon={LogOut} full onClick={signOut} className="!text-danger">
+        Sign out
+      </Button>
     </div>
+  )
+}
+
+function Disclosure({
+  open, onToggle, title, sub, icon: Icon, badge, children,
+}: {
+  open: boolean
+  onToggle: () => void
+  title: string
+  sub: string
+  icon: LucideIcon
+  badge?: number
+  children: React.ReactNode
+}) {
+  return (
+    <>
+      <button
+        type="button" onClick={onToggle} aria-expanded={open}
+        className="w-full flex items-center gap-3.5 p-4 text-left transition-colors hover:bg-surface-2 rounded-lg"
+      >
+        <span className="w-9 h-9 rounded-md bg-surface-2 grid place-items-center shrink-0">
+          <Icon size={16} strokeWidth={2.1} className="text-ink-2" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-semibold text-ink">{title}</span>
+          <span className="block text-xs text-ink-2 mt-0.5 leading-relaxed">{sub}</span>
+        </span>
+        {badge ? (
+          <span className="text-2xs font-semibold tnum px-1.5 py-0.5 rounded-xs bg-surface-3 text-ink-2 shrink-0">
+            {badge}
+          </span>
+        ) : null}
+        <ChevronDown
+          size={17} strokeWidth={2.2} aria-hidden="true"
+          className={cx('text-ink-3 shrink-0 transition-transform duration-200', open && 'rotate-180')}
+        />
+      </button>
+      {open && <div className="px-4 pb-4 pt-1 animate-fade-in">{children}</div>}
+    </>
   )
 }

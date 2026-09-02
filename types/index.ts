@@ -109,6 +109,11 @@ export interface AdminDashboard {
   stats: {
     totalMembers: number; activeGroups: number; pendingKYC: number
     overdueContributions: number; totalCollected: number
+    /** Still to collect today, after part-payments. */
+    remainingToday?: number
+    /** The gross obligation falling due today, including days already settled. */
+    dueTodayGross?: number
+    contributionsOutstanding?: number
   }
   recentKYC: KYCApplication[]
   recentTransactions: Transaction[]

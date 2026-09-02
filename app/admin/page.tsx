@@ -73,6 +73,13 @@ export default function Dashboard() {
             <span className="text-[13px] align-[.35em] mr-0.5 text-white/60">GHS</span>{n0(stats.totalCollected)}
           </p>
           <p className="text-[12px] font-medium text-white/60 mt-1.5">Total collected</p>
+          {stats.remainingToday != null && (
+            /* Still to collect today, AFTER part-payments — not the gross
+               obligation, which reads as this figure without being it. */
+            <p className="text-[11.5px] text-white/55 mt-2 pt-2 border-t border-white/15 tnum">
+              GHS {n0(stats.remainingToday)} still to collect today
+            </p>
+          )}
         </div>
       </div>
 

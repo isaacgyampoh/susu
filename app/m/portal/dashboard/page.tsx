@@ -1,268 +1,229 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ArrowRight, Layers, RefreshCw, Wallet } from 'lucide-react'
+import { format } from 'date-fns'
 import { callFunction, getMemberToken } from '@/lib/supabase'
-import type { MemberDashboard, Contribution } from '@/types'
-import { format, differenceInCalendarDays, isToday } from 'date-fns'
-import StampCard from '@/components/susu/stamp-card'
-import Rotation from '@/components/susu/rotation'
-import { useDeadline } from '@/components/susu/deadline'
-import { ghs as n0 } from '@/lib/money'
+import type { MembershipView, PortalState } from '@/types/portal'
+import { ghs, ghs2 } from '@/lib/money'
+import MembershipCard from '@/components/susu/membership-card'
 import PayPrompt from '@/components/susu/pay-prompt'
-import PayNumberSheet from '@/components/susu/pay-number-sheet'
-const n2 = (v: any) => Number(v ?? 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+import PaySheet from '@/components/susu/pay-sheet'
+import {
+  Avatar, Button, Card, EmptyState, IconButton, Money, Notice, Skeleton,
+  useToast, cx,
+} from '@/components/ui'
 
+/**
+ * The member dashboard.
+ *
+ * ────────────────────────────────────────────────────────────────────────
+ * Rebuilt in Phase 04 around the fact that a member belongs to MANY groups.
+ * Two thirds of this platform's members hold more than one membership; one
+ * holds thirty across eighteen groups.
+ *
+ * The previous version rendered `plans[tab]` — one membership at a time behind
+ * a chip selector — so a member in five groups saw one group's figures and had
+ * to remember to check the rest. Every membership is now on screen, each with
+ * its own obligation, advance and cash-out.
+ *
+ * This component performs NO financial arithmetic. Every figure, including the
+ * cross-membership totals, is computed by get_member_portal_state() in the
+ * database. The old dashboard summed money in a React `reduce`, which is how
+ * the same number came to be calculated in four different places.
+ */
 export default function Dashboard() {
-  const [d, setD]       = useState<MemberDashboard | null>(null)
-  const [loading, setL] = useState(true)
-  const [paying, setP]  = useState<string | null>(null)
+  const toast = useToast()
+  const [state, setState] = useState<PortalState | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const [paySheet, setPaySheet] = useState<MembershipView | null>(null)
+  const [paying, setPaying] = useState<string | null>(null)
   const [pending, setPending] = useState<any>(null)
-  const [numSheet, setNumSheet] = useState<Contribution | null>(null)
-  const [tab, setTab]   = useState(0)
 
-  async function load() {
-    const { data } = await callFunction<MemberDashboard>('member-profile', { token: getMemberToken()! })
-    setD(data); setL(false)
-  }
-  useEffect(() => { load() }, [])
-
-  function pay(c: Contribution) { setNumSheet(c) }
-
-  async function doPay(c: Contribution, payNumber?: string, payNetwork?: string, payAmount?: number, thisGroupOnly?: boolean) {
-    setNumSheet(null)
-    setP(c.id)
-    const { data, error } = await callFunction<any>('payments-initialize',
-      { method: 'POST', body: { contribution_id: c.id, pay_number: payNumber, pay_network: payNetwork, pay_amount: payAmount, this_group_only: thisGroupOnly }, token: getMemberToken()! })
-    setP(null)
-    if (error) return alert(error)
-    if (data?.dev_mode) return load()
-    // The member approves on their phone, so wait here rather than leave
-    if (data?.status === 'prompted' || data?.status === 'otp_required') {
-      setPending({ ...data, amount: data.amount ?? c.amount }); return
+  const load = useCallback(async (quiet = false) => {
+    if (quiet) setRefreshing(true)
+    const { data, error } = await callFunction<PortalState>('member-profile', { token: getMemberToken()! })
+    if (error) {
+      setFailed(error)
+      if (quiet) toast.error({ title: 'Could not refresh', body: error })
+    } else {
+      setState(data); setFailed('')
     }
-    if (data?.authorization_url) window.location.href = data.authorization_url
-  }
+    setLoading(false); setRefreshing(false)
+  }, [toast])
 
-  const plan  = d?.plans?.[tab]
-  const group = plan?.susu_groups
-  const dl    = useDeadline(group?.payment_deadline?.slice(0, 5) ?? '18:00')
+  useEffect(() => { load() }, [load])
 
-  if (loading) return (
-    <div className="max-w-[420px] mx-auto px-5 pt-6 space-y-3 animate-pulse">
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-full bg-tint" />
-        <div className="space-y-1.5"><div className="h-3.5 w-36 bg-tint rounded" /><div className="h-2.5 w-20 bg-tint rounded" /></div>
-      </div>
-      <div className="h-36 bg-tint rounded-2xl" />
-      <div className="h-20 bg-tint rounded-2xl" />
-      <div className="h-24 bg-tint rounded-2xl" />
-      <div className="h-40 bg-tint rounded-2xl" />
+  if (loading) return <DashboardSkeleton />
+
+  if (!state || failed) return (
+    <div className="max-w-md mx-auto px-5 pt-10">
+      <EmptyState
+        icon={Wallet}
+        title="Could not load your account"
+        body={failed || 'Check your connection and try again. Nothing here changes what has already been recorded.'}
+        action={<Button icon={RefreshCw} onClick={() => { setLoading(true); load() }}>Try again</Button>}
+      />
     </div>
   )
-  if (!d)      return <div className="p-10 text-center t-meta">Could not load your account.</div>
 
-  const { member, plans, summary, pendingContributions, recentPayments, penalties, credit, paymentBreakdowns } = d
-  const dueToday = pendingContributions.find(c => isToday(new Date(c.due_date)))
-  const dueTodayAll = pendingContributions.filter(c => isToday(new Date(c.due_date)))
-
-  const mine = recentPayments
-    .filter(c => c.susu_groups?.id === group?.id)
-    .concat(pendingContributions.filter(c => (c.susu_groups as any)?.id === group?.id))
-    .filter((c, i, a) => a.findIndex(x => x.id === c.id) === i)
-    .sort((a, b) => a.due_date.localeCompare(b.due_date))
-
-  const collected = group?.start_date && group?.cycle_days
-    ? Math.max(0, Math.floor(differenceInCalendarDays(new Date(), new Date(group.start_date)) / group.cycle_days))
-    : 0
-  // The registration fee is the operator's commission — never part of what a member collects.
-  const cashout = Number(plan?.payout_amount ?? group?.cashout_amount ?? 0)
-  const toTurn  = plan?.payout_date ? differenceInCalendarDays(new Date(plan.payout_date), new Date()) : null
+  const { member, memberships, totals, payments, penalties } = state
+  const owing = memberships.filter(m => m.due_today > 0.005)
+  const settled = memberships.filter(m => m.due_today <= 0.005 && m.coverage !== 'no-schedule')
 
   return (
-    <div className="max-w-[420px] mx-auto px-5 pt-6 animate-fade-in">
+    <div className="max-w-md mx-auto px-5 pt-6 space-y-4 animate-fade-in">
 
-      <header className="flex items-center gap-3 mb-6">
-        <div className="w-11 h-11 rounded-full bg-ink grid place-items-center shrink-0">
-          <span className="text-white font-bold text-[15px]">{member.full_name[0]}</span>
+      <header className="flex items-center gap-3">
+        <Avatar name={member.full_name} size="lg" tone="ink" />
+        <div className="min-w-0 flex-1">
+          <p className="text-md font-semibold text-ink truncate">{member.full_name}</p>
+          <p className="text-xs text-ink-3 font-mono">{member.member_code}</p>
         </div>
-        <div className="min-w-0">
-          <p className="text-[15px] font-bold truncate">{member.full_name}</p>
-          <p className="t-meta">{member.member_id}</p>
-        </div>
+        <IconButton
+          icon={RefreshCw} label="Refresh" variant="ghost"
+          onClick={() => load(true)}
+          className={cx(refreshing && 'pointer-events-none [&_svg]:animate-spin')}
+        />
       </header>
 
-      {penalties.length > 0 && (
-        <div className="flex items-start gap-2.5 bg-red-50 border border-red/20 rounded-[12px] p-3.5 mb-4">
-          <p className="text-[12.5px] text-red">
-            <span className="font-bold">GHS {n2(summary.totalPenalties)} in penalties.</span> This will be deducted from your collection.
+      {/*
+        Today, in three figures rather than one.
+        A member holding several groups needs to see what today asks of them,
+        what they have already put in, and what is left — "due today" alone is
+        the third of those, and cannot be used to work out the other two.
+        All three come from `get_member_portal_state()`; nothing here adds up
+        rows in the browser.
+      */}
+      <Card tone="ink" pad="lg">
+        <p className="text-xs font-medium text-inverse/60">
+          {totals.remaining_today > 0.005 ? 'Still to pay today' : 'Today, across all your groups'}
+        </p>
+        <Money value={totals.remaining_today} exact size="xl" className="text-inverse mt-1.5" />
+
+        {totals.paid_today > 0.005 && (
+          <p className="text-xs text-inverse/70 mt-1.5 tnum">
+            GHS {ghs2(totals.paid_today)} of GHS {ghs2(totals.obligation_today)} already paid today
           </p>
-        </div>
+        )}
+
+        <dl className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-inverse/15">
+          <Stat label="Groups" value={String(totals.active_memberships)} />
+          <Stat label="Paid so far" value={`GHS ${ghs(totals.paid_all_time)}`} />
+          <Stat label="Still to pay" value={`GHS ${ghs(totals.outstanding)}`} />
+        </dl>
+      </Card>
+
+      {totals.overdue > 0.005 && (
+        <Notice tone="bad" title={`GHS ${ghs2(totals.overdue)} overdue`}>
+          Across {memberships.filter(m => m.overdue > 0.005).length} group
+          {memberships.filter(m => m.overdue > 0.005).length === 1 ? '' : 's'}. Anything still
+          owing on a collection date is deducted from what you receive.
+        </Notice>
       )}
 
-      {/* Due today — across every group the member is in */}
-      {dueTodayAll.length > 0 && (
-        <div className="panel p-4 mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="t-label">Due today{dueTodayAll.length > 1 ? ` · ${dueTodayAll.length} groups` : ''}</p>
-            {dueTodayAll.length > 1 && (
-              <p className="text-[13px] font-bold">Total GHS {n2(dueTodayAll.reduce((s, c) => s + Number(c.amount), 0))}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            {dueTodayAll.map(c => (
-              <div key={c.id} className="flex items-center justify-between gap-3 py-1.5 border-t border-line first:border-t-0">
-                <div>
-                  <p className="text-[13px] font-semibold">{(c.susu_groups as any)?.name ?? 'Susu'}</p>
-                  <p className="t-figure text-[20px] mt-0.5">
-                    <span className="text-[12px] align-[.4em] mr-0.5 text-ink-2">GHS</span>{n2(c.amount)}
-                  </p>
-                </div>
-                <button onClick={() => pay(c)} disabled={paying === c.id} className="act-gold shrink-0">
-                  {paying === c.id ? '…' : 'Pay Now'}
-                </button>
-              </div>
-            ))}
-          </div>
-          <p className={`text-[11.5px] font-medium mt-2 ${dl.urgent ? 'text-red' : 'text-ink-2'}`}>{dl.label}</p>
-        </div>
+      {penalties.length > 0 && (
+        <Notice tone="warn" title="Late payment penalties">
+          GHS {ghs2(penalties.reduce((s, p) => s + Number(p.amount), 0))} outstanding.
+        </Notice>
       )}
 
-
-      {(credit ?? 0) > 0 && (
-        <div className="mb-4 p-3.5 rounded-2xl bg-ink text-white flex items-center justify-between">
-          <div>
-            <p className="text-[12px] text-white/70">Credit on your account</p>
-            <p className="text-[20px] font-extrabold tnum">GHS {n2(credit ?? 0)}</p>
-          </div>
-          <p className="text-[11px] text-white/60 max-w-[46%] text-right">Goes towards your next contribution automatically.</p>
-        </div>
+      {totals.advance_credit > 0.005 && (
+        <Notice tone="good" title={`GHS ${ghs2(totals.advance_credit)} advance credit`}>
+          Held against specific groups. Credit in one group is only ever used for
+          that group&rsquo;s contributions.
+        </Notice>
       )}
 
-      {plans.length > 1 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-5 px-5 scrollbar-none"
-             style={{ scrollbarWidth: 'none' }}>
-          {plans.map((p, i) => (
-            <button key={p.id} onClick={() => setTab(i)}
-              className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-full text-[12.5px] font-semibold transition-colors ${
-                i === tab ? 'bg-ink text-white' : 'bg-tint text-ink-2'
-              }`}>
-              {p.susu_groups?.name}
-              {p.payout_position ? <span className={`ml-1 ${i === tab ? 'text-white/60' : 'text-ink-3'}`}>· S{p.payout_position}</span> : null}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {plan && group ? (
-        <>
-          {/* Collection card — the hero */}
-          <div className="panel p-5 bg-ink border-ink mb-3">
-            <p className="text-[12px] font-semibold text-white/60">You collect</p>
-            <p className="text-[34px] font-extrabold tracking-[-.03em] text-white leading-none mt-1.5 tnum">
-              <span className="text-[16px] align-[.4em] mr-1 text-white">GHS</span>{n0(cashout)}
-            </p>
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/15">
-              <div>
-                <p className="text-[11px] text-white/60 font-medium">Your date</p>
-                <p className="text-[14px] font-bold text-white mt-0.5">
-                  {plan.payout_date ? format(new Date(plan.payout_date), 'd MMM yyyy') : 'Not set'}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-[11px] text-white/60 font-medium">Slot</p>
-                <p className="text-[14px] font-bold text-white mt-0.5">{plan.payout_position} of {group.max_members}</p>
-              </div>
-              {toTurn !== null && toTurn > 0 && (
-                <div className="text-right">
-                  <p className="text-[11px] text-white/60 font-medium">Countdown</p>
-                  <p className="text-[14px] font-bold text-white mt-0.5">{toTurn} days</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Progress */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div className="panel p-4">
-              <p className="t-label">Paid so far</p>
-              <p className="text-[19px] font-extrabold tnum mt-1">GHS {n0(summary.totalPaidAll)}</p>
-            </div>
-            <div className="panel p-4">
-              <p className="t-label">Still to pay</p>
-              <p className="text-[19px] font-extrabold tnum mt-1">GHS {n0(summary.totalPendingAll)}</p>
-            </div>
-          </div>
-
-          {/* Cycle grid */}
-          <div className="panel p-5 mb-3">
-            <StampCard contributions={mine} cycleDays={group.cycle_days} onPayDay={pay} payingId={paying} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <Link href="/m/portal/payments" className="act-primary">Pay ahead</Link>
-            <Link href="/m/portal/payments" className="act-quiet">History</Link>
-          </div>
-
-          {/* Rotation */}
-          <div className="panel p-5 mb-3">
-            <p className="t-h2 mb-2">The rotation</p>
-            <p className="t-meta mb-3">Who collects, and when.</p>
-            <Rotation total={group.max_members} position={plan.payout_position}
-              cycleDays={group.cycle_days} startDate={group.start_date} collected={collected} />
-          </div>
-        </>
+      {memberships.length === 0 ? (
+        <Card pad="none">
+          <EmptyState
+            icon={Layers}
+            title="No groups yet"
+            body="Your collector will add you to a group. Once they do, everything you owe and collect appears here."
+            compact
+          />
+        </Card>
       ) : (
-        <div className="panel p-8 text-center">
-          <p className="t-h2">No plan yet</p>
-          <p className="t-meta mt-1.5">Your collector will add you to a group.</p>
-        </div>
+        <>
+          {owing.length > 0 && (
+            <section>
+              <h2 className="t-eyebrow mb-2">
+                Needs paying today · {owing.length} of {memberships.length}
+              </h2>
+              <div className="space-y-3">
+                {owing.map(m => (
+                  <MembershipCard key={m.membership_id} m={m}
+                    onPay={setPaySheet} paying={paying === m.membership_id} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {settled.length > 0 && (
+            <section>
+              <h2 className="t-eyebrow mb-2 mt-5">
+                {owing.length > 0 ? 'Nothing owing today' : 'Your groups'} · {settled.length}
+              </h2>
+              <div className="space-y-3">
+                {settled.map(m => (
+                  <MembershipCard key={m.membership_id} m={m}
+                    onPay={setPaySheet} paying={paying === m.membership_id} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {memberships.filter(m => m.coverage === 'no-schedule').length > 0 && (
+            <section>
+              <h2 className="t-eyebrow mb-2 mt-5">Not started yet</h2>
+              <div className="space-y-3">
+                {memberships.filter(m => m.coverage === 'no-schedule').map(m => (
+                  <MembershipCard key={m.membership_id} m={m}
+                    onPay={setPaySheet} paying={paying === m.membership_id} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
-      {/* Recent payments — each shows what it covered */}
-      <div className="panel p-5">
-        <div className="flex items-center justify-between mb-3">
-          <p className="t-h2">Recent payments</p>
-          <Link href="/m/portal/payments" className="t-meta font-semibold flex items-center gap-0.5 hover:text-ink transition-colors">
-            See all </Link>
-        </div>
-        {(!paymentBreakdowns || paymentBreakdowns.length === 0) ? (
-          recentPayments.filter(p => p.status === 'paid').length === 0 ? (
-            <p className="t-meta py-3">No payments yet.</p>
-          ) : (
-            <div className="divide-y divide-line">
-              {recentPayments.filter(p => p.status === 'paid').slice(0, 5).map(c => (
-                <div key={c.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-[13.5px] font-semibold">{c.susu_groups?.name}</p>
-                    <p className="t-meta">{c.paid_at ? format(new Date(c.paid_at), 'd MMM, HH:mm') : format(new Date(c.due_date), 'd MMM')}</p>
-                  </div>
-                  <p className="text-[14px] font-bold text-ink tnum">GHS {n2(c.amount)}</p>
-                </div>
-              ))}
-            </div>
-          )
-        ) : (
-          <div className="space-y-3">
-            {paymentBreakdowns.slice(0, 5).map((p: any) => {
-              // Roll the per-day items up to per-group, so one payment reads
-              // 'Group A — 3 days, Group B — 1 day' rather than a long list.
-              const perGroup = new Map<string, { amount: number; days: number }>()
+      {/* Recent payments, each showing what it actually covered — a single
+          MoMo debit can settle several days across several groups. */}
+      {payments.length > 0 && (
+        <Card pad="lg">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <p className="t-h2">Recent payments</p>
+            <Link href="/m/portal/payments"
+              className="inline-flex items-center gap-0.5 text-xs font-medium text-ink-2 hover:text-ink transition-colors">
+              See all <ArrowRight size={13} strokeWidth={2.4} aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="space-y-2.5">
+            {payments.slice(0, 4).map(p => {
+              const byGroup = new Map<string, { amount: number; days: number }>()
               for (const it of p.items) {
-                const g = perGroup.get(it.group) ?? { amount: 0, days: 0 }
+                const g = byGroup.get(it.group) ?? { amount: 0, days: 0 }
                 g.amount += it.amount; g.days += 1
-                perGroup.set(it.group, g)
+                byGroup.set(it.group, g)
               }
               return (
-                <div key={p.reference} className="rounded-xl border border-line p-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-[14px] font-bold text-ink tnum">GHS {n2(p.total)}</p>
-                    <p className="t-meta">{p.at ? format(new Date(p.at), 'd MMM, HH:mm') : ''}</p>
+                <div key={p.reference} className="rounded-md border border-line p-3">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <Money value={p.total} exact size="sm" />
+                    <p className="text-xs text-ink-3">
+                      {p.at ? format(new Date(p.at), 'd MMM, HH:mm') : ''}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    {Array.from(perGroup.entries()).map(([group, v]) => (
-                      <div key={group} className="flex items-center justify-between text-[12.5px]">
-                        <span className="text-ink-2">{group}</span>
-                        <span className="text-ink font-medium tnum">GHS {n2(v.amount)} · {v.days} day{v.days === 1 ? '' : 's'}</span>
+                    {Array.from(byGroup.entries()).map(([g, v]) => (
+                      <div key={g} className="flex items-center justify-between gap-3 text-xs">
+                        <span className="text-ink-2 truncate">{g}</span>
+                        <span className="text-ink font-medium tnum shrink-0">
+                          GHS {ghs2(v.amount)} · {v.days} day{v.days === 1 ? '' : 's'}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -270,34 +231,59 @@ export default function Dashboard() {
               )
             })}
           </div>
-        )}
-      </div>
-      {numSheet && (
-        <PayNumberSheet
-          defaultNumber={member?.mobile_money_number ?? member?.phone}
-          defaultNetwork={member?.mobile_money_provider ?? 'MTN'}
-          amount={Number(numSheet.amount ?? 0)}
-          hasOtherGroups={(plans?.length ?? 0) > 1}
-          groupName={(numSheet as any).susu_groups?.name}
-          slotLabel={(numSheet as any).group_memberships?.payout_position ? `Slot ${(numSheet as any).group_memberships.payout_position}` : undefined}
-          dueDate={(numSheet as any).due_date}
-          onConfirm={(num, net, amt, only) => doPay(numSheet, num, net, amt, only)}
-          onClose={() => setNumSheet(null)}
+        </Card>
+      )}
+
+      {paySheet && (
+        <PaySheet
+          membership={paySheet}
+          defaultNumber={member.mobile_money_number ?? member.phone}
+          defaultNetwork={member.mobile_money_provider ?? 'MTN'}
+          hasOtherMemberships={memberships.length > 1}
+          onClose={() => setPaySheet(null)}
+          onPrompted={p => { setPaySheet(null); setPending(p) }}
+          onBusy={setPaying}
         />
       )}
+
       {pending && (
         <PayPrompt
           reference={pending.reference}
           amount={Number(pending.amount ?? 0)}
-          phone={member?.mobile_money_number ?? member?.phone}
+          phone={member.mobile_money_number ?? member.phone}
           initial={pending.status}
           message={pending.message}
           ussd={pending.ussd}
-          onDone={() => { setPending(null); load() }}
+          onDone={() => { setPending(null); load(true) }}
           onClose={() => setPending(null)}
         />
       )}
+    </div>
+  )
+}
 
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-2xs text-inverse/55 font-medium">{label}</dt>
+      <dd className="text-sm font-semibold text-inverse mt-1 tnum truncate">{value}</dd>
+    </div>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="max-w-md mx-auto px-5 pt-6 space-y-4" role="status" aria-label="Loading your account">
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-11 h-11 rounded-lg" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-3.5 w-40" />
+          <Skeleton className="h-2.5 w-24" />
+        </div>
+      </div>
+      <Skeleton className="h-40 rounded-lg" />
+      <Skeleton className="h-64 rounded-lg" />
+      <Skeleton className="h-64 rounded-lg" />
     </div>
   )
 }

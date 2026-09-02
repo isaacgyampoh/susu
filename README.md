@@ -49,9 +49,14 @@ view is recorded in `document_access_log`.
 ### 3. Supabase — Edge Function secrets
 Edge Functions → Manage Secrets:
 
+> **Never write a real secret in this file.** It is committed. `JWT_SECRET`
+> was published here in plain sight, which made every admin session in the
+> platform forgeable by anyone who read the repository. It is now treated as
+> compromised — see [ROTATION.md](ROTATION.md).
+
 | Key | Value |
 |-----|-------|
-| `JWT_SECRET` | `a45ff29522fcf5f5347f36b4ca5105ad` |
+| `JWT_SECRET` | generate with `openssl rand -hex 32` — the functions refuse to start without it |
 | `FRONTEND_URL` | `https://admin.abbiewealthsusu.com` |
 | `MEMBER_URL` | `https://my.abbiewealthsusu.com` |
 | `ALLOWED_ORIGINS` | comma-separated origins allowed to call the API |
@@ -102,13 +107,23 @@ supabase functions deploy
 
 ## First Login
 
-`/admin/login` → `admin@susuplatform.com` / `Admin@1234`
+The seed account is `admin@susuplatform.com`. Its shipped password is published
+in migration `20240101000000_initial_schema.sql`, so it is public knowledge and
+must be changed before the console is reachable from the internet.
 
-⚠️ Change immediately:
+`v6` flags any account still using it (`must_change_password`), and the console
+shows a banner on every screen until it is changed. Set a new one:
+
 ```sql
-UPDATE admin_users SET password_hash = crypt('YourNewPassword', gen_salt('bf'))
+UPDATE admin_users
+SET password_hash        = crypt('<a long random password>', gen_salt('bf')),
+    must_change_password = false,
+    token_version        = COALESCE(token_version, 0) + 1   -- kills live sessions
 WHERE email = 'admin@susuplatform.com';
 ```
+
+On a live deployment, prefer the in-app change (`/admin/password`), which goes
+through `change_admin_password()` and enforces a 10-character minimum.
 
 ---
 

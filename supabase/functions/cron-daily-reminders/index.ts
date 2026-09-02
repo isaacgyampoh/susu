@@ -97,9 +97,9 @@ serveWithCors(async (req) => {
     })
 
     if (res.kind === 'prompted') {
-      if (res.moolreRef) {
+      if (res.providerOrderId) {
         await supabaseAdmin.from('transactions')
-          .update({ paystack_data: { provider_order_id: res.moolreRef } as never })
+          .update({ paystack_data: { provider_order_id: res.providerOrderId } as never })
           .eq('reference', ref)
       }
       const first = bk.member.full_name.split(' ')[0]

@@ -135,15 +135,26 @@ serveWithCors(async (req) => {
         .from('susu_groups').select('id, name, status, current_members').eq('id', id).single()
       if (!g) return error('Group not found', 404)
 
-      // Deleting a group with money in it would destroy the record of that money
+      // Deleting a group with money in it would destroy the record of that money.
+      // Fully-paid days are the obvious case; PART-paid days are the one that
+      // used to slip through. A member who has put GHS 75 towards a GHS 100 day
+      // has paid real money, and `status` is still 'pending' — so a check on
+      // status alone called that group empty and deleted the record of it.
       const { count: paid } = await supabaseAdmin
         .from('contributions').select('*', { count: 'exact', head: true })
         .eq('group_id', id).eq('status', 'paid')
+      const { count: partPaid } = await supabaseAdmin
+        .from('contributions').select('*', { count: 'exact', head: true })
+        .eq('group_id', id).neq('status', 'paid').gt('amount_paid', 0)
 
-      if (paid && paid > 0) {
+      if ((paid ?? 0) > 0 || (partPaid ?? 0) > 0) {
+        const parts = [
+          (paid ?? 0) > 0     && `${paid} paid contribution${paid === 1 ? '' : 's'}`,
+          (partPaid ?? 0) > 0 && `${partPaid} part-paid day${partPaid === 1 ? '' : 's'}`,
+        ].filter(Boolean).join(' and ')
         return error(
-          `Cannot delete: ${paid} contribution${paid === 1 ? ' has' : 's have'} been paid into this group. ` +
-          `Deleting it would erase that financial record. Mark it completed instead.`, 409)
+          `Cannot delete: this group has ${parts}. Deleting it would erase that ` +
+          `financial record. Mark it completed instead.`, 409)
       }
       const { count: paidOut } = await supabaseAdmin
         .from('payouts').select('*', { count: 'exact', head: true })
@@ -159,10 +170,7 @@ serveWithCors(async (req) => {
       await supabaseAdmin.from('payouts').delete().eq('group_id', id)
       const { error: kycErr } = await supabaseAdmin.from('kyc_applications')
         .update({ selected_group_id: null }).eq('selected_group_id', id)
-      if (kycErr && !/selected_group_id/.test(kycErr.message)) return error(kycErr.message, 500)
-      if (kycErr) {
-        return error('Applications reference this group and the database is behind (run migration v19), so it cannot be deleted yet.', 409)
-      }
+      if (kycErr) return error(kycErr.message, 500)
       await supabaseAdmin.from('group_memberships').delete().eq('group_id', id)
       const { error: e } = await supabaseAdmin.from('susu_groups').delete().eq('id', id)
       if (e) return error(e.message, 500)

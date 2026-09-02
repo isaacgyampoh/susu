@@ -5,23 +5,34 @@ import { requireAdmin }            from '../_shared/jwt.ts'
 /*
  * Reverse a payment recorded in error.
  *
- * A day goes back to unpaid, its transaction is marked reversed, and any
- * penalty cleared by that payment is restored. Used when money was recorded
- * that never actually arrived — a mistyped entry, or a provider payment that
- * was marked settled while it was still pending.
+ * A day goes back to unpaid, every payment that had claimed it is marked
+ * failed, any penalty it cleared is restored, and any credit those payments
+ * banked is offset. Used when money was recorded that never actually arrived —
+ * a mistyped entry, or a payment marked settled while it was still pending.
  *
- * Nothing is deleted: the reversal is written to the audit log with who did
- * it and why, so the history stays honest.
+ * ────────────────────────────────────────────────────────────────────────
+ * PHASE 07: this used to reverse the DAY and nothing else.
  *
- *   POST { contribution_id, reason? }
+ * It restored the contribution and marked the transaction failed, but left
+ * `payment_allocations` untouched. So after an undo the allocation ledger
+ * still said this payment covered that day, while the day said nothing had
+ * paid it — which is exactly the state financial invariant #8
+ * (`allocation_against_unsettled_day`) exists to detect. An operator
+ * correcting a typo would have tripped the alarm built to catch F-02.
+ *
+ * It also left behind any credit those payments had banked: money the system
+ * had just declared never arrived stayed spendable on the member's next day.
+ *
+ * And it did four unrelated writes with no transaction around them, so a
+ * failure part-way left a day unpaid with its payment still successful.
+ *
+ * All three are now the database's problem, in `reverse_contribution_payment()`
+ * — one transaction, one row lock. Nothing is deleted: allocations are stamped
+ * reversed, credit is offset by a negative entry, and the whole before-state is
+ * appended to `settlement_log`.
+ *
+ *   POST { contribution_id, reason }
  */
-async function audit(admin: any, action: string, entityId: string, label: string, details: unknown) {
-  await supabaseAdmin.from('audit_log').insert({
-    admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
-    action, entity_type: 'contribution', entity_id: entityId, entity_label: label, details,
-  }).then(() => {}, () => {})
-}
-
 serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
@@ -34,61 +45,42 @@ serveWithCors(async (req) => {
     const { contribution_id, reason } = await req.json()
     if (!contribution_id) return error('contribution_id is required')
 
-    const { data: c } = await supabaseAdmin
-      .from('contributions')
-      .select('id, status, amount, due_date, paid_at, paystack_ref, member_id, group_id, susu_groups(name)')
-      .eq('id', contribution_id).single()
-    if (!c) return error('Contribution not found', 404)
-    if (c.status !== 'paid') return error('That day is not marked paid, so there is nothing to reverse')
-
-    // Back to what it would be if it had never been paid
-    const today = new Date().toISOString().slice(0, 10)
-    const restored = c.due_date < today ? 'overdue' : 'pending'
-
-    const { error: upErr } = await supabaseAdmin
-      .from('contributions')
-      .update({
-        status: restored,
-        paid_at: null,
-        paystack_ref: null,
-        payment_method: null,
-        amount_paid: 0,
-      })
-      .eq('id', contribution_id)
-    if (upErr) return error(upErr.message, 500)
-
-    // Restore any penalty this payment had cleared
-    await supabaseAdmin.from('payment_penalties')
-      .update({ is_paid: false, paid_at: null })
-      .eq('contribution_id', contribution_id)
-      .then(() => {}, () => {})
-
-    // Mark the matching transaction reversed rather than deleting it
-    if (c.paystack_ref) {
-      await supabaseAdmin.from('transactions')
-        .update({ status: 'failed', description: `Reversed by admin${reason ? ` — ${reason}` : ''}` })
-        .eq('reference', c.paystack_ref)
-        .then(() => {}, () => {})
+    // Reversing money requires a stated reason, the same as an approval
+    // override. The database enforces this too — this check exists to give a
+    // usable message rather than a raised exception.
+    if (typeof reason !== 'string' || reason.trim().length < 10) {
+      return error('A reversal needs a reason of at least 10 characters — it is written to the audit log.', 400)
     }
-    await supabaseAdmin.from('transactions')
-      .update({ status: 'failed' })
-      .eq('related_id', contribution_id).eq('status', 'success')
-      .then(() => {}, () => {})
 
-    await audit(admin, 'payment.reversed', contribution_id,
-      `GHS ${Number(c.amount).toFixed(2)} · ${c.due_date}`, {
-        amount: c.amount,
-        due_date: c.due_date,
-        group: (c.susu_groups as { name?: string } | null)?.name,
-        member_id: c.member_id,
-        reason: reason ?? null,
-      })
+    const { data, error: rpcErr } = await supabaseAdmin.rpc('reverse_contribution_payment', {
+      p_contribution_id: contribution_id,
+      p_admin_id:        admin.sub,
+      p_admin_name:      (admin.full_name as string) ?? (admin.name as string) ?? (admin.email as string) ?? 'admin',
+      p_reason:          reason.trim(),
+    })
+
+    if (rpcErr) {
+      // The engine's own messages are written for an operator to read.
+      const msg = rpcErr.message ?? 'Could not reverse this payment'
+      const known = /not found|nothing has been paid|at least 10 characters/i.test(msg)
+      if (!known) console.error('reverse_contribution_payment failed:', msg)
+      return error(msg.replace(/^.*?ERROR:\s*/, ''), known ? 400 : 500)
+    }
+
+    const r = (data ?? {}) as {
+      restored_to?: string; freed?: number; references?: string[]
+      credit_entries_reversed?: number
+    }
 
     return json({
       reversed: true,
       contribution_id,
-      restored_status: restored,
-      message: `GHS ${Number(c.amount).toFixed(2)} for ${c.due_date} is marked unpaid again.`,
+      restored_status: r.restored_to,
+      // What the reversal actually touched, rather than just "done".
+      freed: r.freed,
+      payments_reversed: r.references ?? [],
+      credit_entries_reversed: r.credit_entries_reversed ?? 0,
+      message: `That day is marked unpaid again. ${(r.references ?? []).length} payment(s) reversed.`,
     })
   } catch (e) {
     console.error(e)

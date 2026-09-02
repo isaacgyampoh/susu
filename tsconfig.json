@@ -1,5 +1,10 @@
 {
   "compilerOptions": {
+    // No target was set, so tsc defaulted to ES3 and rejected iterating a Map
+    // or Set — which the domain does throughout. This affects TYPE CHECKING
+    // ONLY: noEmit is true and Next compiles with SWC against its own
+    // browserslist targets, so no shipped output changes.
+    "target": "es2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,

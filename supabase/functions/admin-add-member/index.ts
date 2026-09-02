@@ -1,15 +1,12 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
+import { generatePasscode, hashPasscode, passcodeErrorResponse } from '../_shared/passcode.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
 
 // Member portal, not the console — see kyc-review for why.
 const MEMBER_URL = Deno.env.get('MEMBER_URL') ?? 'https://my.abbiewealthsusu.com'
 const SIGNIN_URL = `${MEMBER_URL}/m/login`
-
-function generatePasscode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
 
 serveWithCors(async (req) => {
   const cors = handleCors(req)
@@ -86,7 +83,7 @@ serveWithCors(async (req) => {
 
     // Generate + hash passcode
     const passcode = generatePasscode()
-    const { data: hashData } = await supabaseAdmin.rpc('hash_passcode', { p_passcode: passcode })
+    const hashData = await hashPasscode(passcode)
 
     // Create member
     const { data: member, error: memErr } = await supabaseAdmin
@@ -98,7 +95,7 @@ serveWithCors(async (req) => {
         ghana_card_number,
         ghana_card_front_url:  frontUrl,
         ghana_card_back_url:   backUrl,
-        passcode_hash:         hashData ?? passcode,
+        passcode_hash:         hashData,
         status:                'active',
         date_of_birth:         (formData.get('date_of_birth') as string) || null,
         occupation:            (formData.get('occupation') as string) || null,
@@ -164,10 +161,6 @@ serveWithCors(async (req) => {
           slot_fraction: fraction,
         }
         let { data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single()
-        if (gmErr && /slot_fraction/.test(gmErr.message)) {
-          delete gmRow.slot_fraction
-          ;({ data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single())
-        }
         if (gmErr) return error(`Member created but assignment to "${group.name}" failed: ${gmErr.message}`, 500)
 
         if (payoutDate && gm) {
@@ -225,6 +218,8 @@ serveWithCors(async (req) => {
       portal_url: SIGNIN_URL,
     }, 201)
   } catch (e) {
+    const pc = passcodeErrorResponse(e, error)
+    if (pc) return pc
     console.error(e)
     return error('Internal server error: ' + (e as Error).message, 500)
   }

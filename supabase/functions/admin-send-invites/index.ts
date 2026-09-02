@@ -1,5 +1,6 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
+import { generatePasscode, hashPasscode, passcodeErrorResponse } from '../_shared/passcode.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
 
@@ -17,7 +18,6 @@ import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
 const MEMBER_URL = Deno.env.get('MEMBER_URL') ?? 'https://my.abbiewealthsusu.com'
 const SIGNIN_URL = `${MEMBER_URL}/m/login`
 
-const newPasscode = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 serveWithCors(async (req) => {
   const cors = handleCors(req)
@@ -54,11 +54,11 @@ serveWithCors(async (req) => {
 
     for (const m of members) {
       try {
-        const passcode = newPasscode()
-        const { data: hash } = await supabaseAdmin.rpc('hash_passcode', { p_passcode: passcode })
+        const passcode = generatePasscode()
+        const hash = await hashPasscode(passcode)
         const { error: upErr } = await supabaseAdmin
           .from('members')
-          .update({ passcode_hash: hash ?? passcode, credentials_sent_at: new Date().toISOString() })
+          .update({ passcode_hash: hash, credentials_sent_at: new Date().toISOString() })
           .eq('id', m.id)
         if (upErr) { failed.push({ member: m.full_name, reason: upErr.message }); continue }
 

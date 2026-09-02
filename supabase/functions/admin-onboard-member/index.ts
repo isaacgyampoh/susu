@@ -1,5 +1,6 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
+import { generatePasscode, hashPasscode, passcodeErrorResponse } from '../_shared/passcode.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
 
@@ -34,10 +35,6 @@ import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
 
 const MEMBER_URL = Deno.env.get('MEMBER_URL') ?? 'https://my.abbiewealthsusu.com'
 const SIGNIN_URL = `${MEMBER_URL}/m/login`
-
-function generatePasscode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
 
 function addDays(iso: string, n: number): string {
   const d = new Date(iso + 'T00:00:00Z')
@@ -82,7 +79,7 @@ serveWithCors(async (req) => {
       if (dup) return error(`A member with this phone already exists: ${dup.member_id} (${dup.full_name}). Choose "Existing member" instead.`, 409)
 
       passcode = generatePasscode()
-      const { data: hashData } = await supabaseAdmin.rpc('hash_passcode', { p_passcode: passcode })
+      const hashData = await hashPasscode(passcode)
 
       const { data: created, error: cErr } = await supabaseAdmin
         .from('members')
@@ -94,7 +91,7 @@ serveWithCors(async (req) => {
           email: nm.email || null,
           mobile_money_number:   nm.mobile_money_number || null,
           mobile_money_provider: nm.mobile_money_provider || null,
-          passcode_hash: hashData ?? passcode,
+          passcode_hash: hashData,
           status: 'active',
         })
         .select('id, member_id, full_name, phone')
@@ -174,18 +171,8 @@ serveWithCors(async (req) => {
           onboarded_existing: true,
           slot_fraction: fraction,
         }
-        let { data: membership, error: gmErr } = await supabaseAdmin
+        const { data: membership, error: gmErr } = await supabaseAdmin
           .from('group_memberships').insert(gmRow).select('id').single()
-        if (gmErr && /slot_fraction/.test(gmErr.message)) {
-          delete gmRow.slot_fraction
-          ;({ data: membership, error: gmErr } = await supabaseAdmin
-            .from('group_memberships').insert(gmRow).select('id').single())
-        }
-        if (gmErr && /onboarded_existing/.test(gmErr.message)) {
-          delete gmRow.onboarded_existing
-          ;({ data: membership, error: gmErr } = await supabaseAdmin
-            .from('group_memberships').insert(gmRow).select('id').single())
-        }
         if (gmErr || !membership) return error(`Membership failed for "${group.name}": ${gmErr?.message}`, 500)
 
         // ── Backfill PAID contributions for this slot, daily from start ──
@@ -230,12 +217,7 @@ serveWithCors(async (req) => {
         }
 
         for (let i = 0; i < rows.length; i += 400) {
-          let chunk = rows.slice(i, i + 400)
-          let { error: cErr } = await supabaseAdmin.from('contributions').insert(chunk)
-          if (cErr && /is_backfilled/.test(cErr.message)) {
-            chunk = chunk.map(({ is_backfilled: _drop, ...rest }) => rest)
-            ;({ error: cErr } = await supabaseAdmin.from('contributions').insert(chunk))
-          }
+          const { error: cErr } = await supabaseAdmin.from('contributions').insert(rows.slice(i, i + 400))
           if (cErr) return error(`Contribution backfill failed for "${group.name}": ${cErr.message}`, 500)
         }
 
@@ -303,6 +285,8 @@ serveWithCors(async (req) => {
       plans: results,
     }, 201)
   } catch (e) {
+    const pc = passcodeErrorResponse(e, error)
+    if (pc) return pc
     console.error(e)
     return error('Internal server error: ' + (e as Error).message, 500)
   }

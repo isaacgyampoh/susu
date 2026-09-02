@@ -1,17 +1,16 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
+import { generatePasscode, hashPasscode, passcodeErrorResponse } from '../_shared/passcode.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
 import { sendSMS, smsTemplates }   from '../_shared/africas-talking.ts'
+import { issueRegistrationToken }  from '../_shared/registration-token.ts'
+import { registrationPaymentUrl }  from '../_shared/urls.ts'
 
 // The member portal is a different hostname from the console. Deriving it from
 // FRONTEND_URL produced admin.abbiewealthsusu.com/m/login — a 404 in the
 // member's hand, because middleware blocks /m/* on the admin host.
 const MEMBER_URL = Deno.env.get('MEMBER_URL') ?? 'https://my.abbiewealthsusu.com'
 const SIGNIN_URL = `${MEMBER_URL}/m/login`
-
-function generatePasscode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
 
 serveWithCors(async (req) => {
   const cors = handleCors(req)
@@ -23,6 +22,59 @@ serveWithCors(async (req) => {
     if (!admin) return error('Unauthorized', 401)
     const url    = new URL(req.url)
     const status = url.searchParams.get('status') ?? 'pending'
+
+    // ── The registration queue ────────────────────────────────────────────
+    // Buckets are derived in `get_registration_queue()`, not in the browser.
+    // A console that computes "has this person paid?" from a list it fetched
+    // can disagree with the database; one that asks the database cannot.
+    if (url.searchParams.get('view') === 'queue') {
+      const bucket = url.searchParams.get('bucket') ?? 'all'
+      const valid = ['all', 'awaiting_payment', 'awaiting_review', 'approved', 'rejected']
+      if (!valid.includes(bucket)) return error(`bucket must be one of: ${valid.join(', ')}`, 400)
+      const { data, error: rpcErr } = await supabaseAdmin
+        .rpc('get_registration_queue', { p_bucket: bucket })
+      if (rpcErr) return error(rpcErr.message, 500)
+      return json(data)
+    }
+
+    // ── Re-issue an applicant's payment link ──────────────────────────────
+    // Tokens are stored hashed and cannot be recovered, so a lost link is
+    // replaced rather than resent. The new one supersedes the old.
+    if (url.searchParams.get('view') === 'reissue_link') {
+      const kycId = url.searchParams.get('id')
+      if (!kycId) return error('id is required', 400)
+      const { data: k } = await supabaseAdmin
+        .from('kyc_applications')
+        .select('id, full_name, phone, status, registration_fee_paid, registration_fee_amount')
+        .eq('id', kycId).maybeSingle()
+      if (!k) return error('Application not found', 404)
+      if (k.registration_fee_paid) return error('This fee is already paid', 400)
+      if (k.status === 'rejected')  return error('This application was rejected', 400)
+      if (Number(k.registration_fee_amount ?? 0) <= 0) return error('No fee is due', 400)
+
+      const link = await issueRegistrationToken()
+      await supabaseAdmin.from('kyc_applications').update({
+        payment_token_hash: link.hash,
+        payment_token_issued_at: new Date().toISOString(),
+        payment_token_expires_at: link.expiresAt,
+      }).eq('id', kycId)
+
+      const payUrl = registrationPaymentUrl(link.token)
+      await sendSMS(k.phone,
+        `Hi ${k.full_name.split(' ')[0]}, pay your GHS ${Number(k.registration_fee_amount).toFixed(2)} `
+      + `susu registration fee here: ${payUrl}`).catch(() => {})
+
+      await supabaseAdmin.from('audit_log').insert({
+        admin_id: admin.sub as string,
+        admin_name: (admin.full_name as string) ?? (admin.email as string) ?? 'admin',
+        action: 'registration.payment_link_reissued',
+        entity_type: 'kyc_application', entity_id: kycId, entity_label: k.full_name,
+        details: { expires_at: link.expiresAt, sent_to: k.phone },
+      })
+      // The token is returned once so the admin can pass it on directly if the
+      // SMS does not arrive. It is not stored anywhere it can be read back.
+      return json({ message: 'A new payment link has been sent by SMS.', payment_url: payUrl, expires_at: link.expiresAt })
+    }
 
     let query = supabaseAdmin
       .from('kyc_applications')
@@ -79,23 +131,51 @@ serveWithCors(async (req) => {
     if (action === 'mark_fee_paid') {
       if (kyc.registration_fee_paid) return error('Registration fee is already marked paid', 400)
 
-      await supabaseAdmin.from('kyc_applications')
-        .update({ registration_fee_paid: true })
-        .eq('id', kycId)
-
-      // If they're already a member (approved), put it on their money record
       const feeAmount = Number(kyc.registration_fee_amount ?? 0)
-      if (kyc.created_member_id && feeAmount > 0) {
-        await supabaseAdmin.from('transactions').insert({
-          member_id: kyc.created_member_id, type: 'registration_fee',
-          amount: feeAmount,
-          reference: `REG-MANUAL-${String(kycId).slice(0, 8)}-${Date.now()}`,
-          description: `Registration fee received manually (marked by admin)`,
-          status: 'success',
-        })
+
+      // ── PHASE 07 ─────────────────────────────────────────────────────────
+      // This used to flip `registration_fee_paid` first, and only then record
+      // a transaction — and only if the applicant already had a member record.
+      // For an applicant who did not, it wrote no transaction and no audit row
+      // at all: a bare flag saying money arrived, with nothing anywhere saying
+      // where from, how much, or who decided it.
+      //
+      // Seven production applications are in exactly that state, GHS 1,745
+      // between them, all from 19–21 July. They are left alone — reversing a
+      // fee flag on a live member on the strength of a missing record would be
+      // guessing at payment status — but the path that produced them is closed:
+      // the transaction and the audit row are now written FIRST, and the flag
+      // only follows if they succeeded. Invariant 12 fails if this recurs.
+      if (feeAmount <= 0) return error('This application has no fee due', 400)
+      if (typeof body.reason !== 'string' || body.reason.trim().length < 10) {
+        return error('Recording a fee received outside the app needs a reason of at least 10 characters — it is written to the audit log.', 400)
       }
+      const reason = body.reason.trim()
+      const ref = `REG-MANUAL-${String(kycId).slice(0, 8)}-${Date.now()}`
+
+      const { error: txErr } = await supabaseAdmin.from('transactions').insert({
+        member_id: kyc.created_member_id ?? null,
+        kyc_application_id: kycId,
+        type: 'registration_fee', amount: feeAmount, reference: ref, status: 'success',
+        description: `Registration fee received outside the app — recorded by ${admin.full_name ?? admin.email}. ${reason}`,
+      })
+      if (txErr) return error(`Could not record the payment: ${txErr.message}`, 500)
+
+      await supabaseAdmin.from('audit_log').insert({
+        admin_id: admin.sub as string,
+        admin_name: (admin.full_name as string) ?? (admin.email as string) ?? 'admin',
+        action: 'registration.marked_fee_paid',
+        entity_type: 'kyc_application', entity_id: kycId,
+        entity_label: `${kyc.full_name} — GHS ${feeAmount.toFixed(2)}`,
+        details: { reason, fee: feeAmount, reference: ref, recorded_outside_app: true },
+      })
+
+      await supabaseAdmin.from('kyc_applications')
+        .update({ registration_fee_paid: true, registration_fee_ref: ref })
+        .eq('id', kycId).eq('registration_fee_paid', false)
+
       await sendSMS(kyc.phone, `Hi ${kyc.full_name.split(' ')[0]}, we received your registration fee of GHS ${feeAmount.toLocaleString()}. Thank you!`)
-      return json({ message: 'Registration fee marked as paid' })
+      return json({ message: 'Registration fee recorded as received', reference: ref })
     }
 
     if (action === 'reject') {
@@ -104,6 +184,52 @@ serveWithCors(async (req) => {
         .eq('id', kycId)
       await sendSMS(kyc.phone, smsTemplates.applicationRejected(kyc.full_name, rejection_reason ?? 'Application did not meet requirements'))
       return json({ message: 'Application rejected' })
+    }
+
+    // ── REGISTRATION PAYMENT GATE ───────────────────────────────────────
+    // A submitted form does not make someone a paid member. Approval — which
+    // creates an ACTIVE member with live memberships, payout positions and a
+    // contribution schedule — now requires the registration fee to have been
+    // verified by the provider, OR an explicit, audited administrative
+    // override.
+    //
+    // Production showed why: 13 approved applications carry an unpaid fee
+    // totalling GHS 1,320.50, and five of them produced members who are still
+    // active. Those records are preserved and left for a business decision;
+    // this gate stops the count growing.
+    //
+    // The override never fabricates a payment. It records that a human
+    // decided to activate without one, and who decided it.
+    if (!kyc.registration_fee_paid && Number(kyc.registration_fee_amount ?? 0) > 0) {
+      const reason = typeof body.override_reason === 'string' ? body.override_reason.trim() : ''
+      if (!body.override_unpaid_fee) {
+        return json({
+          error: 'registration_fee_unpaid',
+          message:
+            `The registration fee of GHS ${Number(kyc.registration_fee_amount).toFixed(2)} has not been ` +
+            `received. Approving now would activate a membership that has not been paid for.`,
+          fee_due: Number(kyc.registration_fee_amount),
+          how_to_proceed:
+            'Either record the payment (action: mark_fee_paid) once it arrives, or approve with ' +
+            'override_unpaid_fee: true and an override_reason, which is written to the audit log.',
+        }, 402)
+      }
+      if (reason.length < 10) {
+        return error('An override needs a reason of at least 10 characters — it is written to the audit log.', 400)
+      }
+      await supabaseAdmin.from('audit_log').insert({
+        admin_id: admin.sub as string,
+        admin_name: (admin.name as string) ?? 'admin',
+        action: 'registration.approved_without_payment',
+        entity_type: 'kyc_application',
+        entity_id: kycId,
+        entity_label: `${kyc.full_name} — GHS ${Number(kyc.registration_fee_amount).toFixed(2)} unpaid`,
+        details: {
+          reason,
+          fee_due: Number(kyc.registration_fee_amount),
+          note: 'Membership activated without a verified registration fee. No payment record was created.',
+        },
+      })
     }
 
     // APPROVE — the applicant may have chosen several groups
@@ -150,7 +276,7 @@ serveWithCors(async (req) => {
     passcode = generatePasscode()
 
     // Hash the passcode using Postgres
-    const { data: hashData } = await supabaseAdmin.rpc('hash_passcode', { p_passcode: passcode })
+    const hashData = await hashPasscode(passcode)
 
     // Create member
     const { data: created, error: memErr } = await supabaseAdmin
@@ -161,7 +287,7 @@ serveWithCors(async (req) => {
         ghana_card_number: kyc.ghana_card_number,
         ghana_card_front_url: kyc.ghana_card_front_url,
         ghana_card_back_url:  kyc.ghana_card_back_url,
-        passcode_hash: hashData ?? passcode,
+        passcode_hash: hashData,
         status: 'active',
         date_of_birth: kyc.date_of_birth, occupation: kyc.occupation,
         residential_address: kyc.residential_address,
@@ -201,10 +327,33 @@ serveWithCors(async (req) => {
           payout_date: payoutDate, payout_amount: payoutAmount,
           slot_fraction: fraction,
         }
-        let { data: gm, error: gmE } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single()
-        if (gmE && /slot_fraction/.test(gmE.message)) {
-          delete gmRow.slot_fraction
-          ;({ data: gm } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single())
+        // A concurrent approval into the same group can pick the same position
+        // between our read of `used` and this insert. UNIQUE(group_id,
+        // payout_position) then rejects it — and the failure used to be
+        // swallowed, so the membership silently vanished while the applicant
+        // was told they had been approved. Retry on the collision, then fail
+        // loudly rather than continue with a membership that does not exist.
+        let gm: { id: string } | null = null
+        for (let attempt = 0; attempt < 5 && !gm; attempt++) {
+          const { data, error: gmE } = await supabaseAdmin
+            .from('group_memberships').insert(gmRow).select('id').single()
+          if (data) { gm = data; break }
+          const isPositionClash = gmE?.code === '23505' || /payout_position/.test(gmE?.message ?? '')
+          if (!isPositionClash) {
+            return error(`Approved, but assigning a slot in "${g.name}" failed: ${gmE?.message}`, 500)
+          }
+          // Someone took it first. Re-read the group's live positions and try again.
+          const { data: retaken } = await supabaseAdmin
+            .from('group_memberships').select('payout_position').eq('group_id', g.id)
+          const takenNow = new Set((retaken ?? []).map((r: any) => r.payout_position))
+          let p = 1
+          while (takenNow.has(p)) p++
+          gmRow.payout_position = p
+          nextPosition = p
+          used.add(p)
+        }
+        if (!gm) {
+          return error(`Could not find a free payout position in "${g.name}" after 5 attempts. Try again.`, 409)
         }
 
         if (payoutDate && gm) {
@@ -252,6 +401,10 @@ serveWithCors(async (req) => {
       skipped_full_groups: fullTargets.map(g => g.name),
     })
   } catch (e) {
+    // A passcode that could not be hashed must abort the whole approval —
+    // never fall through to writing the member with an unusable credential.
+    const pc = passcodeErrorResponse(e, error)
+    if (pc) return pc
     console.error(e)
     return error('Internal server error', 500)
   }

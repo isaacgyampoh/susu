@@ -204,10 +204,10 @@ export default function GroupsPage() {
               <div className="p-3 bg-tint border border-gold/50 rounded-[10px] space-y-2">
                 <p className="text-sm font-semibold text-ink">Backdating to {format(new Date(startDate), 'MMM d, yyyy')}</p>
                 <p className="text-xs text-ink-2 leading-relaxed">
-                  Each member's schedule starts from the later of this date and the day they joined.
+                  Each member&rsquo;s schedule starts from the later of this date and the day they joined.
                   Days already recorded as paid (from onboarding) are kept. Unpaid past days become arrears.
-                  Payout dates you've already set on members are preserved.
-                  Onboard existing members' history <strong>before</strong> activating, so they aren't shown owing days they already paid.
+                  Payout dates you&rsquo;ve already set on members are preserved.
+                  Onboard existing members&rsquo; history <strong>before</strong> activating, so they aren&rsquo;t shown owing days they already paid.
                 </p>
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input type="checkbox" checked={allowPast} onChange={e => setAllowPast(e.target.checked)}
@@ -223,7 +223,7 @@ export default function GroupsPage() {
                     className="w-4 h-4 mt-0.5 accent-green" />
                   <span className="text-xs text-ink leading-relaxed">
                     <strong>Recompute payout dates</strong> from the new start date and positions.
-                    Untick to keep every member's current payout date and only shift the daily schedule.
+                    Untick to keep every member&rsquo;s current payout date and only shift the daily schedule.
                   </span>
                 </label>
                 <label className="flex items-start gap-2 cursor-pointer">

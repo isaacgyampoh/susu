@@ -2,6 +2,35 @@ import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
 
+/**
+ * Everything the member portal renders.
+ *
+ * ────────────────────────────────────────────────────────────────────────
+ * Rebuilt in Phase 04 around get_member_portal_state(), a single database
+ * query that returns every active membership with its own complete financial
+ * position.
+ *
+ * What it replaces, and why:
+ *
+ *   N+1. The old version issued six fixed queries plus two more per
+ *   membership. The member who holds 30 memberships across 18 groups therefore
+ *   cost 66 round trips to open one screen — over a mobile connection, to an
+ *   edge function in another region.
+ *
+ *   TRUNCATED TOTALS. "Paid so far" was the sum of a 50-row window and "Still
+ *   to pay" a 30-row window. Past those limits the figures simply stopped
+ *   growing. For a member in 18 groups, 50 rows is under two days each; the
+ *   number a member read as their lifetime contribution had been wrong for a
+ *   long time. The projection aggregates in the database over every row.
+ *
+ *   A SILENT FALLBACK. On any RPC error the old code quietly switched from a
+ *   per-slot balance to a per-member-and-group one — a different number, with
+ *   nothing on screen to say which was being shown. Errors now surface.
+ *
+ * The response is membership-first by construction. There is no "current
+ * group" and no plans[0]: every membership is returned with its own
+ * obligations, coverage, credit and payout, and the portal renders all of them.
+ */
 serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
@@ -11,152 +40,73 @@ serveWithCors(async (req) => {
 
   try {
     const memberId = session.sub as string
+    const asOf = new Date().toISOString().slice(0, 10)   // Ghana is UTC+0
 
-    // Member profile
-    const { data: member, error: mErr } = await supabaseAdmin
-      .from('members')
-      .select('id, member_id, full_name, phone, email, whatsapp_number, status, occupation, residential_address, mobile_money_number, mobile_money_provider, bank_name, bank_account_number, bank_account_name, credit_balance, created_at')
-      .eq('id', memberId)
-      .single()
+    // ── The whole portal, in one query. ──────────────────────────────────
+    const { data: state, error: sErr } = await supabaseAdmin
+      .rpc('get_member_portal_state', { p_member_id: memberId, p_as_of: asOf })
+    if (sErr)  return error(`Could not load your account: ${sErr.message}`, 500)
+    if (!state) return error('Member not found', 404)
 
-    if (mErr || !member) return error('Member not found', 404)
+    const s = state as Record<string, any>
 
-    // ALL active memberships with group details + payout info
-    const { data: memberships } = await supabaseAdmin
-      .from('group_memberships')
-      .select(`
-        id, payout_position, payout_date, payout_amount, payout_received, status, joined_at,
-        susu_groups (
-          id, name, description, contribution_amount, contribution_frequency,
-          cycle_days, max_members, current_members, status, start_date, end_date,
-          cashout_amount, payment_deadline, penalty_per_late_day, registration_fee
-        )
-      `)
+    // ── Payment history, with what each payment actually covered. ────────
+    // Grouped by reference so one MoMo debit reads as one payment with its
+    // allocation breakdown, rather than as N unexplained lines.
+    const { data: allocs } = await supabaseAdmin
+      .from('payment_allocations')
+      .select('reference, group_name, membership_id, due_date, amount, kind, created_at')
       .eq('member_id', memberId)
-      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(200)
 
-    // For each membership build balance summary
-    const plansWithBalance = await Promise.all(
-      (memberships ?? []).map(async (m: any) => {
-        // Per-slot balance; fall back to the group-wide figure if the
-        // per-membership function isn't in the database yet
-        let { data: bal, error: balErr } = await supabaseAdmin.rpc('get_membership_balance', {
-          p_membership_id: m.id,
-        })
-        if (balErr) {
-          ;({ data: bal } = await supabaseAdmin.rpc('get_member_plan_balance', {
-            p_member_id: memberId, p_group_id: m.susu_groups.id,
-          }))
-        }
-        const balance = bal?.[0] ?? {}
-
-        // Next pending contribution for this group
-        const { data: nextContrib } = await supabaseAdmin
-          .from('contributions')
-          .select('id, amount, due_date, status, is_late, is_flagged, penalty_due')
-          .eq('membership_id', m.id)
-          .in('status', ['pending', 'overdue'])
-          .order('due_date', { ascending: true })
-          .limit(1)
-
-        return { ...m, balance, nextContribution: nextContrib?.[0] ?? null }
+    const byRef = new Map<string, {
+      reference: string; at: string; total: number
+      items: { group: string; membership_id: string; due_date: string; amount: number; kind: string }[]
+    }>()
+    for (const a of allocs ?? []) {
+      let g = byRef.get(a.reference)
+      if (!g) { g = { reference: a.reference, at: a.created_at, total: 0, items: [] }; byRef.set(a.reference, g) }
+      g.total += Number(a.amount)
+      g.items.push({
+        group: a.group_name, membership_id: a.membership_id,
+        due_date: a.due_date, amount: Number(a.amount), kind: a.kind,
       })
-    )
+    }
+    const payments = Array.from(byRef.values()).slice(0, 30)
 
-    // Recent payments across all groups (last 30)
-    const { data: recentPayments } = await supabaseAdmin
-      .from('contributions')
-      .select('id, amount, due_date, paid_at, status, paystack_ref, is_late, is_flagged, penalty_due, susu_groups(id, name)')
-      .eq('member_id', memberId)
-      .order('due_date', { ascending: false })
-      .limit(50)
-
-    // Pending / overdue across all groups
-    const { data: pendingContributions } = await supabaseAdmin
-      .from('contributions')
-      .select('id, amount, amount_paid, due_date, status, is_late, is_flagged, penalty_due, group_id, membership_id, susu_groups(id, name, payment_deadline), group_memberships(payout_position)')
-      .eq('member_id', memberId)
-      .in('status', ['pending', 'overdue'])
-      .order('due_date', { ascending: true })
-      .limit(30)
-
-    // All payouts
-    const { data: payouts } = await supabaseAdmin
-      .from('payouts')
-      .select('id, total_amount, scheduled_date, paid_at, status, susu_groups(id, name)')
-      .eq('member_id', memberId)
-      .order('scheduled_date', { ascending: true })
-
-    // Penalty balance
-    const { data: penalties } = await supabaseAdmin
-      .from('payment_penalties')
-      .select('id, amount, reason, is_paid, created_at, susu_groups(name)')
-      .eq('member_id', memberId)
-      .eq('is_paid', false)
-
-    // Announcements
-    const groupIds = (memberships ?? []).map((m: any) => m.susu_groups?.id).filter(Boolean)
-    const announcementQuery = supabaseAdmin
+    // ── Announcements and messages — small, bounded, unchanged. ──────────
+    const groupIds = (s.memberships ?? []).map((m: any) => m.group_id).filter(Boolean)
+    const annQuery = supabaseAdmin
       .from('announcements')
       .select('id, title, content, created_at, susu_groups(name)')
-      .order('created_at', { ascending: false })
-      .limit(10)
+      .order('created_at', { ascending: false }).limit(10)
+    const { data: announcements } = groupIds.length
+      ? await annQuery.or(`is_global.eq.true,group_id.in.(${groupIds.join(',')})`)
+      : await annQuery.eq('is_global', true)
 
-    const { data: announcements } = groupIds.length > 0
-      ? await announcementQuery.or(`is_global.eq.true,group_id.in.(${groupIds.join(',')})`)
-      : await announcementQuery.eq('is_global', true)
-
-    // Contact messages (member's own)
     const { data: myMessages } = await supabaseAdmin
       .from('contact_messages')
       .select('id, subject, message, is_read, reply_text, replied_at, created_at')
       .eq('member_id', memberId)
-      .order('created_at', { ascending: false })
-      .limit(10)
+      .order('created_at', { ascending: false }).limit(10)
 
-    // Global summary
-    // What recent payments covered — the day-by-day breakdown per payment,
-    // so the member sees a GHS 500 split across their groups.
-    const { data: allocs } = await supabaseAdmin
-      .from('payment_allocations')
-      .select('reference, group_name, amount, kind, created_at')
-      .eq('member_id', memberId)
-      .order('created_at', { ascending: false })
-      .limit(60)
-    const byRef = new Map<string, any>()
-    for (const a of allocs ?? []) {
-      if (!byRef.has(a.reference)) byRef.set(a.reference, { reference: a.reference, at: a.created_at, total: 0, items: [] })
-      const g = byRef.get(a.reference)
-      g.total += Number(a.amount)
-      g.items.push({ group: a.group_name, amount: Number(a.amount), kind: a.kind })
-    }
-    const paymentBreakdowns = Array.from(byRef.values()).slice(0, 20)
-
-    const totalPaidAll    = (recentPayments ?? []).filter((c: any) => c.status === 'paid').reduce((s: number, c: any) => s + Number(c.amount), 0)
-    const totalPendingAll = (pendingContributions ?? []).reduce((s: number, c: any) => s + Number(c.amount), 0)
-    const totalPenalties  = (penalties ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0)
-    const nextPayout      = (payouts ?? []).find((p: any) => p.status === 'upcoming')
+    const { data: penalties } = await supabaseAdmin
+      .from('payment_penalties')
+      .select('id, amount, reason, is_paid, created_at, susu_groups(name)')
+      .eq('member_id', memberId).eq('is_paid', false)
 
     return json({
-      member,
-      plans: plansWithBalance,          // memberships enriched with balance + next contribution
-      pendingContributions,
-      recentPayments,
-      paymentBreakdowns,
-      credit: Number((member as any).credit_balance ?? 0),
-      payouts,
-      penalties,
-      announcements,
-      myMessages,
-      summary: {
-        totalPaidAll,
-        totalPendingAll,
-        totalPenalties,
-        activePlans:      (memberships ?? []).length,
-        nextPayoutDate:   nextPayout?.scheduled_date ?? null,
-        nextPayoutAmount: nextPayout?.total_amount ?? null,
-        nextPayoutGroup:  (nextPayout as any)?.susu_groups?.name ?? null,
-      },
+      as_of: s.as_of,
+      member: s.member,
+      /** Every active membership, each financially independent. */
+      memberships: s.memberships,
+      /** Aggregates across all memberships, computed in the database. */
+      totals: s.totals,
+      payments,
+      penalties: penalties ?? [],
+      announcements: announcements ?? [],
+      myMessages: myMessages ?? [],
     })
   } catch (e) {
     console.error(e)

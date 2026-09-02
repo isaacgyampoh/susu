@@ -7,7 +7,9 @@ serveWithCors(async (req) => {
   if (cors) return cors
   if (req.method !== 'POST') return error('Method not allowed', 405, req)
 
-  const admin = await requireAdmin(req)
+  // The ONE endpoint that accepts a token issued against a default password —
+  // otherwise the account could never get out of the state.
+  const admin = await requireAdmin(req, true)
   if (!admin) return error('Unauthorized', 401, req)
 
   try {

@@ -328,7 +328,7 @@ export default function AddMemberPage() {
                             onClick={e => e.stopPropagation()}
                             onChange={e => setPayoutDates(prev => ({ ...prev, [g.id]: e.target.value }))}
                             className="px-3 py-1.5 bg-white border border-line text-ink rounded-[8px] text-xs focus:outline-none focus:border-ink" />
-                          <span className="text-[11px] text-ink-3">when they'll receive GHS {Number(g.cashout_amount ?? 0).toLocaleString()}</span>
+                          <span className="text-[11px] text-ink-3">when they&rsquo;ll receive GHS {Number(g.cashout_amount ?? 0).toLocaleString()}</span>
                         </span>
                       </span>
                     )}

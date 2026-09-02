@@ -32,7 +32,7 @@ export function cors(req: Request): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': originFor(req),
     'Access-Control-Allow-Headers':
-      'authorization, x-client-info, apikey, content-type, x-member-token, x-admin-token, x-paystack-signature, x-cron-secret',
+      'authorization, x-client-info, apikey, content-type, x-member-token, x-admin-token, x-cron-secret',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin',
@@ -43,7 +43,7 @@ export function cors(req: Request): Record<string, string> {
 export const corsHeaders = {
   'Access-Control-Allow-Origin': ALLOWED[0],
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-member-token, x-admin-token, x-paystack-signature, x-cron-secret',
+    'authorization, x-client-info, apikey, content-type, x-member-token, x-admin-token, x-cron-secret',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'Vary': 'Origin',
 }

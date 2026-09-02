@@ -1,0 +1,178 @@
+[
+ {
+  "signature": "activate_group(uuid,date,boolean,boolean,boolean)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "27dae29e71dd1d0e7c21a948cc94cbfb",
+  "body_lines": 92,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.activate_group(p_group_id uuid, p_start_date date, p_force boolean DEFAULT false, p_allow_past boolean DEFAULT false, p_recompute_payouts boolean DEFAULT NULL::boolean)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_group        susu_groups%ROWTYPE;\n  v_mem          group_memberships%ROWTYPE;\n  v_cashout      DECIMAL(10,2);\n  v_total_days   INTEGER;\n  v_paid_count   INTEGER;\n  v_end_date     DATE;\n  v_mem_start    DATE;\n  v_offset       INTEGER;\n  v_payout_date  DATE;\n  v_payout_amt   DECIMAL(10,2);\n  v_recompute    BOOLEAN;\n  v_frac         NUMERIC(3,2);\nBEGIN\n  SELECT * INTO v_group FROM susu_groups WHERE id = p_group_id;\n  IF v_group.id IS NULL THEN RAISE EXCEPTION 'Group not found'; END IF;\n\n  IF v_group.status = 'completed' THEN\n    RAISE EXCEPTION 'This group has completed and cannot be re-activated';\n  END IF;\n\n  IF p_start_date < CURRENT_DATE AND NOT p_allow_past THEN\n    RAISE EXCEPTION 'Start date is in the past. Tick the confirmation to backdate a group that genuinely started on %.', p_start_date;\n  END IF;\n\n  IF v_group.status = 'active' AND NOT p_force THEN\n    SELECT COUNT(*) INTO v_paid_count\n    FROM contributions WHERE group_id = p_group_id AND status = 'paid';\n    IF v_paid_count > 0 THEN\n      RAISE EXCEPTION 'Group is already active with % paid contributions. Re-activating would rebuild the schedule and move collection dates.', v_paid_count;\n    END IF;\n  END IF;\n\n  IF (SELECT COUNT(*) FROM group_memberships WHERE group_id = p_group_id AND status = 'active') = 0 THEN\n    RAISE EXCEPTION 'Cannot activate a group with no active members';\n  END IF;\n\n  v_cashout    := COALESCE(v_group.cashout_amount,\n                    v_group.contribution_amount * v_group.max_members * v_group.cycle_days);\n  v_total_days := v_group.max_members * v_group.cycle_days;\n  v_end_date   := p_start_date + v_total_days;\n  v_recompute  := COALESCE(p_recompute_payouts, p_force);\n\n  UPDATE susu_groups\n  SET start_date = p_start_date, end_date = v_end_date, status = 'active'\n  WHERE id = p_group_id;\n\n  DELETE FROM contributions WHERE group_id = p_group_id AND status IN ('pending','overdue');\n  DELETE FROM payouts       WHERE group_id = p_group_id AND status = 'upcoming';\n\n  FOR v_mem IN\n    SELECT * FROM group_memberships\n    WHERE group_id = p_group_id AND status = 'active'\n    ORDER BY payout_position\n  LOOP\n    v_mem_start := GREATEST(p_start_date, COALESCE(v_mem.joined_at::DATE, p_start_date));\n    v_frac      := COALESCE(v_mem.slot_fraction, 1);\n\n    IF v_recompute THEN\n      v_payout_date := p_start_date + (v_mem.payout_position * v_group.cycle_days);\n      v_payout_amt  := ROUND(v_cashout * v_frac, 2);\n    ELSE\n      v_payout_date := COALESCE(v_mem.payout_date,\n                         p_start_date + (v_mem.payout_position * v_group.cycle_days));\n      v_payout_amt  := COALESCE(v_mem.payout_amount, ROUND(v_cashout * v_frac, 2));\n    END IF;\n\n    UPDATE group_memberships\n    SET payout_date = v_payout_date, payout_amount = v_payout_amt\n    WHERE id = v_mem.id;\n\n    IF NOT COALESCE(v_mem.payout_received, false) THEN\n      INSERT INTO payouts (member_id, group_id, membership_id, total_amount, scheduled_date, status)\n      VALUES (v_mem.member_id, p_group_id, v_mem.id, v_payout_amt, v_payout_date, 'upcoming');\n    END IF;\n\n    v_offset := v_mem_start - p_start_date;\n    FOR i IN v_offset..(v_total_days - 1) LOOP\n      IF NOT EXISTS (\n        SELECT 1 FROM contributions\n        WHERE membership_id = v_mem.id AND due_date = p_start_date + i\n      ) THEN\n        INSERT INTO contributions (member_id, group_id, membership_id, amount, due_date, status, cycle_number)\n        VALUES (v_mem.member_id, p_group_id, v_mem.id,\n                ROUND(v_group.contribution_amount * v_frac, 2),\n                p_start_date + i, 'pending', FLOOR(i::FLOAT / v_group.cycle_days) + 1);\n      END IF;\n    END LOOP;\n  END LOOP;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "change_admin_password(uuid,text,text)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "0bd487e3eff0fee9e3d309f92188b703",
+  "body_lines": 24,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.change_admin_password(p_admin_id uuid, p_current text, p_new text)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE v_ok BOOLEAN;\nBEGIN\n  SELECT (password_hash = crypt(p_current, password_hash)) INTO v_ok\n  FROM admin_users WHERE id = p_admin_id AND is_active = true;\n\n  IF NOT COALESCE(v_ok, false) THEN RETURN false; END IF;\n\n  IF length(p_new) < 10 THEN\n    RAISE EXCEPTION 'Password must be at least 10 characters';\n  END IF;\n  IF p_new = 'Admin@1234' THEN\n    RAISE EXCEPTION 'Choose a password that is not the shipped default';\n  END IF;\n\n  UPDATE admin_users\n  SET password_hash        = crypt(p_new, gen_salt('bf')),\n      must_change_password = false,\n      token_version        = COALESCE(token_version, 0) + 1\n  WHERE id = p_admin_id;\n\n  RETURN true;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "check_login_allowed(text,text)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "db5286e56ca820ae674542db9e2ac259",
+  "body_lines": 18,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.check_login_allowed(p_identifier text, p_kind text)\n RETURNS TABLE(allowed boolean, retry_after_seconds integer)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_fails INTEGER;\n  v_last  TIMESTAMPTZ;\nBEGIN\n  SELECT COUNT(*), MAX(attempted_at) INTO v_fails, v_last\n  FROM login_attempts\n  WHERE identifier = p_identifier AND kind = p_kind\n    AND NOT succeeded AND attempted_at > NOW() - INTERVAL '15 minutes';\n\n  IF v_fails >= 5 THEN\n    RETURN QUERY SELECT false,\n      GREATEST(0, EXTRACT(EPOCH FROM (v_last + INTERVAL '15 minutes' - NOW()))::INTEGER);\n  ELSE\n    RETURN QUERY SELECT true, 0;\n  END IF;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "check_payout_eligibility(uuid)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "e1a6c7de23c5f1fe9f48d403edd5ddb9",
+  "body_lines": 60,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.check_payout_eligibility(p_payout_id uuid)\n RETURNS TABLE(eligible boolean, reason text, gross_amount numeric, outstanding_contrib numeric, outstanding_penalty numeric, registration_fee numeric, net_amount numeric, contributions_paid integer, contributions_due integer)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_payout   payouts%ROWTYPE;\n  v_group    susu_groups%ROWTYPE;\n  v_out_c    DECIMAL := 0;\n  v_out_p    DECIMAL := 0;\n  v_paid     INTEGER := 0;\n  v_due      INTEGER := 0;\n  v_net      DECIMAL := 0;\n  v_eligible BOOLEAN := true;\n  v_reason   TEXT := 'Member is eligible for payout';\nBEGIN\n  SELECT * INTO v_payout FROM payouts WHERE id = p_payout_id;\n  IF v_payout.id IS NULL THEN\n    RETURN QUERY SELECT false, 'Payout not found'::TEXT, 0::DECIMAL, 0::DECIMAL, 0::DECIMAL, 0::DECIMAL, 0::DECIMAL, 0, 0;\n    RETURN;\n  END IF;\n\n  SELECT * INTO v_group FROM susu_groups WHERE id = v_payout.group_id;\n\n  -- Contributions for THIS slot only (fall back to member+group for any\n  -- legacy payout row without a membership link)\n  SELECT\n    COALESCE(SUM(CASE WHEN status IN ('pending','overdue') THEN amount ELSE 0 END), 0),\n    COUNT(CASE WHEN status = 'paid' THEN 1 END),\n    COUNT(*)\n  INTO v_out_c, v_paid, v_due\n  FROM contributions\n  WHERE (\n      (v_payout.membership_id IS NOT NULL AND membership_id = v_payout.membership_id)\n      OR\n      (v_payout.membership_id IS NULL AND member_id = v_payout.member_id AND group_id = v_payout.group_id)\n    )\n    AND due_date <= v_payout.scheduled_date;\n\n  -- Penalties: member+group; the release flow settles them so they only\n  -- ever deduct once, on the first payout\n  SELECT COALESCE(SUM(amount), 0) INTO v_out_p\n  FROM payment_penalties\n  WHERE member_id = v_payout.member_id\n    AND group_id  = v_payout.group_id\n    AND NOT is_paid;\n\n  -- The registration fee is commission. It is NOT added here.\n  v_net := v_payout.total_amount - v_out_c - v_out_p;\n\n  IF v_out_c > 0 THEN\n    v_eligible := false;\n    v_reason := 'This slot has GHS ' || v_out_c::TEXT || ' in unpaid contributions due before its payout date';\n  ELSIF v_out_p > 0 THEN\n    v_eligible := true;\n    v_reason := 'Eligible \u2014 GHS ' || v_out_p::TEXT || ' in penalties will be deducted';\n  END IF;\n\n  RETURN QUERY SELECT\n    v_eligible, v_reason, v_payout.total_amount, v_out_c, v_out_p,\n    COALESCE(v_group.registration_fee, 0),\n    v_net, v_paid, v_due;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "flag_late_contributions()",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "0fe73efcf1b2efed62ac3ab3c7d5a47b",
+  "body_lines": 41,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.flag_late_contributions()\n RETURNS integer\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE updated_count INTEGER;\nBEGIN\n  UPDATE contributions c\n  SET is_late    = true,\n      is_flagged = true,\n      flagged_at = NOW(),\n      status     = 'overdue'\n  FROM susu_groups g\n  WHERE c.group_id = g.id\n    AND c.status   = 'pending'\n    AND c.due_date <= CURRENT_DATE\n    AND CURRENT_TIME > g.payment_deadline;\n\n  GET DIAGNOSTICS updated_count = ROW_COUNT;\n\n  -- Create penalty records for newly flagged contributions\n  INSERT INTO payment_penalties (member_id, group_id, contribution_id, amount, reason)\n  SELECT c.member_id, c.group_id, c.id, g.penalty_per_late_day,\n         'Late payment \u2013 ' || c.due_date::TEXT\n  FROM contributions c\n  JOIN susu_groups g ON g.id = c.group_id\n  WHERE c.is_flagged    = true\n    AND c.flagged_at::DATE = CURRENT_DATE\n    AND g.penalty_per_late_day > 0\n    AND NOT EXISTS (\n      SELECT 1 FROM payment_penalties p WHERE p.contribution_id = c.id\n    );\n\n  -- Sync penalty_due onto contributions\n  UPDATE contributions c\n  SET penalty_due = g.penalty_per_late_day\n  FROM susu_groups g\n  WHERE c.group_id = g.id\n    AND c.is_flagged   = true\n    AND c.penalty_due  = 0\n    AND g.penalty_per_late_day > 0;\n\n  RETURN updated_count;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "forfeit_membership(uuid,text,uuid)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "f4c0a4b64cc6a197f13e201cff1742f0",
+  "body_lines": 36,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.forfeit_membership(p_membership_id uuid, p_reason text, p_admin_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_m group_memberships%ROWTYPE;\n  v_remaining INTEGER;\nBEGIN\n  SELECT * INTO v_m FROM group_memberships WHERE id = p_membership_id;\n  IF v_m.id IS NULL THEN RAISE EXCEPTION 'Membership not found'; END IF;\n  IF v_m.payout_received THEN RAISE EXCEPTION 'Cannot forfeit \u2014 member has already received their payout'; END IF;\n  IF v_m.status = 'defaulted' THEN RAISE EXCEPTION 'This slot is already forfeited'; END IF;\n\n  UPDATE group_memberships\n  SET status = 'defaulted', forfeited_at = NOW(), forfeit_reason = p_reason\n  WHERE id = p_membership_id;\n\n  -- Free the slot in the group's live count (and reopen a full group)\n  UPDATE susu_groups\n  SET current_members = GREATEST(current_members - 1, 0),\n      status = CASE WHEN status = 'full' THEN 'open' ELSE status END\n  WHERE id = v_m.group_id;\n\n  -- Cancel this slot's future contributions and upcoming payout only\n  DELETE FROM contributions\n  WHERE membership_id = p_membership_id AND status IN ('pending','overdue');\n  DELETE FROM payouts\n  WHERE membership_id = p_membership_id AND status = 'upcoming';\n\n  -- Suspend the account ONLY if no active membership remains anywhere\n  SELECT COUNT(*) INTO v_remaining\n  FROM group_memberships\n  WHERE member_id = v_m.member_id AND status = 'active';\n\n  IF v_remaining = 0 THEN\n    UPDATE members SET status = 'suspended' WHERE id = v_m.member_id;\n  END IF;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "generate_membership_schedule(uuid)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "68077d178145b1c991fafeae358233f1",
+  "body_lines": 41,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.generate_membership_schedule(p_membership_id uuid)\n RETURNS integer\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_mem        group_memberships%ROWTYPE;\n  v_group      susu_groups%ROWTYPE;\n  v_frac       NUMERIC := 1;\n  v_total_days INTEGER;\n  v_mem_start  DATE;\n  v_offset     INTEGER;\n  v_inserted   INTEGER := 0;\nBEGIN\n  SELECT * INTO v_mem FROM group_memberships WHERE id = p_membership_id;\n  IF v_mem.id IS NULL THEN RETURN 0; END IF;\n\n  SELECT * INTO v_group FROM susu_groups WHERE id = v_mem.group_id;\n  IF v_group.status <> 'active' OR v_group.start_date IS NULL THEN RETURN 0; END IF;\n\n  -- slot_fraction arrived in v15; read it tolerantly so this works either way\n  v_frac := COALESCE((to_jsonb(v_mem)->>'slot_fraction')::NUMERIC, 1);\n\n  v_total_days := v_group.max_members * v_group.cycle_days;\n  v_mem_start  := GREATEST(v_group.start_date, COALESCE(v_mem.joined_at::DATE, v_group.start_date));\n  v_offset     := v_mem_start - v_group.start_date;\n  IF v_offset < 0 THEN v_offset := 0; END IF;\n\n  FOR i IN v_offset..(v_total_days - 1) LOOP\n    IF NOT EXISTS (\n      SELECT 1 FROM contributions\n      WHERE membership_id = p_membership_id AND due_date = v_group.start_date + i\n    ) THEN\n      INSERT INTO contributions (member_id, group_id, membership_id, amount, due_date, status, cycle_number)\n      VALUES (v_mem.member_id, v_mem.group_id, p_membership_id,\n              ROUND(v_group.contribution_amount * v_frac, 2),\n              v_group.start_date + i, 'pending',\n              FLOOR(i::FLOAT / v_group.cycle_days) + 1);\n      v_inserted := v_inserted + 1;\n    END IF;\n  END LOOP;\n\n  RETURN v_inserted;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "get_collection_trend(integer)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "1fe76f71e58b14ad9af1cbaa31030488",
+  "body_lines": 15,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.get_collection_trend(p_days integer DEFAULT 14)\n RETURNS TABLE(day date, expected numeric, collected numeric, rate numeric)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  RETURN QUERY\n  SELECT\n    d::DATE,\n    COALESCE(SUM(c.amount), 0),\n    COALESCE(SUM(CASE WHEN c.status='paid' THEN c.amount ELSE 0 END), 0),\n    CASE WHEN COALESCE(SUM(c.amount),0) > 0\n      THEN ROUND((COALESCE(SUM(CASE WHEN c.status='paid' THEN c.amount ELSE 0 END),0) / SUM(c.amount))*100, 1)\n      ELSE 0 END\n  FROM generate_series(CURRENT_DATE - (p_days - 1), CURRENT_DATE, '1 day'::interval) d\n  LEFT JOIN contributions c ON c.due_date = d::DATE\n  GROUP BY d ORDER BY d;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "get_group_financials(uuid)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "3c6c3405e568e11221b3d687d6083a5f",
+  "body_lines": 47,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.get_group_financials(p_group_id uuid)\n RETURNS TABLE(expected_total numeric, collected_total numeric, outstanding_total numeric, overdue_total numeric, penalties_total numeric, reg_fees_total numeric, paid_out_total numeric, pending_payouts numeric, balance numeric, collection_rate numeric, member_count integer, active_members integer, defaulted_members integer)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_expected DECIMAL := 0; v_collected DECIMAL := 0;\n  v_outstanding DECIMAL := 0; v_overdue DECIMAL := 0;\n  v_penalties DECIMAL := 0; v_regfees DECIMAL := 0;\n  v_paidout DECIMAL := 0; v_pendingout DECIMAL := 0;\n  v_due_todate DECIMAL := 0;\n  v_mc INTEGER := 0; v_ac INTEGER := 0; v_dc INTEGER := 0;\nBEGIN\n  SELECT\n    COALESCE(SUM(amount), 0),\n    COALESCE(SUM(CASE WHEN status = 'paid'    THEN amount ELSE 0 END), 0),\n    COALESCE(SUM(CASE WHEN status IN ('pending','overdue') THEN amount ELSE 0 END), 0),\n    COALESCE(SUM(CASE WHEN status = 'overdue' THEN amount ELSE 0 END), 0),\n    COALESCE(SUM(CASE WHEN due_date <= CURRENT_DATE THEN amount ELSE 0 END), 0)\n  INTO v_expected, v_collected, v_outstanding, v_overdue, v_due_todate\n  FROM contributions WHERE group_id = p_group_id;\n\n  SELECT COALESCE(SUM(amount), 0) INTO v_penalties\n  FROM payment_penalties WHERE group_id = p_group_id AND NOT is_paid;\n\n  SELECT COALESCE(SUM(t.amount), 0) INTO v_regfees\n  FROM transactions t\n  WHERE t.type = 'registration_fee' AND t.status = 'success'\n    AND t.member_id IN (SELECT member_id FROM group_memberships WHERE group_id = p_group_id);\n\n  SELECT\n    COALESCE(SUM(CASE WHEN status = 'paid'     THEN total_amount ELSE 0 END), 0),\n    COALESCE(SUM(CASE WHEN status != 'paid'    THEN total_amount ELSE 0 END), 0)\n  INTO v_paidout, v_pendingout\n  FROM payouts WHERE group_id = p_group_id;\n\n  SELECT\n    COUNT(*),\n    COUNT(CASE WHEN status = 'active'    THEN 1 END),\n    COUNT(CASE WHEN status = 'defaulted' THEN 1 END)\n  INTO v_mc, v_ac, v_dc\n  FROM group_memberships WHERE group_id = p_group_id;\n\n  RETURN QUERY SELECT\n    v_expected, v_collected, v_outstanding, v_overdue,\n    v_penalties, v_regfees, v_paidout, v_pendingout,\n    (v_collected + v_regfees - v_paidout),\n    CASE WHEN v_due_todate > 0 THEN ROUND((v_collected / v_due_todate) * 100, 1) ELSE 0 END,\n    v_mc, v_ac, v_dc;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "get_member_plan_balance(uuid,uuid)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "9bd9b5b3a61a3dc8d6fdd8af0e1eb72a",
+  "body_lines": 15,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.get_member_plan_balance(p_member_id uuid, p_group_id uuid)\n RETURNS TABLE(total_paid numeric, total_remaining numeric, total_overdue numeric, penalty_balance numeric, contributions_paid integer, contributions_total integer)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  RETURN QUERY\n  SELECT\n    COALESCE(SUM(CASE WHEN c.status = 'paid'    THEN c.amount ELSE 0 END), 0),\n    COALESCE(SUM(CASE WHEN c.status IN ('pending','overdue') THEN c.amount ELSE 0 END), 0),\n    COALESCE(SUM(CASE WHEN c.status = 'overdue' THEN c.amount ELSE 0 END), 0),\n    COALESCE((SELECT SUM(p.amount) FROM payment_penalties p\n              WHERE p.member_id = p_member_id AND p.group_id = p_group_id AND NOT p.is_paid), 0),\n    COUNT(CASE WHEN c.status = 'paid' THEN 1 END)::INTEGER,\n    COUNT(*)::INTEGER\n  FROM contributions c\n  WHERE c.member_id = p_member_id AND c.group_id = p_group_id;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "get_member_statement(uuid)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "e73ff521cac241c3b1b288b18091c586",
+  "body_lines": 46,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.get_member_statement(p_member_id uuid)\n RETURNS TABLE(entry_date date, entry_type text, description text, debit numeric, credit numeric, status text, reference text)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  RETURN QUERY\n  -- Contributions (money in)\n  SELECT\n    c.due_date,\n    'contribution'::TEXT,\n    ('Contribution \u2014 ' || g.name)::TEXT,\n    0::DECIMAL,\n    CASE WHEN c.status = 'paid' THEN c.amount ELSE 0 END,\n    c.status::TEXT,\n    COALESCE(c.paystack_ref, '')::TEXT\n  FROM contributions c\n  JOIN susu_groups g ON g.id = c.group_id\n  WHERE c.member_id = p_member_id\n\n  UNION ALL\n  -- Payouts (money out)\n  SELECT\n    p.scheduled_date,\n    'payout'::TEXT,\n    ('Cashout \u2014 ' || g.name)::TEXT,\n    p.total_amount,\n    0::DECIMAL,\n    p.status::TEXT,\n    COALESCE(p.paystack_transfer_ref, '')::TEXT\n  FROM payouts p\n  JOIN susu_groups g ON g.id = p.group_id\n  WHERE p.member_id = p_member_id\n\n  UNION ALL\n  -- Penalties\n  SELECT\n    pp.created_at::DATE,\n    'penalty'::TEXT,\n    pp.reason::TEXT,\n    pp.amount,\n    0::DECIMAL,\n    CASE WHEN pp.is_paid THEN 'paid' ELSE 'outstanding' END::TEXT,\n    ''::TEXT\n  FROM payment_penalties pp\n  WHERE pp.member_id = p_member_id\n\n  ORDER BY 1 DESC;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "get_membership_balance(uuid)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "ab29b1ef3bfc3eff482f0387c5c6f7a3",
+  "body_lines": 16,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.get_membership_balance(p_membership_id uuid)\n RETURNS TABLE(total_paid numeric, total_remaining numeric, total_overdue numeric, penalty_balance numeric, contributions_paid integer, contributions_total integer)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  RETURN QUERY\n  SELECT\n    COALESCE(SUM(CASE WHEN c.status = 'paid'    THEN c.amount ELSE 0 END), 0),\n    COALESCE(SUM(CASE WHEN c.status IN ('pending','overdue') THEN c.amount ELSE 0 END), 0),\n    COALESCE(SUM(CASE WHEN c.status = 'overdue' THEN c.amount ELSE 0 END), 0),\n    COALESCE((SELECT SUM(p.amount) FROM payment_penalties p\n              JOIN contributions pc ON pc.id = p.contribution_id\n              WHERE pc.membership_id = p_membership_id AND NOT p.is_paid), 0),\n    COUNT(CASE WHEN c.status = 'paid' THEN 1 END)::INTEGER,\n    COUNT(*)::INTEGER\n  FROM contributions c\n  WHERE c.membership_id = p_membership_id;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "get_platform_analytics()",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "c91f0724912bf055c8fb4c8ee187e586",
+  "body_lines": 34,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.get_platform_analytics()\n RETURNS TABLE(collected_today numeric, collected_this_week numeric, collected_this_month numeric, due_today numeric, paid_today_count integer, due_today_count integer, collection_rate_today numeric, total_outstanding numeric, total_overdue numeric, active_members integer, defaulted_members integer, payouts_due_7d numeric, payouts_due_30d numeric)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_due_today_amt DECIMAL := 0;\n  v_paid_today_amt DECIMAL := 0;\n  v_dtc INTEGER := 0; v_ptc INTEGER := 0;\nBEGIN\n  SELECT\n    COALESCE(SUM(amount), 0),\n    COUNT(*),\n    COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END), 0),\n    COUNT(CASE WHEN status='paid' THEN 1 END)\n  INTO v_due_today_amt, v_dtc, v_paid_today_amt, v_ptc\n  FROM contributions WHERE due_date = CURRENT_DATE;\n\n  RETURN QUERY SELECT\n    v_paid_today_amt,\n    (SELECT COALESCE(SUM(amount),0) FROM contributions\n      WHERE status='paid' AND paid_at >= date_trunc('week', CURRENT_DATE)),\n    (SELECT COALESCE(SUM(amount),0) FROM contributions\n      WHERE status='paid' AND paid_at >= date_trunc('month', CURRENT_DATE)),\n    v_due_today_amt,\n    v_ptc,\n    v_dtc,\n    CASE WHEN v_due_today_amt > 0 THEN ROUND((v_paid_today_amt / v_due_today_amt)*100, 1) ELSE 0 END,\n    (SELECT COALESCE(SUM(amount),0) FROM contributions WHERE status IN ('pending','overdue')),\n    (SELECT COALESCE(SUM(amount),0) FROM contributions WHERE status = 'overdue'),\n    (SELECT COUNT(*)::INTEGER FROM members WHERE status='active'),\n    (SELECT COUNT(*)::INTEGER FROM group_memberships WHERE status='defaulted'),\n    (SELECT COALESCE(SUM(total_amount),0) FROM payouts\n      WHERE status='upcoming' AND scheduled_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 7),\n    (SELECT COALESCE(SUM(total_amount),0) FROM payouts\n      WHERE status='upcoming' AND scheduled_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 30);\nEND;\n$function$\n"
+ },
+ {
+  "signature": "hash_passcode(text)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "dc29551007f724e44a77f929e18a32bf",
+  "body_lines": 5,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.hash_passcode(p_passcode text)\n RETURNS text\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  RETURN crypt(p_passcode, gen_salt('bf'));\nEND;\n$function$\n"
+ },
+ {
+  "signature": "mark_overdue_contributions()",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "1b6f708a3d599baf8af3aa0c3a98d5f2",
+  "body_lines": 10,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.mark_overdue_contributions()\n RETURNS integer\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE updated_count INTEGER;\nBEGIN\n  UPDATE contributions\n  SET status = 'overdue'\n  WHERE status = 'pending' AND due_date < CURRENT_DATE;\n  GET DIAGNOSTICS updated_count = ROW_COUNT;\n  RETURN updated_count;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "record_login_attempt(text,text,boolean)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "7eaf13646ee0bf6b86dd2f6b6088a478",
+  "body_lines": 12,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.record_login_attempt(p_identifier text, p_kind text, p_ok boolean)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  INSERT INTO login_attempts (identifier, kind, succeeded) VALUES (p_identifier, p_kind, p_ok);\n  -- On success, clear the slate\n  IF p_ok THEN\n    DELETE FROM login_attempts\n    WHERE identifier = p_identifier AND kind = p_kind AND NOT succeeded;\n  END IF;\n  -- Housekeeping\n  DELETE FROM login_attempts WHERE attempted_at < NOW() - INTERVAL '24 hours';\nEND;\n$function$\n"
+ },
+ {
+  "signature": "record_partial_payment(uuid,numeric,text,text)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "9f3fa7af70086a35c79397a80076a9d9",
+  "body_lines": 23,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.record_partial_payment(p_contribution_id uuid, p_amount numeric, p_method text DEFAULT 'cash'::text, p_note text DEFAULT NULL::text)\n RETURNS TABLE(paid_so_far numeric, fully_paid boolean, amount_due numeric)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE\n  v_c contributions%ROWTYPE;\n  v_new DECIMAL;\n  v_done BOOLEAN;\nBEGIN\n  SELECT * INTO v_c FROM contributions WHERE id = p_contribution_id;\n  IF v_c.id IS NULL THEN RAISE EXCEPTION 'Contribution not found'; END IF;\n\n  v_new  := LEAST(v_c.amount, COALESCE(v_c.amount_paid, 0) + p_amount);\n  v_done := v_new >= v_c.amount - 0.001;\n\n  UPDATE contributions\n  SET amount_paid = v_new,\n      status = CASE WHEN v_done THEN 'paid' ELSE status END,\n      paid_at = CASE WHEN v_done THEN NOW() ELSE paid_at END,\n      payment_method = COALESCE(p_method, payment_method),\n      payment_note = COALESCE(p_note, payment_note)\n  WHERE id = p_contribution_id;\n\n  RETURN QUERY SELECT v_new, v_done, v_c.amount;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "revoke_admin_sessions(uuid)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "41f42a7e93a7ef8a71b06f019112e462",
+  "body_lines": 5,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.revoke_admin_sessions(p_admin_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  UPDATE admin_users SET token_version = COALESCE(token_version, 0) + 1 WHERE id = p_admin_id;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "revoke_member_sessions(uuid)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "fe1f0c22b70e487ab90a14056a3720ef",
+  "body_lines": 5,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.revoke_member_sessions(p_member_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  UPDATE members SET token_version = COALESCE(token_version, 0) + 1 WHERE id = p_member_id;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "session_is_current(uuid,text,integer)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "c7c6a8e2b160d7baf22733c37cdccce5",
+  "body_lines": 12,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.session_is_current(p_id uuid, p_kind text, p_version integer)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nDECLARE v INTEGER;\nBEGIN\n  IF p_kind = 'admin' THEN\n    SELECT COALESCE(token_version, 0) INTO v FROM admin_users WHERE id = p_id AND is_active = true;\n  ELSE\n    SELECT COALESCE(token_version, 0) INTO v FROM members WHERE id = p_id AND status = 'active';\n  END IF;\n  IF v IS NULL THEN RETURN false; END IF;   -- deleted, suspended or deactivated\n  RETURN v = COALESCE(p_version, 0);\nEND;\n$function$\n"
+ },
+ {
+  "signature": "verify_admin_password(text,text)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "868f8481267c9c776948aeeeaa76eeba",
+  "body_lines": 11,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.verify_admin_password(p_email text, p_password text)\n RETURNS TABLE(id uuid, email text, full_name text, role text, token_version integer, must_change_password boolean)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  RETURN QUERY\n  SELECT a.id, a.email, a.full_name, a.role,\n         COALESCE(a.token_version, 0), COALESCE(a.must_change_password, false)\n  FROM admin_users a\n  WHERE a.email = p_email\n    AND a.password_hash = crypt(p_password, a.password_hash)\n    AND a.is_active = true;\nEND;\n$function$\n"
+ },
+ {
+  "signature": "verify_member_passcode(text,text)",
+  "security_definer": true,
+  "owner": "postgres",
+  "body_md5": "4c38d9cb4fa824bf4ef9f1a6379a49e4",
+  "body_lines": 11,
+  "deployed_definition": "CREATE OR REPLACE FUNCTION public.verify_member_passcode(p_phone text, p_passcode text)\n RETURNS TABLE(id uuid, member_id text, full_name text, phone text, status member_status, whatsapp_number text, token_version integer)\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\nBEGIN\n  RETURN QUERY\n  SELECT m.id, m.member_id, m.full_name, m.phone, m.status, m.whatsapp_number,\n         COALESCE(m.token_version, 0)\n  FROM members m\n  WHERE m.phone = p_phone\n    AND m.passcode_hash = crypt(p_passcode, m.passcode_hash)\n    AND m.status = 'active';\nEND;\n$function$\n"
+ }
+]

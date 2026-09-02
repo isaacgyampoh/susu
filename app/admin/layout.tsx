@@ -13,7 +13,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
   // Grouped by what the operator is doing, not by which table it touches.
   { group: 'Every day', items: [
     { href: '/admin/transactions',  label: 'Daily Payments', hint: 'who paid today' },
-    { href: '/admin/kyc',           label: 'Applications',   hint: 'new sign-ups' },
+    { href: '/admin/kyc',           label: 'Registrations',  hint: 'who has paid, who is waiting' },
     { href: '/admin/payouts',       label: 'Payouts',        hint: 'who collects' },
   ]},
   { group: 'People & groups', items: [
@@ -22,6 +22,10 @@ const NAV: { group: string; items: NavItem[] }[] = [
   ]},
   { group: 'Money detail', items: [
     { href: '/admin/contributions', label: 'Contributions', hint: 'day-by-day dues' },
+    // Money nobody has resolved yet. Filed under "Money detail" rather than
+    // "Every day" because it is a periodic review, not a daily task — but it
+    // is unreachable if it is not in the navigation at all.
+    { href: '/admin/reconciliation', label: 'Reconciliation', hint: 'unresolved payments' },
     { href: '/admin/analytics',     label: 'Analytics' },
     { href: '/admin/reports',       label: 'Reports' },
   ]},
@@ -46,8 +50,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!localStorage.getItem('admin_token')) { router.replace('/'); return }
-    try { setAdmin(JSON.parse(localStorage.getItem('admin_user') ?? '{}')) } catch {}
-  }, [router])
+    let who: { must_change_password?: boolean } = {}
+    try { who = JSON.parse(localStorage.getItem('admin_user') ?? '{}') } catch {}
+    setAdmin(who as typeof admin)
+
+    /*
+     * THE DEFAULT PASSWORD IS A GATE, NOT A BANNER.
+     *
+     * This account shipped with `Admin@1234`, which is published in this
+     * repository's history — anyone who has read the repo can sign in as
+     * super_admin. Until Phase 07 the console said so in a red strip and then
+     * let you carry on, which is a notice, not a control: it is dismissed by
+     * navigating anywhere at all.
+     *
+     * Nobody is locked out by this. `change_admin_password()` clears the flag,
+     * refuses the shipped default outright, and bumps `token_version` so every
+     * other session dies with it — so the only way out is also the fix.
+     */
+    if (who.must_change_password && pathname !== '/admin/password') {
+      router.replace('/admin/password')
+    }
+  }, [router, pathname])
 
   // Close on navigation — otherwise the drawer hangs over the new page
   useEffect(() => { close() }, [pathname, close])
@@ -152,16 +175,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* min-w-0 lets children shrink; children scroll their own wide content.
           overflow-x-hidden here would CLIP tables rather than let them scroll. */}
       <main className="lg:pl-[210px] min-w-0">
-        {/* The shipped password is public — it is in the repo. Say so, loudly,
-            on every screen until it is changed. */}
-        {admin?.must_change_password && pathname !== '/admin/password' && (
-          <div className="bg-red text-white px-5 sm:px-8 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        {/* Shown on the password screen itself — everywhere else the effect
+            above has already redirected here, so this is the one place it can
+            still appear, and the one place it is useful. */}
+        {admin?.must_change_password && (
+          <div className="bg-red text-white px-5 sm:px-8 py-2.5">
             <p className="text-[12.5px]">
-              This account still uses the default password, which is published in the source code.
+              This account still uses the default password, which is published in this
+              repository&rsquo;s history. The console is locked until you change it.
             </p>
-            <Link href="/admin/password" className="text-[12.5px] font-semibold underline underline-offset-2">
-              Change it now
-            </Link>
           </div>
         )}
         <div className="min-w-0">{children}</div>

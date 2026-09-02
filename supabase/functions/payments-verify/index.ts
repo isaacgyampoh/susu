@@ -4,53 +4,33 @@ import { requireMember }         from '../_shared/jwt.ts'
 import { paymentStatus as naloStatus }   from '../_shared/nalo.ts'
 import { provider, paymentsUnavailable } from '../_shared/mode.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
-import { applyPaymentToSchedule, claimTransaction } from '../_shared/settle.ts'
+import { settlePayment } from '../_shared/settle.ts'
+import { settleRegistrationFee } from '../_shared/registration-fee.ts'
 
 /**
  * The member's app polls this after approving a prompt.
  *
- * With no trustworthy webhook, this is not a convenience — it is how a payment
- * gets settled at all. The phone asks "did it land?", we ask NaloPay, and the
- * answer decides.
+ * With no trustworthy webhook, this is not a convenience — for many payments it
+ * is how settlement happens at all. The phone asks "did it land?", we ask
+ * NaloPay, and NaloPay's answer decides.
+ *
+ * Two things changed in Phase 04:
+ *
+ *   1. THE BATCH BRANCH IS GONE. Paying ahead used to take a completely
+ *      separate path — a blanket `UPDATE … WHERE batch_id = …` that wrote no
+ *      allocation rows, never set `amount_paid`, and touched no credit. It was
+ *      one of five settlement implementations. Every payment, single or bulk,
+ *      now goes through the one canonical engine.
+ *
+ *   2. THE MODULE-SCOPE `lastSpread` IS GONE. It held the previous
+ *      settlement's result at module level, and Deno reuses isolates between
+ *      requests — so two members verifying at the same moment shared it, and
+ *      one member's SMS receipt could carry another's figures. It is now a
+ *      local.
  */
-/** A single payment or a whole batch — settle whatever this reference covers. */
-
-// Allocation from the most recent settlement, so the receipt can describe it
-let lastSpread: { daysCleared: number; partBanked: number; unallocated: number; groups: string[] } | null = null
-
-async function settleLocally(reference: string, tx: any, raw: unknown): Promise<boolean> {
-  // Claim first: the callback or the sweeper may already have settled this,
-  // and a second receipt reads to the member as a second charge.
-  if (!(await claimTransaction(tx.id, { settled_raw: raw }))) return false
-
-  if (tx.batch_id) {
-    // Paying ahead: one approval clears every day in the batch
-    await supabaseAdmin.from('contributions')
-      .update({ status: 'paid', paid_at: new Date().toISOString(), paystack_ref: reference })
-      .eq('batch_id', tx.batch_id).neq('status', 'paid')
-    const { data: ids } = await supabaseAdmin
-      .from('contributions').select('id').eq('batch_id', tx.batch_id)
-    if (ids?.length) {
-      await supabaseAdmin.from('payment_penalties')
-        .update({ is_paid: true, paid_at: new Date().toISOString() })
-        .in('contribution_id', ids.map((r: { id: string }) => r.id))
-    }
-  } else if (tx.type === 'contribution' && tx.related_id) {
-    lastSpread = await applyPaymentToSchedule(tx.related_id, Number(tx.amount), reference, ((tx.paystack_data as any)?.scope === 'slot' ? 'slot' : 'member'))
-  }
-  // If this was a registration fee, flag the member's KYC application paid too
-  if (tx.type === 'registration_fee') {
-    await supabaseAdmin.from('kyc_applications')
-      .update({ registration_fee_paid: true })
-      .eq('created_member_id', tx.member_id).eq('registration_fee_paid', false)
-      .then(({ error }) => { if (error) console.log('kyc flag skipped:', error.message) })
-  }
-  return true
-}
-
 serveWithCors(async (req) => {
-  const c = handleCors(req)
-  if (c) return c
+  const cors = handleCors(req)
+  if (cors) return cors
   if (req.method !== 'POST') return error('Method not allowed', 405)
 
   const session = await requireMember(req)
@@ -63,73 +43,100 @@ serveWithCors(async (req) => {
     const { reference } = await req.json()
     if (!reference) return error('reference is required')
 
-    // Only ever check your own payment
+    // Scoped to the caller: a member may only ever verify their own payment.
     const { data: tx } = await supabaseAdmin
       .from('transactions')
-      .select('reference, status, member_id, related_id, type, amount, batch_id')
+      .select('reference, status, member_id, related_id, type, amount, batch_id, paystack_data, items_count')
       .eq('reference', reference).eq('member_id', session.sub).maybeSingle()
 
     if (!tx) return error('Payment not found', 404)
     if (tx.status === 'success') return json({ status: 'paid', message: 'Payment confirmed' })
+    if (tx.status === 'failed')  return json({ status: 'failed', message: 'This payment did not complete. You can try again.' })
 
-    if (provider() === 'nalo') {
-      let lookupRef = reference
-      if (provider() === 'nalo') {
-        // NaloPay is keyed by its order_id, saved on the transaction at prompt time
-        const { data: txRow } = await supabaseAdmin
-          .from('transactions').select('paystack_data').eq('reference', reference).maybeSingle()
-        const oid = (txRow?.paystack_data as { provider_order_id?: string } | null)?.provider_order_id
-        if (oid) lookupRef = oid
-      }
-      const s = await naloStatus(lookupRef)
-      if (!s)        return json({ status: 'pending', message: 'Waiting for confirmation…' })
-      if (s.pending) return json({ status: 'pending', message: 'Waiting for you to approve the prompt…' })
-      if (!s.settled) {
-        await supabaseAdmin.from('transactions').update({ status: 'failed' }).eq('reference', reference)
-        return json({ status: 'failed', message: 'The payment was not completed. You can try again.' })
-      }
+    if (provider() !== 'nalo') return json({ status: 'pending', message: 'Not confirmed yet.' })
 
-      const due = Number(tx.amount)
-      if (s.amount + 0.01 < due) {
-        return json({ status: 'pending', message: 'Partial payment received. Contact your admin.' })
-      }
+    // NaloPay is keyed by ITS order id, saved on the transaction at prompt time.
+    const oid = (tx.paystack_data as { provider_order_id?: string } | null)?.provider_order_id
+    const s = await naloStatus(oid ?? reference)
 
-      const iSettled = await settleLocally(reference, tx, s.raw)
-      if (!iSettled) return json({ status: 'paid', message: 'Payment confirmed. Thank you.' })
+    if (!s)        return json({ status: 'pending', message: 'Waiting for confirmation…' })
+    if (s.pending) return json({ status: 'pending', message: 'Waiting for you to approve the prompt…' })
 
-      // Personalised receipt — this is the path the member's app actually hits
-      const { data: m } = await supabaseAdmin
-        .from('members').select('full_name, phone').eq('id', tx.member_id).single()
-      if (m) {
-        let group = 'your susu'
-        let days = 1
-        if (tx.batch_id) {
-          const { data: batchRows } = await supabaseAdmin
-            .from('contributions').select('susu_groups(name)').eq('batch_id', tx.batch_id)
-          days = batchRows?.length ?? 1
-          group = ((batchRows?.[0]?.susu_groups) as { name?: string } | null)?.name ?? group
-        } else if (tx.related_id) {
-          const { data: c } = await supabaseAdmin
-            .from('contributions').select('susu_groups(name)').eq('id', tx.related_id).single()
-          group = (c?.susu_groups as { name?: string } | null)?.name ?? group
-        }
-        if (lastSpread && (lastSpread.daysCleared > 1 || lastSpread.groups.length > 1 || lastSpread.unallocated > 0.001)) {
-          await sendSMS(m.phone, smsTemplates.paymentSpread(
-            m.full_name.split(' ')[0], Number(tx.amount).toFixed(2),
-            lastSpread.daysCleared, lastSpread.groups.length, lastSpread.unallocated))
-        } else {
-          await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(
-            m.full_name.split(' ')[0], Number(tx.amount).toFixed(2), group, days))
-        }
-        await notifyAdmins(smsTemplates.adminPaymentReceived(
-          m.full_name, Number(tx.amount).toFixed(2), group))
+    if (!s.settled) {
+      await supabaseAdmin.from('transactions').update({ status: 'failed' }).eq('reference', reference)
+      return json({ status: 'failed', message: 'The payment was not completed. You can try again.' })
+    }
+
+    // A short payment is not settled here. Crediting the full requested amount
+    // when less arrived would create money.
+    if (s.amount + 0.01 < Number(tx.amount)) {
+      return json({
+        status: 'pending',
+        message: `We received GHS ${s.amount.toFixed(2)} of GHS ${Number(tx.amount).toFixed(2)}. Contact your admin.`,
+      })
+    }
+
+    // A registration fee buys a place in a group; it settles no obligation.
+    if (tx.type === 'registration_fee') {
+      try {
+        await settleRegistrationFee(reference, s.amount)
+        return json({ status: 'paid', message: 'Registration fee received. Thank you.' })
+      } catch (e) {
+        console.error('registration fee settlement failed:', (e as Error).message)
+        return json({ status: 'pending', message: 'Your payment arrived but is still being recorded.' })
       }
+    }
+
+    // ── Settle. Atomic, locked, idempotent — and the ONLY path. ─────────
+    const scope = (tx.paystack_data as { scope?: string } | null)?.scope === 'slot' ? 'slot' : 'member'
+
+    let result
+    try {
+      result = await settlePayment(reference, s.amount, scope)
+    } catch (e) {
+      console.error('settlement failed:', (e as Error).message)
+      return json({
+        status: 'pending',
+        message: 'Your payment arrived but is still being recorded. It will appear shortly.',
+      })
+    }
+
+    // If a concurrent caller settled it first, `settle_payment` returns that
+    // settlement's allocations rather than doing anything twice.
+    if (result.allocations.length === 0) {
       return json({ status: 'paid', message: 'Payment confirmed. Thank you.' })
     }
 
-    return json({ status: 'pending', message: 'Not confirmed yet.' })
+    await sendReceipt(tx.member_id, Number(tx.amount), result.daysCleared, result.groups)
+
+    return json({
+      status: 'paid',
+      message: 'Payment confirmed. Thank you.',
+      // The member is told what their money covered, not just that it worked.
+      covered: result.allocations.map(a => ({
+        group: a.group_name, due_date: a.due_date, amount: a.amount, kind: a.kind,
+      })),
+      days_cleared: result.daysCleared,
+      credit_added: result.creditAdded,
+    })
   } catch (e) {
     console.error(e)
     return error('Internal server error', 500)
   }
 })
+
+async function sendReceipt(memberId: string, amount: number, days: number, groups: string[]) {
+  const { data: m } = await supabaseAdmin
+    .from('members').select('full_name, phone').eq('id', memberId).single()
+  if (!m) return
+  const first = m.full_name.split(' ')[0]
+  const paid = amount.toFixed(2)
+  const group = groups[0] ?? 'your susu'
+
+  if (days > 1 || groups.length > 1) {
+    await sendSMS(m.phone, smsTemplates.paymentSpread(first, paid, days, groups.length, 0))
+  } else {
+    await sendSMS(m.phone, smsTemplates.paymentConfirmedDetailed(first, paid, group, Math.max(days, 1)))
+  }
+  await notifyAdmins(smsTemplates.adminPaymentReceived(m.full_name, paid, group))
+}

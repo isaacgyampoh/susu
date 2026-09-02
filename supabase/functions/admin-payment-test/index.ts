@@ -56,14 +56,20 @@ serveWithCors(async (req) => {
       externalref: reference, reference: 'Susu provider test',
     })
 
-    // Record it so a later status check has something to look at
-    await supabaseAdmin.from('transactions').insert({
-      member_id: null, type: 'provider_test', amount, reference,
-      description: `Provider self-test (${prov}) to ${phone}`,
-      status: res.kind === 'prompted' ? 'pending' : 'failed',
-    }).then(() => {}, () => {})   // best-effort; member_id may be non-null-constrained
-
-    const orderId = res.kind === 'prompted' ? res.moolreRef : null
+    /*
+     * No local row is written for a test prompt.
+     *
+     * There used to be one, inserted with `type: 'provider_test'` — a value the
+     * `tx_type` enum does not have (`registration_fee | contribution | payout`).
+     * The insert therefore failed every single time, into a swallowed
+     * `.then(() => {}, () => {})`, while its comment claimed it existed so the
+     * `check` action would have something to look at.
+     *
+     * It never did, and `check` never needed it: that action asks NaloPay
+     * directly by reference. A diagnostic also has no business putting rows in
+     * the financial tables.
+     */
+    const orderId = res.kind === 'prompted' ? res.providerOrderId : null
     return json({ provider: prov, reference, order_id: orderId, result: res })
   }
 

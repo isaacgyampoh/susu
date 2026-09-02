@@ -42,11 +42,40 @@ serveWithCors(async (req) => {
       const amt = Number(body.partial_amount)
       if (isNaN(amt) || amt <= 0) return error('partial_amount must be a positive number')
 
-      const { data: pr, error: prErr } = await supabaseAdmin.rpc('record_partial_payment', {
-        p_contribution_id: ids[0], p_amount: amt, p_method: method, p_note: note,
+      // Directed settlement of a single obligation, through the one engine.
+      // This replaced record_partial_payment(), a fifth settlement
+      // implementation with its own semantics, no allocation ledger, no row
+      // lock and no idempotency. That function was dropped from the database in
+      // v41 — it had no caller left, and a deployed SECURITY DEFINER function
+      // that mutates money is a liability whether or not anything calls it.
+      const partRef = `PART-${String(ids[0]).slice(0, 8)}-${Date.now()}`
+      const { data: pc } = await supabaseAdmin
+        .from('contributions').select('member_id, amount, amount_paid').eq('id', ids[0]).single()
+      if (!pc) return error('Contribution not found', 404)
+
+      const { error: pTxErr } = await supabaseAdmin.from('transactions').insert({
+        member_id: pc.member_id, type: 'contribution', amount: amt,
+        reference: partRef, status: 'pending', related_id: ids[0],
+        description: `Instalment (${method})${note ? ` — ${note}` : ''}`,
       })
-      if (prErr) return error(`Could not record instalment: ${prErr.message}. Run migration v22.`, 500)
-      const row = Array.isArray(pr) ? pr[0] : pr
+      if (pTxErr) return error(`Could not record instalment: ${pTxErr.message}`, 500)
+
+      const { error: pSetErr } = await supabaseAdmin.rpc('settle_payment', {
+        p_reference: partRef, p_confirmed_amount: amt,
+        p_scope: 'slot', p_target_contributions: [ids[0]],
+      })
+      if (pSetErr) return error(`Could not record instalment: ${pSetErr.message}`, 500)
+
+      await supabaseAdmin.from('contributions')
+        .update({ payment_method: method, payment_note: note }).eq('id', ids[0])
+
+      const { data: after } = await supabaseAdmin
+        .from('contributions').select('amount, amount_paid, status').eq('id', ids[0]).single()
+      const row = {
+        paid_so_far: Number(after?.amount_paid ?? 0),
+        amount_due:  Number(after?.amount ?? 0),
+        fully_paid:  after?.status === 'paid',
+      }
 
       // Audit transaction for the instalment
       const { data: c } = await supabaseAdmin
@@ -90,24 +119,21 @@ serveWithCors(async (req) => {
     const skipped = (rows ?? []).length - payable.length
     if (payable.length === 0) return error('None of the selected contributions are awaiting payment')
 
-    const now = new Date().toISOString()
-
-    let { error: upErr } = await supabaseAdmin
-      .from('contributions')
-      .update({ status: 'paid', paid_at: now, payment_method: method, payment_note: note })
-      .in('id', payable.map(r => r.id))
-      .in('status', ['pending', 'overdue'])   // guard against races
-    if (upErr && /payment_method|payment_note/.test(upErr.message)) {
-      // v10 migration not applied — the payment still gets recorded
-      ;({ error: upErr } = await supabaseAdmin
-        .from('contributions')
-        .update({ status: 'paid', paid_at: now })
-        .in('id', payable.map(r => r.id))
-        .in('status', ['pending', 'overdue']))
-    }
-    if (upErr) return error(upErr.message, 500)
-
-    // One audit transaction + one SMS receipt per member+group batch
+    /*
+     * Settled through the canonical engine, using DIRECTED allocation.
+     *
+     * This path used to do a blanket UPDATE: it wrote no allocation rows,
+     * never set amount_paid, and never touched credit. It is the busiest path
+     * on the platform — 3,978 contributions, GHS 403,940 — so the whole of
+     * that history has no record of what any payment covered.
+     *
+     * It cannot simply call the policy allocator, because the two answer
+     * different questions: the admin is ASSERTING which specific days were
+     * paid in cash, not asking the engine to choose. So the engine is called
+     * with p_target_contributions — same locking, same allocation ledger, same
+     * atomicity, same audit trail, but the caller decides the set.
+     */
+    const receipts: any[] = []
     const batches = new Map<string, typeof payable>()
     for (const r of payable) {
       const key = `${r.member_id}|${r.group_id}`
@@ -115,19 +141,36 @@ serveWithCors(async (req) => {
       batches.get(key)!.push(r)
     }
 
-    const receipts: any[] = []
     for (const batch of batches.values()) {
       const first  = batch[0] as any
       const total  = batch.reduce((s, r) => s + Number(r.amount), 0)
       const days   = batch.length
       const gName  = first.susu_groups?.name ?? 'your susu group'
       const ref    = `MAN-${method.toUpperCase()}-${Date.now()}-${first.member_id.slice(0, 6)}`
+      const ids    = batch.map(r => r.id)
 
-      await supabaseAdmin.from('transactions').insert({
+      // Recorded as pending, then settled — so a failure mid-way leaves the
+      // payment visibly unsettled rather than half-applied.
+      const { error: txErr } = await supabaseAdmin.from('transactions').insert({
         member_id: first.member_id, type: 'contribution', amount: total,
-        reference: ref, status: 'success',
+        reference: ref, status: 'pending', related_id: ids[0],
         description: `${label(method)} payment collected by admin — ${days} day${days > 1 ? 's' : ''} for "${gName}"${note ? ` · ${note}` : ''}`,
       })
+      if (txErr) return error(`Could not record the payment: ${txErr.message}`, 500)
+
+      const { error: setErr } = await supabaseAdmin.rpc('settle_payment', {
+        p_reference: ref,
+        p_confirmed_amount: total,
+        p_scope: 'slot',
+        p_target_contributions: ids,
+      })
+      if (setErr) return error(`Could not settle the payment: ${setErr.message}`, 500)
+
+      // The method is metadata about HOW it was collected; the engine records
+      // the money itself.
+      await supabaseAdmin.from('contributions')
+        .update({ payment_method: method, payment_note: note })
+        .in('id', ids)
 
       if (!body.no_sms && first.members?.phone) {
         await sendSMS(first.members.phone,

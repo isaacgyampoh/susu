@@ -1,0 +1,427 @@
+[
+ {
+  "scenario": "exact_single",
+  "daily": 100,
+  "days": 10,
+  "paid_days": 0,
+  "payment": 100,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-01"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 1,
+   "total_allocated": "100.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "partial",
+  "daily": 100,
+  "days": 10,
+  "paid_days": 0,
+  "payment": 40,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "part",
+     "group": "Conformance Group A",
+     "amount": "40.00",
+     "due_date": "2026-09-01"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 0,
+   "total_allocated": "40.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "advance_3days",
+  "daily": 100,
+  "days": 10,
+  "paid_days": 0,
+  "payment": 300,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-01"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-02"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-03"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 3,
+   "total_allocated": "300.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "partial_advance_250",
+  "daily": 100,
+  "days": 10,
+  "paid_days": 0,
+  "payment": 250,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-01"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-02"
+    },
+    {
+     "kind": "part",
+     "group": "Conformance Group A",
+     "amount": "50.00",
+     "due_date": "2026-09-03"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 2,
+   "total_allocated": "250.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "worked_450",
+  "daily": 100,
+  "days": 10,
+  "paid_days": 0,
+  "payment": 450,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-01"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-02"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-03"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-04"
+    },
+    {
+     "kind": "part",
+     "group": "Conformance Group A",
+     "amount": "50.00",
+     "due_date": "2026-09-05"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 4,
+   "total_allocated": "450.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "zero_payment",
+  "daily": 100,
+  "days": 10,
+  "paid_days": 0,
+  "payment": 0,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [],
+   "credit_after": "0",
+   "days_settled": 0,
+   "total_allocated": "0",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "overpay_beyond_all",
+  "daily": 100,
+  "days": 3,
+  "paid_days": 0,
+  "payment": 1000,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-01"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-02"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-03"
+    }
+   ],
+   "credit_after": "700.00",
+   "days_settled": 3,
+   "total_allocated": "300.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "tops_up_partial",
+  "daily": 100,
+  "days": 10,
+  "paid_days": 1,
+  "payment": 50,
+  "extra_ms": 0,
+  "partial_on_next": 50,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "50.00",
+     "due_date": "2026-09-02"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 1,
+   "total_allocated": "50.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "after_paid_days",
+  "daily": 100,
+  "days": 10,
+  "paid_days": 3,
+  "payment": 120,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-04"
+    },
+    {
+     "kind": "part",
+     "group": "Conformance Group A",
+     "amount": "20.00",
+     "due_date": "2026-09-05"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 1,
+   "total_allocated": "120.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "pesewa_amounts",
+  "daily": 0.01,
+  "days": 5,
+  "paid_days": 0,
+  "payment": 0.03,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "0.01",
+     "due_date": "2026-09-01"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "0.01",
+     "due_date": "2026-09-02"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "0.01",
+     "due_date": "2026-09-03"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 3,
+   "total_allocated": "0.03",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "fractional_slot",
+  "daily": 13.75,
+  "days": 8,
+  "paid_days": 0,
+  "payment": 55,
+  "extra_ms": 0,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "13.75",
+     "due_date": "2026-09-01"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "13.75",
+     "due_date": "2026-09-02"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "13.75",
+     "due_date": "2026-09-03"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "13.75",
+     "due_date": "2026-09-04"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 4,
+   "total_allocated": "55.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "five_memberships",
+  "daily": 100,
+  "days": 5,
+  "paid_days": 0,
+  "payment": 300,
+  "extra_ms": 4,
+  "partial_on_next": 0,
+  "scope": "member",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-01"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-02"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-03"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 3,
+   "total_allocated": "300.00",
+   "other_memberships_touched": 0
+  }
+ },
+ {
+  "scenario": "isolation_slot_scope",
+  "daily": 100,
+  "days": 5,
+  "paid_days": 0,
+  "payment": 300,
+  "extra_ms": 4,
+  "partial_on_next": 0,
+  "scope": "slot",
+  "result": {
+   "allocations": [
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-01"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-02"
+    },
+    {
+     "kind": "full",
+     "group": "Conformance Group A",
+     "amount": "100.00",
+     "due_date": "2026-09-03"
+    }
+   ],
+   "credit_after": "0",
+   "days_settled": 3,
+   "total_allocated": "300.00",
+   "other_memberships_touched": 0
+  }
+ }
+]
