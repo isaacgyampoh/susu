@@ -179,7 +179,7 @@ export default function SignIn() {
           application announces itself before it asks for anything. */}
       <section className="signin-dark relative flex flex-col justify-between overflow-hidden
                           bg-[#0C0E12] text-white
-                          px-6 sm:px-10 lg:p-14 xl:p-16
+                          px-[1.125rem] sm:px-10 lg:p-14 xl:p-16
                           pt-[max(2rem,calc(env(safe-area-inset-top)+1.25rem))]
                           pb-8 sm:pb-10 lg:pb-14
                           min-h-[38dvh] sm:min-h-[42dvh] lg:min-h-0">
@@ -228,11 +228,13 @@ export default function SignIn() {
                           bg-surface lg:border-l lg:border-line
                           rounded-t-2xl lg:rounded-none
                           -mt-4 lg:mt-0
-                          px-6 sm:px-10 lg:px-14
-                          pt-8 sm:pt-10 lg:pt-0
+                          px-[1.125rem] sm:px-10 lg:px-14
+                          pt-7 sm:pt-10 lg:pt-0
                           pb-[max(1.5rem,env(safe-area-inset-bottom))]">
 
-        <div className="w-full max-w-[360px] lg:max-w-[336px] lg:my-auto">
+        {/* No cap and no centring on a phone — see the member sign-in for
+            what a fixed column does to a 575px screen. */}
+        <div className="w-full sm:max-w-[380px] lg:max-w-[336px] my-auto">
           <span className="block w-8 h-[3px] rounded-full bg-accent mb-5 lg:mb-6" />
 
           <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
@@ -319,7 +321,7 @@ export default function SignIn() {
 
         {/* Anchored to the foot of the surface. Both claims are true of this
             endpoint — no invented certification, no security badge. */}
-        <p className="text-2xs text-ink-3 leading-relaxed mt-auto pt-8 max-w-[360px] lg:max-w-[336px]">
+        <p className="text-2xs text-ink-3 leading-relaxed mt-auto pt-7 sm:max-w-[380px] lg:max-w-[336px]">
           Sign-in attempts are rate limited and recorded. Changing your PIN signs
           out every device.
         </p>

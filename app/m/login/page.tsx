@@ -62,14 +62,18 @@ export default function MemberSignIn() {
       {/* ══ Brand field ════════════════════════════════════════════════════
           A band on the phone, a column from `sm` up. Shorter than the admin
           screen's: a member is here to sign in, not to be introduced. */}
-      <section className="member-dark relative flex flex-col justify-between overflow-hidden
-                          bg-[#0C0E12] text-white px-6 sm:px-10
-                          pt-[max(1.75rem,calc(env(safe-area-inset-top)+1rem))]
-                          pb-7 sm:pb-10 min-h-[26dvh] sm:min-h-0">
+      <section className="member-dark relative flex flex-col justify-end gap-6 overflow-hidden
+                          bg-[#0C0E12] text-white
+                          px-[1.125rem] sm:px-10
+                          pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))]
+                          pb-6 sm:pb-10 min-h-[32dvh] sm:min-h-0">
 
+        {/* Positioned so a readable arc of the rotation sits in the band —
+            several slots filled, one lit, the rest still outlined. Cropped to a
+            sliver it read as stray circles rather than as the thing a susu is. */}
         <div aria-hidden="true"
-          className="pointer-events-none absolute -right-[26%] -bottom-[62%] w-[min(380px,80%)]
-                     sm:-right-[18%] sm:-bottom-[24%] sm:w-[min(560px,80%)] aspect-square opacity-[0.45]">
+          className="pointer-events-none absolute -right-[20%] -bottom-[34%] w-[min(400px,86%)]
+                     sm:-right-[18%] sm:-bottom-[24%] sm:w-[min(560px,80%)] aspect-square opacity-[0.55]">
           <svg viewBox="0 0 200 200" className="w-full h-full">
             <circle cx="100" cy="100" r="74" fill="none" stroke="rgb(255 255 255/.10)" strokeWidth="1" />
             <circle cx="100" cy="100" r="52" fill="none" stroke="rgb(255 255 255/.05)" strokeWidth="1" />
@@ -86,11 +90,11 @@ export default function MemberSignIn() {
           </svg>
         </div>
 
-        <span className="relative font-display text-md font-semibold tracking-[-.01em]">
+        <span className="relative font-display text-md font-semibold tracking-[-.01em] mb-auto">
           Abbie Wealth
         </span>
 
-        <div className="relative mt-7 sm:mt-0 max-w-[420px]">
+        <div className="relative max-w-[420px]">
           <h1 className="font-display font-semibold tracking-[-.03em] text-balance
                          text-[clamp(24px,6.4vw,30px)] leading-[1.1]
                          sm:text-[clamp(30px,3vw,40px)]">
@@ -108,9 +112,13 @@ export default function MemberSignIn() {
       {/* ══ Sign-in surface ════════════════════════════════════════════════ */}
       <section className="relative flex flex-col min-w-0 bg-surface
                           sm:border-l sm:border-line rounded-t-2xl sm:rounded-none -mt-4 sm:mt-0
-                          px-6 sm:px-10 pt-8 sm:pt-0
-                          pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        <div className="w-full max-w-[380px] sm:my-auto">
+                          px-[1.125rem] sm:px-10 pt-7 sm:pt-0
+                          pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        {/* No cap and no centring on a phone: the form uses the width of the
+            device. A 380px column on a 575px screen left 159px of dead gutter
+            down the right-hand side — the application drawn inside the screen
+            instead of as the screen. */}
+        <div className="w-full sm:max-w-[380px] my-auto">
           <span className="block w-8 h-[3px] rounded-full bg-accent mb-5" />
 
           <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
@@ -120,7 +128,7 @@ export default function MemberSignIn() {
             Your phone number and the passcode your susu admin sent you.
           </p>
 
-          <form onSubmit={submit} className="mt-7 space-y-4">
+          <form onSubmit={submit} className="mt-6 space-y-3.5">
             {err && (
               <p role="alert"
                 className="text-sm text-danger bg-danger-soft border border-danger-line
@@ -161,7 +169,7 @@ export default function MemberSignIn() {
           </form>
         </div>
 
-        <p className="text-2xs text-ink-3 leading-relaxed mt-auto pt-8 max-w-[380px]">
+        <p className="text-2xs text-ink-3 leading-relaxed mt-auto pt-7 sm:max-w-[380px]">
           Don&rsquo;t have a passcode? Ask your susu admin — they can send you a new one.
         </p>
       </section>
