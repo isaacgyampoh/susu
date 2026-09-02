@@ -30,7 +30,7 @@ serveWithCors(async (req) => {
     .from('transactions')
     .select('amount, type')
     .eq('status', 'success')
-    .in('type', ['contribution', 'bulk_contribution'])
+    .in('type', ['contribution'])
     .gte('created_at', start.toISOString())
 
   const count = txns?.length ?? 0

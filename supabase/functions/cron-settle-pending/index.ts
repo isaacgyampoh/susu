@@ -44,12 +44,26 @@ serveWithCors(async (req) => {
   }
   const getStatus = naloStatus
 
+  /*
+   * This query filtered on `'bulk_contribution'`, a tx_type that has never
+   * existed: no migration declares it, and payments-bulk records a multi-day
+   * payment as a plain 'contribution'. PostgREST rejects the entire query on an
+   * unknown enum label, so THE SWEEPER RETURNED 500 ON EVERY RUN.
+   *
+   * It runs every ten minutes and is the safety net for payments the callback
+   * missed — the thing that is supposed to stop payments sitting pending. It
+   * has never once completed. That is the most plausible explanation for the
+   * 402-payment backlog: nothing was ever sweeping them.
+   *
+   * Nothing else in this function was wrong, which is why it never showed up as
+   * a settlement bug — it simply never got as far as settling anything.
+   */
   const since = new Date(Date.now() - 48 * 3600e3).toISOString()
   const { data: pending, error: dbErr } = await supabaseAdmin
     .from('transactions')
     .select('id, reference, amount, type, related_id, batch_id, member_id, paystack_data, created_at')
     .eq('status', 'pending')
-    .in('type', ['contribution', 'bulk_contribution', 'registration_fee'])
+    .in('type', ['contribution', 'registration_fee'])
     .gte('created_at', since)
     .order('created_at', { ascending: true })
     .limit(300)

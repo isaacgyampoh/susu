@@ -38,7 +38,7 @@ serveWithCors(async (req) => {
       .from('transactions')
       .select('amount, description, paystack_data')
       .eq('status', 'success')
-      .in('type', ['contribution', 'bulk_contribution', 'registration_fee'])
+      .in('type', ['contribution', 'registration_fee'])
       .gte('created_at', startOfDay)
 
     let onlineTotal = 0, onlineCount = 0, manualTotal = 0, manualCount = 0

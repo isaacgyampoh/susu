@@ -42,7 +42,7 @@ serveWithCors(async (req) => {
     let q = supabaseAdmin
       .from('transactions')
       .select('id, amount, type, status, reference, description, created_at, paystack_data, members!member_id(id, full_name, member_id, phone)', { count: 'exact' })
-      .in('type', ['contribution', 'bulk_contribution', 'registration_fee'])
+      .in('type', ['contribution', 'registration_fee'])
       .order('created_at', { ascending: false })
 
     if (status !== 'all') q = q.eq('status', status)
@@ -69,7 +69,7 @@ serveWithCors(async (req) => {
       .from('transactions')
       .select('amount, paystack_data')
       .eq('status', 'success')
-      .in('type', ['contribution', 'bulk_contribution', 'registration_fee'])
+      .in('type', ['contribution', 'registration_fee'])
     if (since) totalsQ = totalsQ.gte('created_at', since)
     const { data: totalsData } = await totalsQ
 
