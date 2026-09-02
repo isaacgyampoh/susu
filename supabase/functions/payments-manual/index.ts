@@ -77,18 +77,28 @@ serveWithCors(async (req) => {
         fully_paid:  after?.status === 'paid',
       }
 
-      // Audit transaction for the instalment
+      /*
+       * No second transaction is written here.
+       *
+       * This used to insert an "audit transaction" — same amount, a NEW
+       * reference, status 'success' — immediately after settle_payment() had
+       * already recorded the instalment and written its allocations. Every
+       * instalment was therefore counted TWICE in `transactions`: once as the
+       * settled payment, once as a phantom success with no allocations behind
+       * it. It would have inflated "Total collected" on the admin dashboard and
+       * tripped financial invariant 9.
+       *
+       * It is a leftover from before the engine existed, when that insert WAS
+       * the record. The engine is the record now.
+       *
+       * Production check before removing it: zero PART- transactions exist, so
+       * the instalment path has never been used and nothing was double-counted.
+       * The defect was latent, not active.
+       */
       const { data: c } = await supabaseAdmin
         .from('contributions').select('member_id, group_id, susu_groups(name), members(full_name, phone)')
         .eq('id', ids[0]).single()
       if (c) {
-        await supabaseAdmin.from('transactions').insert({
-          member_id: c.member_id, type: 'contribution', amount: amt,
-          reference: `PART-${ids[0].slice(0, 8)}-${Date.now()}`,
-          description: `Instalment (${method}) toward ${(c.susu_groups as any)?.name ?? 'susu'}${note ? ` — ${note}` : ''}`,
-          status: 'success',
-        }).then(() => {}, () => {})
-
         const m = (c as any).members
         if (m?.phone) {
           if (row?.fully_paid) {

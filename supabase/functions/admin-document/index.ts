@@ -12,11 +12,18 @@ serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
 
+  // A GET here used to reach `req.json()` on an empty body, throw, and be
+  // caught as a 500 — an unparseable request is the caller's mistake, not a
+  // server fault, and a 500 sends people looking for an outage.
+  if (req.method !== 'POST') return error('Method not allowed', 405, req)
+
   const admin = await requireAdmin(req)
   if (!admin) return error('Unauthorized', 401, req)
 
   try {
-    const { path, subject } = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body) return error('A JSON body with a document path is required', 400, req)
+    const { path, subject } = body
     if (!path) return error('path is required', 400, req)
 
     // Never sign an arbitrary path handed to us

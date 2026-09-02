@@ -68,17 +68,30 @@ serveWithCors(async (req) => {
       if (!ALLOWED.includes(file.type)) return error(`${label} must be a photo`, 400)
     }
 
-    if (frontFile && frontFile.size > 0) {
-      const { data: up } = await supabaseAdmin.storage
+    /*
+     * The same silent loss kyc-submit had: the upload error was discarded, so a
+     * failure left the URL null and the member was created as though no card
+     * had been offered. The `kyc-documents` bucket did not exist at all until
+     * this audit, so every upload through either path had been failing since
+     * launch — 27 applications hold a card NUMBER and not one holds an image.
+     * An admin should be told, not left with a member record that quietly lacks
+     * the ID they just photographed.
+     */
+    const putCard = async (file: File, side: 'front' | 'back'): Promise<string> => {
+      const { data: up, error: upErr } = await supabaseAdmin.storage
         .from('kyc-documents')
-        .upload(`ghana-cards/${crypto.randomUUID()}-front`, frontFile, { contentType: frontFile.type, upsert: false })
-      if (up) frontUrl = up.path
+        .upload(`ghana-cards/${crypto.randomUUID()}-${side}`, file, { contentType: file.type, upsert: false })
+      if (upErr || !up) {
+        console.error(`admin-add-member: ${side} card upload failed:`, upErr?.message)
+        throw new Error(`The Ghana Card ${side} image could not be uploaded. The member was not created.`)
+      }
+      return up.path
     }
-    if (backFile && backFile.size > 0) {
-      const { data: up } = await supabaseAdmin.storage
-        .from('kyc-documents')
-        .upload(`ghana-cards/${crypto.randomUUID()}-back`, backFile, { contentType: backFile.type, upsert: false })
-      if (up) backUrl = up.path
+    try {
+      if (frontFile && frontFile.size > 0) frontUrl = await putCard(frontFile, 'front')
+      if (backFile  && backFile.size  > 0) backUrl  = await putCard(backFile, 'back')
+    } catch (e) {
+      return error((e as Error).message, 502)
     }
 
     // Generate + hash passcode

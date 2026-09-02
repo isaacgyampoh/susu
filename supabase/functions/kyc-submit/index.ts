@@ -70,8 +70,25 @@ serveWithCors(async (req) => {
     if (!groupsData || groupsData.length !== selectedGroupIds.length) return error('One or more selected groups were not found', 404)
     for (const g of groupsData) {
       const want = slotMap[g.id]?.count ?? 1
-      if (!['open', 'full'].includes(g.status) || g.current_members + want > g.max_members) {
-        return error(`"${g.name}" cannot take ${want} slot(s) — only ${Math.max(0, g.max_members - g.current_members)} left`, 400)
+      const free = Math.max(0, g.max_members - g.current_members)
+
+      /*
+       * Say which of the two reasons it actually is.
+       *
+       * This reported "only N left" for BOTH a closed group and a full one, so
+       * a group that had stopped accepting applications answered "cannot take
+       * 1 slot — only 19 left". Nobody can act on that: it names a number that
+       * contradicts the refusal.
+       */
+      if (!['open', 'full'].includes(g.status)) {
+        return error(`"${g.name}" is not accepting applications at the moment.`, 400, req)
+      }
+      if (g.current_members + want > g.max_members) {
+        return error(
+          free === 0
+            ? `"${g.name}" is full.`
+            : `"${g.name}" has ${free} slot${free === 1 ? '' : 's'} left, and you asked for ${want}.`,
+          400, req)
       }
     }
 
@@ -92,23 +109,44 @@ serveWithCors(async (req) => {
       if (bad) return error(bad, 400, req)
     }
 
-    if (frontFile) {
-      const { data: up } = await supabaseAdmin.storage
+    /*
+     * ── GHANA CARD UPLOAD ────────────────────────────────────────────────
+     *
+     * This silently lost every card ever submitted. Two reasons, both hidden:
+     *
+     *   1. The `kyc-documents` bucket did not exist. The upload error was
+     *      discarded — `const { data: up }` without `error` — so `up` came back
+     *      null, the URL stayed null, and the application saved as though no
+     *      card had been offered. 27 applications carry a card NUMBER and not
+     *      one carries an image.
+     *
+     *   2. It stored `getPublicUrl(...)`, but the bucket is private by design
+     *      ("looking at someone's national ID is a privileged act"). A public
+     *      URL into a private bucket resolves to nothing, and admin-document —
+     *      which signs a short-lived URL — expects a storage PATH and rejects
+     *      anything not starting with `ghana-cards/`.
+     *
+     * The path is now stored, the error is surfaced, and a failed upload is
+     * reported to the applicant instead of being swallowed. The card is part of
+     * verification; losing it quietly is worse than refusing the form.
+     */
+    async function uploadCard(file: File, side: 'front' | 'back'): Promise<string> {
+      const path = `ghana-cards/${crypto.randomUUID()}-${side}`
+      const { data: up, error: upErr } = await supabaseAdmin.storage
         .from('kyc-documents')
-        .upload(`ghana-cards/${crypto.randomUUID()}-front`, frontFile, { contentType: frontFile.type, upsert: false })
-      if (up) {
-        const { data: { publicUrl } } = supabaseAdmin.storage.from('kyc-documents').getPublicUrl(up.path)
-        frontUrl = publicUrl
+        .upload(path, file, { contentType: file.type, upsert: false })
+      if (upErr || !up) {
+        console.error(`kyc-submit: ${side} card upload failed:`, upErr?.message)
+        throw new Error(`Your Ghana Card ${side} image could not be uploaded. Please try again.`)
       }
+      return up.path
     }
-    if (backFile) {
-      const { data: up } = await supabaseAdmin.storage
-        .from('kyc-documents')
-        .upload(`ghana-cards/${crypto.randomUUID()}-back`, backFile, { contentType: backFile.type, upsert: false })
-      if (up) {
-        const { data: { publicUrl } } = supabaseAdmin.storage.from('kyc-documents').getPublicUrl(up.path)
-        backUrl = publicUrl
-      }
+
+    try {
+      if (frontFile) frontUrl = await uploadCard(frontFile, 'front')
+      if (backFile)  backUrl  = await uploadCard(backFile, 'back')
+    } catch (e) {
+      return error((e as Error).message, 502, req)
     }
 
     // The applicant's payment link. Issued here — before the row exists — so
