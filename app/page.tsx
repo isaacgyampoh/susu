@@ -147,7 +147,7 @@ export default function SignIn() {
         */}
         <div aria-hidden="true" className="brand-photo absolute inset-0" />
         <div aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-r from-[#0C0E12] via-[#0C0E12]/85 to-[#0C0E12]/35" />
+          className="absolute inset-0 bg-gradient-to-r from-[#0C0E12] via-[#0C0E12]/75 to-transparent" />
 
         <div className="relative">
           <span className="font-display font-bold text-white

@@ -66,7 +66,7 @@ export default function MemberSignIn() {
                           bg-[#0C0E12] text-white
                           px-[1.125rem] sm:px-10
                           pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))]
-                          pb-6 sm:pb-10 min-h-[32dvh] sm:min-h-0">
+                          pb-6 sm:pb-10 min-h-[36dvh] sm:min-h-0">
 
         {/*
           ── THE PICTURE ───────────────────────────────────────────────────
@@ -84,7 +84,7 @@ export default function MemberSignIn() {
         {/* A scrim, not a wash. Dark enough on the left for white type to hold
             at any exposure; almost clear on the right so the picture survives. */}
         <div aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-r from-[#0C0E12] via-[#0C0E12]/85 to-[#0C0E12]/35" />
+          className="absolute inset-0 bg-gradient-to-r from-[#0C0E12] via-[#0C0E12]/75 to-transparent" />
 
         <span className="relative mb-auto font-display font-bold text-white
                          text-[19px] sm:text-[21px] tracking-[-.02em] leading-none">

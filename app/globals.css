@@ -163,22 +163,28 @@
      genuinely better than a 1000px line of text — a tablet and desktop
      decision that must not leak back down onto the phone. */
   /* ── THE BRAND IMAGE ───────────────────────────────────────────────────
-     A hand holding out a note, behind the wordmark on both sign-in screens.
-     Drawn as SVG rather than photographed: it is a few kilobytes, stays sharp
-     on any screen, and needs no licence.
+     Sits behind the wordmark on both sign-in screens.
 
-     `contain` because the illustration has its own transparent margins and
-     should not be cropped — the dark brand field fills the rest, and the scrim
-     over the top keeps the type readable on the left.
+     Anchored BOTTOM-RIGHT, which is the rule for cut-out photography of
+     people: a figure has to stand on the lower edge of the band or it floats.
+     `contain` so the subject is never cropped through the face.
 
-     TO USE A PHOTOGRAPH INSTEAD: drop the file in /public, point the url()
-     below at it, and change `contain` to `cover` so it fills the band. Keep
-     faces and hands to the right of centre — the wordmark sits top-left and
-     the headline bottom-left. */
+     TO USE A PHOTOGRAPH OF PEOPLE — the intended direction:
+       1. Get a licensed or original shot: members using the app, a collector
+          taking a contribution. Cut out on a transparent background, saved as
+          PNG or WebP so the dark field shows through around them.
+       2. Save it as /public/brand-collection.png and point the url() below at
+          it. Nothing else changes: bottom-right and `contain` are already the
+          right treatment for a cut-out.
+       3. Keep the subject to the RIGHT. The wordmark sits top-left and the
+          headline bottom-left, and the scrim below is built to protect that
+          column while leaving faces clear.
+
+     The SVG here is a placeholder standing in until that photograph exists. */
   .brand-photo {
     background-image: url('/brand-collection.svg');
     background-size: contain;
-    background-position: right center;
+    background-position: right bottom;
     background-repeat: no-repeat;
   }
 
