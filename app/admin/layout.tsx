@@ -37,7 +37,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
   { group: 'Settings', items: [
     { href: '/admin/payment-settings', label: 'Payments' },
     { href: '/admin/audit',            label: 'Audit log' },
-    { href: '/admin/password',         label: 'Change password' },
+    { href: '/admin/password',         label: 'Change PIN' },
   ]},
 ]
 
@@ -181,8 +181,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {admin?.must_change_password && (
           <div className="bg-red text-white px-5 sm:px-8 py-2.5">
             <p className="text-[12.5px]">
-              This account still uses the default password, which is published in this
-              repository&rsquo;s history. The console is locked until you change it.
+              This account still uses the PIN this system shipped with, which is written
+              down in its setup instructions. The console is locked until you change it.
             </p>
           </div>
         )}
