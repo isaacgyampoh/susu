@@ -23,17 +23,6 @@ import { cx } from '@/components/ui'
    clears a notch or a Dynamic Island instead of hiding under it.
    ------------------------------------------------------------------------ */
 
-/** The rotation, small enough to sit beside the name. */
-export function Mark({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" opacity=".28" />
-      <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="12" cy="3" r="2.1" fill="currentColor" />
-    </svg>
-  )
-}
-
 export function AppBar({
   variant = 'plain', title, back, right, children, className,
 }: {
@@ -53,9 +42,10 @@ export function AppBar({
       )}>
         <div className="portal-w relative">
           <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2">
-              <Mark className="w-[17px] h-[17px] text-[#A7DCC4]" />
-              <span className="font-display text-base font-semibold tracking-[-.01em]">Abbie Wealth</span>
+            {/* The wordmark carries the brand on its own. A small ring icon
+                beside it was decoration doing no work. */}
+            <span className="font-display font-bold text-[17px] tracking-[-.02em] leading-none">
+              Abbie&nbsp;Wealth
             </span>
             {right}
           </div>

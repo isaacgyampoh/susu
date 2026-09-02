@@ -20,67 +20,21 @@ import { callFunction, setAdminToken } from '@/lib/supabase'
  * every cell — four digits that open an entire administration are not
  * something a shared browser should remember.
  *
- * ── WHY THE LEFT PANEL LOOKS LIKE THAT ──────────────────────────────────
+ * ── THE BRAND FIELD ─────────────────────────────────────────────────────
  *
- * A susu is a rotation: a fixed ring of slots, everyone paying in, one member
- * collecting per turn. That is the whole product, and it happens to be a
- * shape. So the ring is drawn properly and at scale — seven slots settled, one
- * lit as the current turn, the rest still ahead — rather than used as abstract
- * circles in a corner. It is the one image on this screen, it means something
- * specific, and it is the reason the page needs no stock photography, no
- * gradient and no padlock illustration.
+ * A photograph of a collection — money changing hands — behind the wordmark,
+ * loaded from `public/brand-collection.jpg` via the `.brand-photo` class. It is
+ * a CSS background rather than an <img>, so if the file is not there the field
+ * simply stays dark: no broken image and nothing for anyone to notice. The
+ * scrim over it is heavy on the left where the type sits and nearly clear on
+ * the right, so the picture survives instead of being washed out.
+ *
+ * An earlier revision drew a rotation diagram here instead. It was accurate
+ * about what a susu is and still read as decoration; a picture of the actual
+ * work says it without needing to be explained.
  */
 
 const CELLS = 4
-
-/* Rotation state. Static: this is the sign-in screen, so there is no member
-   and nothing real to read. It illustrates the idea, and claims no figures. */
-const SLOTS = 12
-const SETTLED = 7
-const CURRENT = 7
-
-function RotationRing() {
-  const R = 74
-  return (
-    <svg viewBox="0 0 200 200" className="w-full h-full" aria-hidden="true">
-      <circle cx="100" cy="100" r={R}      fill="none" stroke="rgb(255 255 255 / .10)" strokeWidth="1" />
-      <circle cx="100" cy="100" r={R - 22} fill="none" stroke="rgb(255 255 255 / .05)" strokeWidth="1" />
-      <circle cx="100" cy="100" r={R + 22} fill="none" stroke="rgb(255 255 255 / .04)" strokeWidth="1" />
-
-      {Array.from({ length: SLOTS }).map((_, i) => {
-        const a = (i / SLOTS) * Math.PI * 2 - Math.PI / 2
-        const x = 100 + Math.cos(a) * R
-        const y = 100 + Math.sin(a) * R
-        const settled = i < SETTLED
-        const current = i === CURRENT
-        return (
-          <g key={i} className="ring-node" style={{ animationDelay: `${i * 55}ms` }}>
-            {current && (
-              <circle cx={x} cy={y} r="13" fill="none" stroke="#A7DCC4" strokeWidth="1" opacity=".45" />
-            )}
-            <circle
-              cx={x} cy={y} r={current ? 7 : 5.5}
-              fill={current ? '#A7DCC4' : settled ? 'rgb(255 255 255 / .92)' : 'transparent'}
-              stroke={current ? 'none' : settled ? 'none' : 'rgb(255 255 255 / .30)'}
-              strokeWidth="1.25"
-            />
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
-
-/** Ring with a settled arc — the rotation, small enough to sit beside a name. */
-function Mark({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" opacity=".28" />
-      <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="12" cy="3" r="2.1" fill="currentColor" />
-    </svg>
-  )
-}
 
 export default function SignIn() {
   const router = useRouter()
@@ -184,18 +138,26 @@ export default function SignIn() {
                           pb-8 sm:pb-10 lg:pb-14
                           min-h-[38dvh] sm:min-h-[42dvh] lg:min-h-0">
 
-        <div aria-hidden="true"
-          className="pointer-events-none absolute
-                     -right-[22%] -bottom-[46%] w-[min(460px,86%)]
-                     sm:-right-[16%] sm:-bottom-[52%] sm:w-[min(560px,70%)]
-                     lg:-right-[14%] lg:-bottom-[18%] lg:w-[min(760px,78%)]
-                     aspect-square opacity-[0.5]">
-          <RotationRing />
-        </div>
+        {/*
+          ── THE PICTURE ───────────────────────────────────────────────────
+          Drop a photograph at `public/brand-collection.jpg` (optionally a .webp
+          beside it) and it appears here — the same image the member sign-in
+          uses, so the two screens read as one product.
 
-        <div className="relative flex items-center gap-2.5">
-          <Mark className="w-[18px] h-[18px] lg:w-[19px] lg:h-[19px] text-[#A7DCC4]" />
-          <span className="font-display text-md font-semibold tracking-[-.01em]">Abbie Wealth</span>
+          A CSS background rather than an <img>: if the file is absent the
+          browser paints nothing and the dark field shows through. No broken
+          image, nothing to notice. Ships safely before the photograph exists.
+        */}
+        <div aria-hidden="true" className="brand-photo absolute inset-0" />
+        <div aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-r from-[#0C0E12] via-[#0C0E12]/85 to-[#0C0E12]/35" />
+
+        <div className="relative">
+          <span className="font-display font-bold text-white
+                           text-[19px] sm:text-[21px] lg:text-[23px]
+                           tracking-[-.02em] leading-none">
+            Abbie&nbsp;Wealth
+          </span>
         </div>
 
         <div className="relative max-w-[520px] mt-8 lg:mt-0">
@@ -214,10 +176,6 @@ export default function SignIn() {
 
         <div className="relative hidden lg:flex items-end justify-between gap-8">
           <span className="text-xs text-white/35">Administrator console</span>
-          <span className="flex items-center gap-2.5 text-xs text-white/35">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#A7DCC4]" />
-            Slot {CURRENT + 1} of {SLOTS} · {SETTLED} settled
-          </span>
         </div>
       </section>
 

@@ -162,6 +162,25 @@
      A max-width only starts at 768px, where a constrained reading column is
      genuinely better than a 1000px line of text — a tablet and desktop
      decision that must not leak back down onto the phone. */
+  /* ── THE BRAND PHOTOGRAPH ───────────────────────────────────────────────
+     Put a picture at public/brand-collection.jpg — a collector taking a
+     contribution — and it appears behind both sign-in screens.
+
+     A background-image rather than an <img>: if the file is absent the browser
+     paints nothing and the dark brand field shows through. No broken icon, no
+     empty frame, nothing a member would notice. So this ships before the
+     photograph exists and starts working the moment it lands.
+
+     `right center` because the wordmark sits top-left and the headline
+     bottom-left — keep faces and hands to the right of the frame. */
+  .brand-photo {
+    background-image: image-set(url('/brand-collection.webp') type('image/webp'),
+                                url('/brand-collection.jpg')  type('image/jpeg'));
+    background-size: cover;
+    background-position: right center;
+    background-repeat: no-repeat;
+  }
+
   .portal-w {
     width: 100%;
     min-width: 0;

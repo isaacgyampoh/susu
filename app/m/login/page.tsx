@@ -68,30 +68,31 @@ export default function MemberSignIn() {
                           pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))]
                           pb-6 sm:pb-10 min-h-[32dvh] sm:min-h-0">
 
-        {/* Positioned so a readable arc of the rotation sits in the band —
-            several slots filled, one lit, the rest still outlined. Cropped to a
-            sliver it read as stray circles rather than as the thing a susu is. */}
-        <div aria-hidden="true"
-          className="pointer-events-none absolute -right-[20%] -bottom-[34%] w-[min(400px,86%)]
-                     sm:-right-[18%] sm:-bottom-[24%] sm:w-[min(560px,80%)] aspect-square opacity-[0.55]">
-          <svg viewBox="0 0 200 200" className="w-full h-full">
-            <circle cx="100" cy="100" r="74" fill="none" stroke="rgb(255 255 255/.10)" strokeWidth="1" />
-            <circle cx="100" cy="100" r="52" fill="none" stroke="rgb(255 255 255/.05)" strokeWidth="1" />
-            {Array.from({ length: 12 }).map((_, i) => {
-              const a = (i / 12) * Math.PI * 2 - Math.PI / 2
-              const x = 100 + Math.cos(a) * 74, y = 100 + Math.sin(a) * 74
-              const settled = i < 7, current = i === 7
-              return (
-                <circle key={i} cx={x} cy={y} r={current ? 7 : 5.5}
-                  fill={current ? '#A7DCC4' : settled ? 'rgb(255 255 255/.92)' : 'transparent'}
-                  stroke={current || settled ? 'none' : 'rgb(255 255 255/.30)'} strokeWidth="1.25" />
-              )
-            })}
-          </svg>
-        </div>
+        {/*
+          ── THE PICTURE ───────────────────────────────────────────────────
+          Drop a photograph at `public/brand-collection.jpg` (and optionally a
+          .webp beside it) and it appears here: a collector taking a
+          contribution, money changing hands, the thing this product is for.
 
-        <span className="relative font-display text-md font-semibold tracking-[-.01em] mb-auto">
-          Abbie Wealth
+          It is a CSS background rather than an <img> on purpose. If the file is
+          not there the band simply stays the dark brand field — no broken
+          image, no empty frame, nothing for a member to notice. So this ships
+          safely before the photograph exists.
+
+          Shoot or choose it with the crop in mind: the wordmark sits top-left
+          and the headline bottom-left, so keep faces and hands to the RIGHT of
+          centre. `object-position: right center` is doing that below.
+        */}
+        <div aria-hidden="true" className="brand-photo absolute inset-0" />
+
+        {/* A scrim, not a wash. Dark enough on the left for white type to hold
+            at any exposure; almost clear on the right so the picture survives. */}
+        <div aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-r from-[#0C0E12] via-[#0C0E12]/85 to-[#0C0E12]/35" />
+
+        <span className="relative mb-auto font-display font-bold text-white
+                         text-[19px] sm:text-[21px] tracking-[-.02em] leading-none">
+          Abbie&nbsp;Wealth
         </span>
 
         <div className="relative max-w-[420px]">
@@ -124,10 +125,10 @@ export default function MemberSignIn() {
           <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
             Sign in
           </h2>
-          <p className="text-sm text-ink-2 mt-2">
-            Your phone number and the passcode your susu admin sent you.
-          </p>
 
+          {/* No subtitle. The two fields below are labelled Phone number and
+              Passcode; explaining them again in a sentence tells a member
+              something they can already read. */}
           <form onSubmit={submit} className="mt-6 space-y-3.5">
             {err && (
               <p role="alert"
