@@ -10,6 +10,7 @@ import {
   Avatar, Button, Card, DetailList, DetailRow, Field, Input, LoadingBlock,
   Money, Notice, Status, Textarea, useConfirm, useToast, cx,
 } from '@/components/ui'
+import { AppBar } from '@/components/susu/app-bar'
 
 export default function Profile() {
   const toast  = useToast()
@@ -133,16 +134,23 @@ export default function Profile() {
   }
 
   return (
-    <div className="portal-w pt-6 space-y-3 animate-fade-in">
+    <div className="animate-fade-in">
+      <AppBar title="Account" />
 
-      <div className="flex items-center gap-3 mb-2">
-        <Avatar name={member.full_name} size="lg" tone="ink" />
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-ink truncate">{member.full_name}</h1>
-          <p className="text-xs text-ink-3 font-mono mt-0.5">{member.member_code}</p>
+      <div className="portal-w pt-6 pb-4 space-y-3">
+
+        {/* Who this account belongs to, and whether it is in good standing.
+            An account screen opens on identity, not on a menu. */}
+        <div className="flex items-center gap-3 pb-1">
+          <Avatar name={member.full_name} size="lg" tone="ink" />
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-semibold text-ink tracking-[-.02em] truncate">
+              {member.full_name}
+            </h1>
+            <p className="text-xs text-ink-3 font-mono mt-0.5">{member.member_code}</p>
+          </div>
+          <Status value={member.status} className="ml-auto shrink-0" />
         </div>
-        <Status value={member.status} className="ml-auto shrink-0" />
-      </div>
 
       {memberships.length > 0 && (
         <Card pad="lg">
@@ -254,6 +262,7 @@ export default function Profile() {
         </Card>
       )}
 
+      <h2 className="t-eyebrow pt-4">Account</h2>
       <Card pad="lg">
         <p className="t-h2 mb-1">Your details</p>
         <DetailList>
@@ -277,6 +286,7 @@ export default function Profile() {
         </p>
       </Card>
 
+      <h2 className="t-eyebrow pt-4">Security</h2>
       {/* ---- Change passcode ---- */}
       <Card pad="none">
         <Disclosure
@@ -316,6 +326,7 @@ export default function Profile() {
       </Card>
 
       {/* ---- Message the collector ---- */}
+      <h2 className="t-eyebrow pt-4">Support</h2>
       <Card pad="none">
         <Disclosure
           icon={MessageSquare}
@@ -372,6 +383,7 @@ export default function Profile() {
       <Button variant="outline" icon={LogOut} full onClick={signOut} className="!text-danger">
         Sign out
       </Button>
+      </div>
     </div>
   )
 }
