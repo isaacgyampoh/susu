@@ -26,8 +26,15 @@ serveWithCors(async (req) => {
     const { path, subject } = body
     if (!path) return error('path is required', 400, req)
 
-    // Never sign an arbitrary path handed to us
-    if (!path.startsWith('ghana-cards/') || path.includes('..')) {
+    // Never sign an arbitrary path handed to us. The checks are on the raw
+    // string BEFORE any decoding, so an encoded traversal cannot slip through
+    // by arriving as %2e%2e and being normalised later.
+    if (typeof path !== 'string' || path.length > 400) {
+      return error('Invalid path', 400, req)
+    }
+    const suspicious = path.includes('..') || path.includes('\\') ||
+                       path.startsWith('/') || /%2e|%2f|%5c/i.test(path)
+    if (!path.startsWith('ghana-cards/') || suspicious) {
       return error('Invalid path', 400, req)
     }
 
@@ -35,7 +42,43 @@ serveWithCors(async (req) => {
       .from('kyc-documents')
       .createSignedUrl(path, 120)   // two minutes is enough to look
 
-    if (e) return error(e.message, 500, req)
+    /*
+     * ── A MISSING DOCUMENT IS AN EXPECTED STATE, NOT A SERVER FAULT ───────
+     *
+     * Every storage failure used to become `error(e.message, 500)`. That is
+     * wrong twice over.
+     *
+     * It is wrong operationally: 27 applications were taken while the KYC
+     * bucket did not exist, so they hold a Ghana Card number and no image.
+     * Opening one of those is a NORMAL thing for an administrator to do, and it
+     * answered with a 500 — which reads as an outage and sends somebody looking
+     * for a broken server instead of telling them the truth, which is that the
+     * document was never stored.
+     *
+     * And it is wrong for disclosure: `e.message` is the storage layer's own
+     * text, returned verbatim to the caller. Internal errors are for the log.
+     */
+    if (e || !data?.signedUrl) {
+      const raw = (e?.message ?? '').toLowerCase()
+      const missing = raw.includes('not found') || raw.includes('does not exist') ||
+                      raw.includes('no such') || raw.includes('object not found')
+
+      console.error('admin-document: could not sign', path, e?.message)
+
+      if (missing) {
+        await supabaseAdmin.from('document_access_log').insert({
+          admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
+          subject: subject ?? 'unknown', object_path: path,
+          outcome: 'missing',
+        }).then(() => {}, () => {})   // logging must never break the response
+
+        return json({
+          error: 'This document is not available. It was never stored — the applicant needs to upload it again.',
+          code:  'DOCUMENT_UNAVAILABLE',
+        }, 404, req)
+      }
+      return error('The document store did not respond. Please try again.', 502, req)
+    }
 
     await supabaseAdmin.from('document_access_log').insert({
       admin_id:    admin.sub,

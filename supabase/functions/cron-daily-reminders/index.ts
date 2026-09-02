@@ -29,8 +29,28 @@ serveWithCors(async (req) => {
     if (!admin) return json({ error: 'unauthorized' }, 401)
   }
 
+  /*
+   * ── DRY RUN ──────────────────────────────────────────────────────────
+   *
+   * This job was invoked by hand during an endpoint audit. It did precisely
+   * what it is built to do: 66 real SMS messages and 65 real NaloPay prompts —
+   * around GHS 5,350 of payment intents — to real members, at the wrong time
+   * of day. Nothing malfunctioned. The auditor simply had no way to look at
+   * this job and learn what calling it would cost.
+   *
+   * `dry_run` is that way. It walks exactly the same query and the same
+   * bucketing, and reports who WOULD be charged and how much, without touching
+   * the provider, the phone network or the transactions table.
+   *
+   * The scheduler never sends it, so the real 07:00 path is byte-for-byte what
+   * it was. This exists for the person holding an admin token who wants to know
+   * what the button does before pressing it.
+   */
+  const dryRun = url.searchParams.get('dry_run') === '1' ||
+                 url.searchParams.get('dry_run') === 'true'
+
   const prov = provider()
-  if (prov !== 'nalo') {
+  if (prov !== 'nalo' && !dryRun) {
     return json({ error: 'reminder needs a phone-prompt provider', provider: prov }, 400)
   }
   const doReq = naloRequest
@@ -67,6 +87,8 @@ serveWithCors(async (req) => {
   }
 
   let texted = 0, skipped = 0
+  const wouldCharge: { member: string; group: string; amount: number }[] = []
+
   for (const bk of buckets.values()) {
     const oldest = bk.ids[0]
 
@@ -79,6 +101,18 @@ serveWithCors(async (req) => {
 
     const base = bk.amount + bk.penalty
     const { charged } = withServiceCharge(base)
+
+    // Everything below this line contacts the outside world. A dry run stops
+    // here, having done all the reading and none of the charging.
+    if (dryRun) {
+      wouldCharge.push({
+        member: bk.member.full_name,
+        group:  bk.group?.name ?? 'susu',
+        amount: charged,
+      })
+      continue
+    }
+
     const momo = bk.member.mobile_money_number || bk.member.phone
     const net  = bk.member.mobile_money_provider || 'MTN'
     const ref  = `DAY-${oldest}-${Date.now()}`
@@ -120,6 +154,18 @@ serveWithCors(async (req) => {
         `Open your portal to pay, or reply/visit to pay by MoMo or cash. Thank you! — Abbie Wealth`)
       texted++
     }
+  }
+
+  if (dryRun) {
+    return json({
+      dry_run: true,
+      date: today,
+      would_prompt: wouldCharge.length,
+      would_charge_total: Math.round(wouldCharge.reduce((t, w) => t + w.amount, 0) * 100) / 100,
+      already_pending_today: skipped,
+      detail: wouldCharge,
+      note: 'Nothing was sent and no payment intent was created.',
+    })
   }
 
   return json({ date: today, texted, skipped })

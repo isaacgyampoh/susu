@@ -167,8 +167,39 @@ serveWithCors(async (req) => {
       // recorded nowhere. The application link means an applicant who is not
       // yet a member still gets a transaction; previously that case wrote none.
       if (action === 'fee_received') {
-        if (kyc.registration_fee_paid) return error('This fee is already recorded as paid', 400)
         if (fee <= 0) return error('This application has no fee due', 400)
+
+        /*
+         * ── THE GUARD IS "IS THERE ALREADY A PAYMENT", NOT "IS THE FLAG SET" ──
+         *
+         * This used to refuse whenever `registration_fee_paid` was true. The
+         * intent was right — never record the same fee twice — but the test was
+         * wrong, and it created a trap.
+         *
+         * Seven applications from launch week carry `registration_fee_paid =
+         * true` with no transaction, no reference and no audit entry: the flag
+         * was set at import, before the registration payment pipeline existed.
+         * Financial invariant 13 flags them, correctly, as GHS 1,745 of claimed
+         * registration income with nothing behind it. And the only tool that can
+         * attach the missing evidence refused to run on them, precisely BECAUSE
+         * the flag was set. The invariant demanded a record the system would not
+         * let anyone create.
+         *
+         * A duplicate is a second TRANSACTION, so that is what is checked now.
+         * The flag says what somebody once believed; the transaction is what
+         * actually happened, and it is the thing that must not be written twice.
+         */
+        const { data: existingTx } = await supabaseAdmin
+          .from('transactions')
+          .select('reference')
+          .eq('type', 'registration_fee').eq('status', 'success')
+          .or(`kyc_application_id.eq.${kyc.id}` +
+              (kyc.created_member_id ? `,member_id.eq.${kyc.created_member_id}` : ''))
+          .limit(1)
+
+        if ((existingTx ?? []).length > 0) {
+          return error('This fee already has a recorded payment', 400)
+        }
 
         const ref = `REG-MANUAL-${String(id).slice(0, 8)}-${Date.now()}`
         const { error: txErr } = await supabaseAdmin.from('transactions').insert({
@@ -179,9 +210,27 @@ serveWithCors(async (req) => {
         })
         if (txErr) return error(`Could not record the payment: ${txErr.message}`, 500)
 
+        // No `.eq('registration_fee_paid', false)` filter: that is what silently
+        // skipped the very rows above. Idempotency comes from the transaction
+        // check, not from the flag's previous value.
         await supabaseAdmin.from('kyc_applications')
           .update({ registration_fee_paid: true, registration_fee_ref: ref })
-          .eq('id', id).eq('registration_fee_paid', false)
+          .eq('id', id)
+
+        /*
+         * The audit entry the invariant actually looks for.
+         *
+         * Invariant 13 accepts either a successful transaction OR an audit_log
+         * row with action 'registration.fee_received'. Nothing in the codebase
+         * ever wrote that action, so half the invariant's evidence test was
+         * unreachable. It is written here, where the money is recorded.
+         */
+        await audit({
+          action: 'registration.fee_received',
+          entity_type: 'kyc_application', entity_id: kyc.id,
+          entity_label: kyc.full_name ?? '',
+          details: { amount: fee, reference: ref, reason: why },
+        })
 
         await supabaseAdmin.from('settlement_log').insert({
           reference: ref, event: 'registration_fee_recorded_manually',

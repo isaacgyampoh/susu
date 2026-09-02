@@ -71,7 +71,7 @@
 
   body {
     @apply bg-bg text-ink text-base antialiased;
-    font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
     text-rendering: optimizeLegibility;
   }
@@ -128,9 +128,15 @@
 @layer components {
 
   /* ---- Type ------------------------------------------------------------ */
-  .t-title  { @apply text-2xl font-semibold text-ink; }
-  .t-h2     { @apply text-base font-semibold text-ink; }
-  .t-figure { @apply text-2xl font-semibold leading-none tnum text-ink; }
+  /* Headings take the display face; body text never does. Character is an
+     asset at 24px and a legibility cost at 14px. */
+  .t-title  { @apply font-display text-2xl font-semibold text-ink tracking-[-.02em]; }
+  .t-h2     { @apply font-display text-base font-semibold text-ink; }
+
+  /* Money. Tabular figures so a column of amounts stays a column, and the
+     display face because a figure is the thing on the screen most likely to be
+     read first and hardest to misread if it has weight. */
+  .t-figure { @apply font-display text-2xl font-semibold leading-none tnum text-ink tracking-[-.02em]; }
   .t-label  { @apply text-xs font-medium text-ink-3; }
   .t-meta   { @apply text-xs text-ink-2; }
   .t-body   { @apply text-base text-ink-2 leading-relaxed; }

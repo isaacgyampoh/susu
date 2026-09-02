@@ -1,3 +1,4 @@
+import { refuseJoin, ADMIN_JOINABLE } from '../_shared/group-join.ts'
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { generatePasscode, hashPasscode, passcodeErrorResponse } from '../_shared/passcode.ts'
@@ -134,17 +135,26 @@ serveWithCors(async (req) => {
         .eq('id', gid).single()
       if (!group) continue
 
-      if (group.current_members >= group.max_members) {
-        return error(`Group "${group.name}" is full (${group.current_members}/${group.max_members})`, 400)
-      }
-
       const settings = groupSettings[gid] ?? {}
       const slots    = Math.max(1, Math.min(10, Number(settings.slots ?? 1)))
       const fraction = FRACS.includes(Number(settings.fraction)) ? Number(settings.fraction) : 1
 
-      if (group.current_members + slots > group.max_members) {
-        return error(`Group "${group.name}" only has ${group.max_members - group.current_members} slot(s) left — cannot take ${slots}`, 400)
-      }
+      /*
+       * `status` was selected here and then never read, so a completed or
+       * closed group silently accepted a new member. It is checked now, and by
+       * the same rule the public form uses — the two doors into a group should
+       * not disagree about whether it is open.
+       *
+       * The admin door additionally admits 'active': adding somebody to a group
+       * that has already started is a real operation, which is why the code
+       * below generates a schedule for a mid-flight join.
+       */
+      const refusal = refuseJoin(
+        { name: group.name, status: group.status,
+          max_members: group.max_members, current_members: group.current_members },
+        slots, ADMIN_JOINABLE,
+      )
+      if (refusal) return error(refusal, 400)
 
       const { data: taken } = await supabaseAdmin
         .from('group_memberships').select('payout_position')

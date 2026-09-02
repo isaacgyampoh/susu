@@ -1,3 +1,4 @@
+import { refuseJoin, PUBLIC_JOINABLE } from '../_shared/group-join.ts'
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { devPaymentsAllowed } from '../_shared/mode.ts'
@@ -70,26 +71,14 @@ serveWithCors(async (req) => {
     if (!groupsData || groupsData.length !== selectedGroupIds.length) return error('One or more selected groups were not found', 404)
     for (const g of groupsData) {
       const want = slotMap[g.id]?.count ?? 1
-      const free = Math.max(0, g.max_members - g.current_members)
 
-      /*
-       * Say which of the two reasons it actually is.
-       *
-       * This reported "only N left" for BOTH a closed group and a full one, so
-       * a group that had stopped accepting applications answered "cannot take
-       * 1 slot — only 19 left". Nobody can act on that: it names a number that
-       * contradicts the refusal.
-       */
-      if (!['open', 'full'].includes(g.status)) {
-        return error(`"${g.name}" is not accepting applications at the moment.`, 400, req)
-      }
-      if (g.current_members + want > g.max_members) {
-        return error(
-          free === 0
-            ? `"${g.name}" is full.`
-            : `"${g.name}" has ${free} slot${free === 1 ? '' : 's'} left, and you asked for ${want}.`,
-          400, req)
-      }
+      // Which of the two reasons it actually is — state, or capacity — is
+      // decided in one place, shared with the admin door. See group-join.ts.
+      const refusal = refuseJoin(
+        { name: g.name, status: g.status, max_members: g.max_members, current_members: g.current_members },
+        want, PUBLIC_JOINABLE,
+      )
+      if (refusal) return error(refusal, 400, req)
     }
 
     // Total registration fee: fee × slots, across all selected groups

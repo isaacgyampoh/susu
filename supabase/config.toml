@@ -118,3 +118,15 @@ verify_jwt = false
 
 [functions.moolre-webhook]
 verify_jwt = false
+
+# Declared here rather than relied on as a `--no-verify-jwt` deploy flag.
+# The flag is not sticky across redeploys: deploying admin-reconciliation
+# without it once made every console request answer UNAUTHORIZED_LEGACY_JWT,
+# because this platform issues its own JWTs and verifies them in _shared/jwt.ts
+# rather than using Supabase's gateway verification. Config is remembered; a
+# flag typed at a terminal is not.
+[functions.admin-reconciliation]
+verify_jwt = false
+
+[functions.cron-daily-reminders]
+verify_jwt = false

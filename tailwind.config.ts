@@ -88,8 +88,11 @@ const config: Config = {
       },
 
       fontFamily: {
-        sans: ['var(--font-geist-sans)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-geist-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        sans:    ['var(--font-sans)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-ui', 'sans-serif'],
+        // Headings only. See the note in app/layout.tsx for why this is a
+        // separate face rather than a heavier weight of the body font.
+        display: ['var(--font-display)', 'var(--font-sans)', 'Georgia', 'sans-serif'],
+        mono:    ['var(--font-geist-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
 
       // Motion that tells you what happened: sheets rise, toasts slide, panels fade.

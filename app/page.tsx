@@ -4,38 +4,48 @@ import { useRouter } from 'next/navigation'
 import { callFunction, setAdminToken } from '@/lib/supabase'
 
 /**
- * ADMINISTRATOR SIGN-IN — four digits, nothing else.
+ * ADMINISTRATOR SIGN-IN.
  *
- * There is no email field and no password field, because there is no longer an
- * email or a password: the server authenticates the PIN alone. Adding an
- * identifier box back here would not just be dead UI, it would be a lie about
- * what the credential is.
+ * ────────────────────────────────────────────────────────────────────────
+ * Four digits, typed on the device's own keyboard.
  *
- * The PIN lives in component state for the length of one submit and goes
- * nowhere else — not localStorage, not the URL, not a form that a browser would
- * offer to save. What persists after a successful sign-in is the token the
- * server issues, which is the same thing the email login used to leave behind.
+ * An earlier revision drew an on-screen 1-2-3 keypad. It worked, but it made a
+ * financial operations console look like a cash machine, and on desktop it
+ * asked an administrator to click at numbers they could simply type. The
+ * keypad is gone. What remains is four cells and a caret.
  *
- * Entry is a keypad rather than a text input for two reasons. On a phone — how
- * this console is mostly used — a keypad is the correct control and does not
- * depend on the OS surfacing a numeric keyboard. And a keypad has no value to
- * autofill, so no password manager offers to remember four digits that identify
- * the whole administration.
+ * `inputMode="numeric"` is what brings up the phone's number pad — the OS
+ * keyboard, which the person already knows, rather than a bespoke one drawn in
+ * a div. That is the whole reason a custom keypad was never needed.
  *
- * A physical keyboard still works: the window-level handler below means a
- * desktop admin types 1-0-2-4 and never touches the mouse.
+ * ── WHAT THE PIN TOUCHES ────────────────────────────────────────────────
+ *
+ * It lives in one piece of component state for the length of a submit and goes
+ * nowhere else: not localStorage, not the URL, not a form a browser would offer
+ * to save. Each cell renders a dot, never the digit, so the PIN is not
+ * shoulder-readable and not sitting in the DOM as text. Autocomplete is off on
+ * every cell — four digits that open an entire administration are not something
+ * a shared browser should remember.
+ *
+ * What persists after a successful sign-in is the token the server issues,
+ * which is what the email login used to leave behind too.
  */
+
+const CELLS = 4
+
 export default function SignIn() {
   const router = useRouter()
-  const [pin, setPin]   = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr]   = useState('')
+  const [pin, setPin]     = useState<string[]>(Array(CELLS).fill(''))
+  const [busy, setBusy]   = useState(false)
+  const [err, setErr]     = useState('')
   const [shake, setShake] = useState(false)
-  // Guards the auto-submit: without it, a re-render at four digits fires twice.
+  const refs = useRef<(HTMLInputElement | null)[]>([])
+  // Guards the auto-submit: a re-render at four digits would otherwise fire twice.
   const sending = useRef(false)
 
   useEffect(() => {
     if (localStorage.getItem('admin_token')) router.replace('/admin')
+    else refs.current[0]?.focus()
   }, [router])
 
   const submit = useCallback(async (value: string) => {
@@ -43,7 +53,7 @@ export default function SignIn() {
     sending.current = true
     setBusy(true); setErr('')
 
-    const { data, error } = await callFunction<{ token: string; admin: unknown }>(
+    const { data, error } = await callFunction<{ token: string; admin: { must_change_password?: boolean } }>(
       'auth-admin-login', { method: 'POST', body: { pin: value } },
     )
 
@@ -52,138 +62,183 @@ export default function SignIn() {
 
     if (error) {
       // Clear on failure. Leaving four wrong digits on screen invites the next
-      // attempt to be a single-digit edit of a guess that already failed.
-      setPin(''); setErr(error); setShake(true)
-      setTimeout(() => setShake(false), 400)
+      // attempt to be a one-digit edit of a guess that already failed.
+      setPin(Array(CELLS).fill('')); setErr(error); setShake(true)
+      setTimeout(() => setShake(false), 380)
+      refs.current[0]?.focus()
       return
     }
     setAdminToken(data!.token)
     localStorage.setItem('admin_user', JSON.stringify(data!.admin))
-    router.push('/admin')
+    router.push(data!.admin?.must_change_password ? '/admin/password' : '/admin')
   }, [router])
 
-  const push = useCallback((digit: string) => {
+  const commit = useCallback((next: string[]) => {
+    setPin(next)
+    const joined = next.join('')
+    if (joined.length === CELLS && /^\d{4}$/.test(joined)) void submit(joined)
+  }, [submit])
+
+  function onChange(i: number, raw: string) {
     if (busy) return
     setErr('')
-    setPin(prev => {
-      if (prev.length >= 4) return prev
-      const next = prev + digit
-      if (next.length === 4) void submit(next)
-      return next
-    })
-  }, [busy, submit])
+    const digits = raw.replace(/\D/g, '')
+    if (!digits) return
 
-  const back = useCallback(() => {
+    // One field accepts a whole pasted PIN, so pasting works without the
+    // person having to land the cursor in the first cell.
+    const next = [...pin]
+    for (let k = 0; k < digits.length && i + k < CELLS; k++) next[i + k] = digits[k]
+    const landed = Math.min(i + digits.length, CELLS - 1)
+    commit(next)
+    refs.current[landed]?.focus()
+  }
+
+  function onKeyDown(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
     if (busy) return
-    setErr('')
-    setPin(prev => prev.slice(0, -1))
-  }, [busy])
-
-  // Physical keyboard. Deliberately on the window: there is no text input to
-  // focus, so there is nothing else for a keystroke to land on.
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (/^\d$/.test(e.key))      { e.preventDefault(); push(e.key) }
-      else if (e.key === 'Backspace') { e.preventDefault(); back() }
-      else if (e.key === 'Escape')    { e.preventDefault(); setPin(''); setErr('') }
+    if (e.key === 'Backspace') {
+      e.preventDefault()
+      setErr('')
+      const next = [...pin]
+      // Backspace clears this cell, or steps back into the previous one when
+      // this cell is already empty — the behaviour every OTP field has, and the
+      // absence of which makes segmented inputs infuriating.
+      if (next[i]) { next[i] = '' ; setPin(next) }
+      else if (i > 0) { next[i - 1] = ''; setPin(next); refs.current[i - 1]?.focus() }
+      return
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [push, back])
+    if (e.key === 'ArrowLeft'  && i > 0)         { e.preventDefault(); refs.current[i - 1]?.focus() }
+    if (e.key === 'ArrowRight' && i < CELLS - 1) { e.preventDefault(); refs.current[i + 1]?.focus() }
+    if (e.key === 'Escape')                      { setPin(Array(CELLS).fill('')); setErr(''); refs.current[0]?.focus() }
+  }
 
-  const key = `h-[62px] rounded-2xl text-[24px] font-medium tabular-nums select-none
-               transition-all active:scale-[.96]
-               bg-white/[0.08] text-white border border-white/10
-               hover:bg-white/[0.14] focus-visible:outline-none
-               focus-visible:ring-2 focus-visible:ring-white/60
-               lg:bg-surface lg:text-ink lg:border-line lg:hover:bg-ink/[0.05]
-               lg:focus-visible:ring-ink/40
-               disabled:opacity-40 disabled:pointer-events-none`
+  function onPaste(e: React.ClipboardEvent) {
+    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, CELLS)
+    if (!digits) return
+    e.preventDefault()
+    const next = Array(CELLS).fill('')
+    for (let k = 0; k < digits.length; k++) next[k] = digits[k]
+    commit(next)
+    refs.current[Math.min(digits.length, CELLS - 1)]?.focus()
+  }
+
+  const filled = pin.filter(Boolean).length
 
   return (
-    <div className="relative h-[100dvh] overflow-hidden lg:grid lg:grid-cols-[1fr_460px]">
+    <main className="min-h-[100dvh] grid lg:grid-cols-[1.05fr_minmax(420px,.85fr)] bg-bg">
 
-      <div className="absolute inset-0 lg:relative lg:col-start-1 lg:inset-auto overflow-hidden bg-ink" aria-hidden="true">
-        <picture>
-          <source srcSet="/cover.webp" type="image/webp" />
-          <img src="/cover.jpg" alt="" fetchPriority="high" decoding="async"
-            className="absolute inset-0 w-full h-full object-cover" />
-        </picture>
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/25 via-ink/55 to-ink/80
-                        lg:bg-gradient-to-tr lg:from-ink/95 lg:via-ink/55 lg:to-ink/10" />
-      </div>
-
-      <div className="hidden lg:flex absolute inset-y-0 left-0 w-[calc(100%-460px)] flex-col justify-between p-12 pointer-events-none z-10">
-        <span className="text-[15px] font-semibold tracking-[-.02em] text-white">Abbie Wealth</span>
-        <h1 className="text-[38px] font-semibold tracking-[-.03em] leading-[1.06] text-white max-w-[440px]">
-          Run your susu with a proper ledger.
-        </h1>
-        <span className="text-[12px] text-white/40">Administrator access</span>
-      </div>
-
-      <div className="relative h-full lg:col-start-2 flex flex-col justify-center overflow-y-auto
-                      px-6 py-10 lg:bg-surface lg:border-l lg:border-line">
-        <div className="w-full max-w-[320px] mx-auto">
-
-          <p className="lg:hidden text-[16px] font-semibold tracking-[-.02em] text-white mb-8">Abbie Wealth</p>
-
-          <h2 className="text-[28px] lg:text-[26px] font-semibold tracking-[-.02em] text-white lg:text-ink">
-            Enter your PIN
-          </h2>
-          <p className="text-[13px] text-white/50 lg:text-ink-2 mt-1.5">Administrator access</p>
-
-          {/* ── The four digits ──────────────────────────────────────── */}
-          <div
-            role="group"
-            aria-label="4-digit administrator PIN"
-            className={`flex justify-center gap-3.5 mt-8 mb-2 ${shake ? 'animate-[shake_.4s_ease-in-out]' : ''}`}
-          >
-            {[0, 1, 2, 3].map(i => {
-              const filled = i < pin.length
-              const active = i === pin.length && !busy
+      {/* ── Brand side. A flat ink field and a statement — no photograph, no
+             gradient, no illustration. The restraint is the identity. ───── */}
+      <div className="relative hidden lg:flex flex-col justify-between bg-ink p-14 overflow-hidden">
+        {/* One quiet geometric mark, drawn from the rotation the product is
+            about: fixed slots, filled in turn. It is not decoration for its own
+            sake — it is the thing the business does. */}
+        <div aria-hidden="true" className="absolute right-[-90px] bottom-[-90px] opacity-[0.07]">
+          <svg width="420" height="420" viewBox="0 0 100 100" fill="none">
+            {Array.from({ length: 12 }).map((_, i) => {
+              const a = (i / 12) * Math.PI * 2 - Math.PI / 2
               return (
-                <span key={i} aria-hidden="true"
-                  className={`w-[54px] h-[58px] rounded-2xl border flex items-center justify-center
-                              transition-all duration-150
-                              ${filled
-                                ? 'bg-white border-white lg:bg-ink lg:border-ink'
-                                : 'bg-white/[0.06] border-white/20 lg:bg-transparent lg:border-line'}
-                              ${active ? 'border-white/70 lg:border-ink/50' : ''}`}>
-                  {filled && <span className="w-2.5 h-2.5 rounded-full bg-ink lg:bg-white" />}
-                </span>
+                <circle key={i} cx={50 + Math.cos(a) * 34} cy={50 + Math.sin(a) * 34}
+                  r={i < 7 ? 5.5 : 4} fill={i < 7 ? '#fff' : 'none'}
+                  stroke="#fff" strokeWidth="1" />
               )
             })}
-          </div>
+          </svg>
+        </div>
 
-          {/* Announces progress without ever announcing the digits. */}
-          <p className="sr-only" aria-live="polite">
-            {busy ? 'Checking your PIN' : `${pin.length} of 4 digits entered`}
+        <span className="font-display text-md font-semibold text-white tracking-[-.01em]">
+          Abbie Wealth
+        </span>
+
+        <div className="relative max-w-[460px]">
+          <h1 className="font-display text-[40px] leading-[1.08] font-semibold text-white tracking-[-.03em] text-balance">
+            Every cedi accounted for, every slot in its turn.
+          </h1>
+          <p className="mt-5 text-md text-white/55 leading-relaxed">
+            Contributions, allocations and payouts — recorded once, by one engine,
+            with a trail behind every figure.
+          </p>
+        </div>
+
+        <span className="text-xs text-white/35">Administrator console</span>
+      </div>
+
+      {/* ── Sign-in side ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14
+                      bg-surface lg:border-l lg:border-line
+                      [padding-top:max(3rem,env(safe-area-inset-top))]
+                      [padding-bottom:max(3rem,env(safe-area-inset-bottom))]">
+        <div className="w-full max-w-[340px] mx-auto">
+
+          <span className="lg:hidden font-display text-md font-semibold text-ink tracking-[-.01em]">
+            Abbie Wealth
+          </span>
+
+          <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.02em] mt-7 lg:mt-0">
+            Enter your admin PIN
+          </h2>
+          <p className="text-sm text-ink-2 mt-2">
+            Four digits. Five wrong attempts locks this device for fifteen minutes.
           </p>
 
-          <div className="min-h-[42px] flex items-center justify-center">
-            {err
-              ? <p role="alert" className="text-[12.5px] text-center text-white bg-red/80 lg:bg-red/10 lg:text-red
-                                           border border-red/40 rounded-xl px-3.5 py-2">{err}</p>
-              : busy
-                ? <p className="text-[12.5px] text-white/50 lg:text-ink-3">Signing in…</p>
-                : null}
+          <div
+            role="group"
+            aria-label="Administrator PIN, 4 digits"
+            onPaste={onPaste}
+            className={`flex gap-3 mt-8 ${shake ? 'animate-[shake_.38s_ease-in-out]' : ''}`}
+          >
+            {pin.map((d, i) => (
+              <div key={i} className="relative flex-1">
+                <input
+                  ref={el => { refs.current[i] = el }}
+                  value={d}
+                  onChange={e => onChange(i, e.target.value)}
+                  onKeyDown={e => onKeyDown(i, e)}
+                  onFocus={e => e.target.select()}
+                  disabled={busy}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  maxLength={CELLS}
+                  aria-label={`Digit ${i + 1} of ${CELLS}`}
+                  // The value is kept in state and rendered as a dot below, so
+                  // the digit itself is never painted on screen.
+                  className={`peer w-full h-[62px] rounded-xl border bg-surface-2 text-center
+                              text-transparent caret-ink outline-none
+                              transition-[border-color,box-shadow,background-color] duration-150
+                              ${err ? 'border-danger/50' : 'border-line'}
+                              focus:border-ink focus:bg-surface focus:ring-4 focus:ring-ink/[0.07]
+                              disabled:opacity-50`}
+                />
+                <span aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <span className={`rounded-full bg-ink transition-all duration-150
+                                    ${d ? 'w-[11px] h-[11px] opacity-100' : 'w-[6px] h-[6px] opacity-15'}`} />
+                </span>
+              </div>
+            ))}
           </div>
 
-          {/* ── Keypad ───────────────────────────────────────────────── */}
-          <div className="grid grid-cols-3 gap-2.5 mt-1">
-            {['1','2','3','4','5','6','7','8','9'].map(d => (
-              <button key={d} type="button" className={key} disabled={busy}
-                onClick={() => push(d)} aria-label={d}>{d}</button>
-            ))}
-            <span aria-hidden="true" />
-            <button type="button" className={key} disabled={busy}
-              onClick={() => push('0')} aria-label="0">0</button>
-            <button type="button" onClick={back} disabled={busy || pin.length === 0}
-              aria-label="Delete last digit"
-              className={`${key} text-[15px] font-normal`}>
-              <span aria-hidden="true">⌫</span>
-            </button>
+          {/* Progress, never the digits. */}
+          <p className="sr-only" aria-live="polite">
+            {busy ? 'Checking your PIN' : `${filled} of ${CELLS} digits entered`}
+          </p>
+
+          <div className="min-h-[52px] mt-4">
+            {err ? (
+              <p role="alert"
+                className="text-sm text-danger bg-danger-soft border border-danger-line rounded-lg px-3 py-2.5">
+                {err}
+              </p>
+            ) : busy ? (
+              <p className="text-sm text-ink-3 flex items-center gap-2">
+                <span aria-hidden="true"
+                  className="w-3.5 h-3.5 rounded-full border-2 border-ink-3/30 border-t-ink-3 animate-spin" />
+                Signing in…
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -191,15 +246,14 @@ export default function SignIn() {
       <style jsx global>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          20%      { transform: translateX(-7px); }
-          40%      { transform: translateX(7px); }
-          60%      { transform: translateX(-4px); }
-          80%      { transform: translateX(4px); }
+          25%      { transform: translateX(-6px); }
+          50%      { transform: translateX(6px); }
+          75%      { transform: translateX(-3px); }
         }
         @media (prefers-reduced-motion: reduce) {
           @keyframes shake { 0%, 100% { transform: none; } }
         }
       `}</style>
-    </div>
+    </main>
   )
 }
