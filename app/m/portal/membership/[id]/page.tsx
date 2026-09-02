@@ -40,7 +40,7 @@ export default function MembershipDetail() {
 
   const m = state?.memberships.find(x => x.membership_id === id)
   if (!state || !m) return (
-    <div className="max-w-md mx-auto px-5 pt-10">
+    <div className="portal-w pt-10">
       <EmptyState
         icon={Wallet}
         title="Group not found"
@@ -58,7 +58,7 @@ export default function MembershipDetail() {
   const owes = m.due_today > 0.005
 
   return (
-    <div className="max-w-md mx-auto px-5 pt-6 space-y-4 animate-fade-in">
+    <div className="portal-w pt-6 space-y-4 animate-fade-in">
       <PageHeader
         back={{ href: '/m/portal/dashboard', label: 'All groups' }}
         title={m.group_name}

@@ -144,6 +144,13 @@
   /* Small-caps section marker used above groups of fields and table blocks */
   .t-eyebrow { @apply text-2xs font-semibold uppercase tracking-[.08em] text-ink-3; }
 
+  /* ── The member application's content width ────────────────────────────
+     Pinned at max-w-md everywhere, the portal became a 448px column floating
+     in the middle of a tablet — the "website centred in a screen" look the
+     app is meant not to have. On a phone this is effectively full width; from
+     `sm` up it widens so the device's screen is actually used. */
+  .portal-w { @apply w-full mx-auto px-5 sm:px-6 max-w-md sm:max-w-2xl lg:max-w-3xl; }
+
   /* ---- Surfaces -------------------------------------------------------- */
   .card       { @apply bg-surface border border-line rounded-lg; }
   .card-hover { @apply transition-[border-color,box-shadow] duration-200 hover:border-ink/20 hover:shadow-sm; }

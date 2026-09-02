@@ -36,7 +36,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
       </main>
 
       <div className="fixed inset-x-0 bottom-[calc(var(--tabbar)+env(safe-area-inset-bottom))] z-40 px-4 pointer-events-none">
-        <div className="max-w-md mx-auto pointer-events-auto">
+        <div className="portal-w pointer-events-auto">
           <InstallApp compact />
         </div>
       </div>
@@ -46,7 +46,8 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
         className="fixed inset-x-0 bottom-0 z-40 bg-surface/85 backdrop-blur-xl border-t border-line
                    pb-[env(safe-area-inset-bottom)]"
       >
-        <div className="max-w-md mx-auto flex items-stretch h-[var(--tabbar)] px-2">
+        <div className="w-full mx-auto max-w-md sm:max-w-2xl lg:max-w-3xl
+                        flex items-stretch h-[var(--tabbar)] px-2">
           {TABS.map(({ href, label, icon: Icon }) => {
             const on = pathname === href
             return (

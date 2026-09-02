@@ -86,7 +86,7 @@ export default function StatementPage() {
 
   if (loading && !data) return <LoadingBlock label="Preparing your statement" className="h-[60vh]" />
   if (!data) return (
-    <div className="max-w-md mx-auto px-5 pt-10">
+    <div className="portal-w pt-10">
       <EmptyState icon={FileText} title="No statement available" body="Try a different period." />
     </div>
   )

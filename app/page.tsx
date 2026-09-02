@@ -171,40 +171,48 @@ export default function SignIn() {
   const active = pin.findIndex(d => !d)
 
   return (
-    <main className="min-h-[100dvh] lg:grid lg:grid-cols-[1.12fr_minmax(440px,.88fr)] bg-bg">
+    <main className="min-h-[100dvh] grid grid-rows-[auto_1fr]
+                     lg:grid-rows-1 lg:grid-cols-[1.12fr_minmax(440px,.88fr)] bg-[#0C0E12]">
 
-      {/* ══ Brand side ══════════════════════════════════════════════════ */}
-      <section className="signin-dark relative hidden lg:flex flex-col justify-between
-                          overflow-hidden bg-[#0C0E12] text-white p-14 xl:p-16">
+      {/* ══ Brand field ═══════════════════════════════════════════════════
+          On a phone this is a band across the top, not a hidden panel: the
+          application announces itself before it asks for anything. */}
+      <section className="signin-dark relative flex flex-col justify-between overflow-hidden
+                          bg-[#0C0E12] text-white
+                          px-6 sm:px-10 lg:p-14 xl:p-16
+                          pt-[max(2rem,calc(env(safe-area-inset-top)+1.25rem))]
+                          pb-8 sm:pb-10 lg:pb-14
+                          min-h-[38dvh] sm:min-h-[42dvh] lg:min-h-0">
 
-        {/* Sits behind the words, bleeding off the lower-right so the ring
-            reads as continuing past the panel rather than being cropped. */}
         <div aria-hidden="true"
-          className="pointer-events-none absolute -right-[14%] -bottom-[18%]
-                     w-[min(760px,78%)] aspect-square opacity-[0.5]">
+          className="pointer-events-none absolute
+                     -right-[22%] -bottom-[46%] w-[min(460px,86%)]
+                     sm:-right-[16%] sm:-bottom-[52%] sm:w-[min(560px,70%)]
+                     lg:-right-[14%] lg:-bottom-[18%] lg:w-[min(760px,78%)]
+                     aspect-square opacity-[0.5]">
           <RotationRing />
         </div>
 
         <div className="relative flex items-center gap-2.5">
-          <Mark className="w-[19px] h-[19px] text-[#A7DCC4]" />
+          <Mark className="w-[18px] h-[18px] lg:w-[19px] lg:h-[19px] text-[#A7DCC4]" />
           <span className="font-display text-md font-semibold tracking-[-.01em]">Abbie Wealth</span>
         </div>
 
-        <div className="relative max-w-[520px]">
-          <p className="t-eyebrow !text-white/40 mb-5">Susu operations</p>
-          <h1 className="font-display text-[clamp(34px,3.2vw,46px)] leading-[1.06] font-semibold
-                         tracking-[-.032em] text-balance">
+        <div className="relative max-w-[520px] mt-8 lg:mt-0">
+          <p className="t-eyebrow !text-white/40 mb-3 lg:mb-5">Susu operations</p>
+          <h1 className="font-display font-semibold tracking-[-.032em] text-balance
+                         text-[clamp(27px,7.2vw,34px)] leading-[1.08]
+                         lg:text-[clamp(34px,3.2vw,46px)] lg:leading-[1.06]">
             Every cedi accounted for,
             <br className="hidden xl:block" /> every slot in its turn.
           </h1>
-          <p className="mt-6 text-md text-white/55 leading-relaxed max-w-[430px]">
+          <p className="hidden sm:block mt-5 lg:mt-6 text-md text-white/55 leading-relaxed max-w-[430px]">
             Contributions, allocations and payouts — recorded once, by one engine,
             with a trail behind every figure.
           </p>
         </div>
 
-        {/* Names the diagram, so it reads as information rather than ornament. */}
-        <div className="relative flex items-end justify-between gap-8">
+        <div className="relative hidden lg:flex items-end justify-between gap-8">
           <span className="text-xs text-white/35">Administrator console</span>
           <span className="flex items-center gap-2.5 text-xs text-white/35">
             <span className="w-1.5 h-1.5 rounded-full bg-[#A7DCC4]" />
@@ -213,112 +221,105 @@ export default function SignIn() {
         </div>
       </section>
 
-      {/* ══ Sign-in side ════════════════════════════════════════════════ */}
-      <section className="relative flex flex-col min-h-[100dvh] lg:min-h-0
+      {/* ══ Sign-in surface ═══════════════════════════════════════════════
+          Rises to meet the brand field and owns the rest of the viewport.
+          A 16px top edge, not a floating rounded card. */}
+      <section className="relative flex flex-col min-w-0
                           bg-surface lg:border-l lg:border-line
+                          rounded-t-2xl lg:rounded-none
+                          -mt-4 lg:mt-0
                           px-6 sm:px-10 lg:px-14
-                          pt-[max(2rem,env(safe-area-inset-top))]
-                          pb-[max(2rem,env(safe-area-inset-bottom))]">
+                          pt-8 sm:pt-10 lg:pt-0
+                          pb-[max(1.5rem,env(safe-area-inset-bottom))]">
 
-        <div className="lg:hidden flex items-center gap-2.5 text-ink">
-          <Mark className="w-[19px] h-[19px] text-accent" />
-          <span className="font-display text-md font-semibold tracking-[-.01em]">Abbie Wealth</span>
-        </div>
+        <div className="w-full max-w-[360px] lg:max-w-[336px] lg:my-auto">
+          <span className="block w-8 h-[3px] rounded-full bg-accent mb-5 lg:mb-6" />
 
-        {/* The optical centre, not a floating box: this column owns the full
-            height and the entry sits in the middle of it. */}
-        <div className="flex-1 flex flex-col justify-center py-10">
-          <div className="w-full max-w-[336px] mx-auto lg:mx-0">
+          <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
+            Enter your admin PIN
+          </h2>
+          <p className="text-sm text-ink-2 mt-2 leading-relaxed">
+            Four digits. Five wrong attempts locks this device for fifteen minutes.
+          </p>
 
-            <span className="block w-8 h-[3px] rounded-full bg-accent mb-6" />
-
-            <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
-              Enter your admin PIN
-            </h2>
-            <p className="text-sm text-ink-2 mt-2 leading-relaxed">
-              Four digits. Five wrong attempts locks this device for fifteen minutes.
-            </p>
-
-            <div
-              role="group"
-              aria-label="Administrator PIN, 4 digits"
-              onPaste={onPaste}
-              className={`flex gap-2.5 mt-7 ${shake ? 'animate-[shake_.38s_ease-in-out]' : ''}`}
-            >
-              {pin.map((d, i) => {
-                const isActive = i === active && !busy
-                return (
-                  <div key={i} className="relative flex-1">
-                    <input
-                      ref={el => { refs.current[i] = el }}
-                      value={d}
-                      onChange={e => onChange(i, e.target.value)}
-                      onKeyDown={e => onKeyDown(i, e)}
-                      onFocus={e => e.target.select()}
-                      disabled={busy}
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      maxLength={CELLS}
-                      aria-label={`Digit ${i + 1} of ${CELLS}`}
-                      // Value lives in state and is painted as a dot below, so
-                      // the digit itself is never drawn on screen.
-                      className={`peer w-full h-[68px] rounded-[14px] bg-surface-2 text-center
-                                  text-transparent caret-transparent outline-none border
-                                  transition-[border-color,background-color,box-shadow] duration-150
-                                  ${err ? 'border-danger/45' : d ? 'border-ink/25' : 'border-line'}
-                                  focus:border-ink focus:bg-surface focus:ring-[3px] focus:ring-ink/[0.08]
-                                  disabled:opacity-50`}
-                    />
-                    <span aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                      {d ? (
-                        <span className="w-[10px] h-[10px] rounded-full bg-ink animate-[popIn_.16s_ease-out]" />
-                      ) : (
-                        <span className={`rounded-full bg-ink transition-all duration-200
-                                          ${isActive ? 'w-[2px] h-6 opacity-70 animate-[caret_1.1s_steps(1)_infinite]'
-                                                     : 'w-[5px] h-[5px] opacity-[0.14]'}`} />
-                      )}
-                    </span>
-                    {/* Settled-slot rule: the cell fills from the bottom, the
-                        same way a slot in the ring fills. */}
-                    <span aria-hidden="true"
-                      className={`pointer-events-none absolute left-3 right-3 bottom-[9px] h-[2px] rounded-full
-                                  transition-all duration-200
-                                  ${d ? 'bg-accent opacity-100' : 'bg-ink opacity-0'}`} />
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Progress, never the digits. */}
-            <p className="sr-only" aria-live="polite">
-              {busy ? 'Checking your PIN' : `${filled} of ${CELLS} digits entered`}
-            </p>
-
-            <div className="min-h-[54px] mt-4">
-              {err ? (
-                <p role="alert"
-                  className="text-sm text-danger bg-danger-soft border border-danger-line
-                             rounded-[10px] px-3 py-2.5 animate-[riseIn_.18s_ease-out]">
-                  {err}
-                </p>
-              ) : busy ? (
-                <p className="text-sm text-ink-3 flex items-center gap-2">
+          <div
+            role="group"
+            aria-label="Administrator PIN, 4 digits"
+            onPaste={onPaste}
+            className={`flex gap-2.5 mt-7 ${shake ? 'animate-[shake_.38s_ease-in-out]' : ''}`}
+          >
+            {pin.map((d, i) => {
+              const isActive = i === active && !busy
+              return (
+                <div key={i} className="relative flex-1">
+                  <input
+                    ref={el => { refs.current[i] = el }}
+                    value={d}
+                    onChange={e => onChange(i, e.target.value)}
+                    onKeyDown={e => onKeyDown(i, e)}
+                    onFocus={e => e.target.select()}
+                    disabled={busy}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    maxLength={CELLS}
+                    aria-label={`Digit ${i + 1} of ${CELLS}`}
+                    // Value lives in state and is painted as a dot below, so the
+                    // digit itself is never drawn on screen.
+                    className={`peer w-full h-[64px] sm:h-[68px] rounded-xl bg-surface-2 text-center
+                                text-transparent caret-transparent outline-none border
+                                transition-[border-color,background-color,box-shadow] duration-150
+                                ${err ? 'border-danger/45' : d ? 'border-ink/25' : 'border-line'}
+                                focus:border-ink focus:bg-surface focus:ring-[3px] focus:ring-ink/[0.08]
+                                disabled:opacity-50`}
+                  />
                   <span aria-hidden="true"
-                    className="w-3.5 h-3.5 rounded-full border-2 border-ink-3/25 border-t-ink-3 animate-spin" />
-                  Signing in…
-                </p>
-              ) : null}
-            </div>
+                    className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    {d ? (
+                      <span className="w-[10px] h-[10px] rounded-full bg-ink animate-[popIn_.16s_ease-out]" />
+                    ) : (
+                      <span className={`rounded-full bg-ink transition-all duration-200
+                                        ${isActive ? 'w-[2px] h-6 opacity-70 animate-[caret_1.1s_steps(1)_infinite]'
+                                                   : 'w-[5px] h-[5px] opacity-[0.14]'}`} />
+                    )}
+                  </span>
+                  {/* Fills from the bottom, the way a slot in the ring fills. */}
+                  <span aria-hidden="true"
+                    className={`pointer-events-none absolute left-3 right-3 bottom-[9px] h-[2px] rounded-full
+                                transition-all duration-200
+                                ${d ? 'bg-accent opacity-100' : 'bg-ink opacity-0'}`} />
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Progress, never the digits. */}
+          <p className="sr-only" aria-live="polite">
+            {busy ? 'Checking your PIN' : `${filled} of ${CELLS} digits entered`}
+          </p>
+
+          <div className="min-h-[54px] mt-4">
+            {err ? (
+              <p role="alert"
+                className="text-sm text-danger bg-danger-soft border border-danger-line
+                           rounded-[10px] px-3 py-2.5 animate-[riseIn_.18s_ease-out]">
+                {err}
+              </p>
+            ) : busy ? (
+              <p className="text-sm text-ink-3 flex items-center gap-2">
+                <span aria-hidden="true"
+                  className="w-3.5 h-3.5 rounded-full border-2 border-ink-3/25 border-t-ink-3 animate-spin" />
+                Signing in…
+              </p>
+            ) : null}
           </div>
         </div>
 
-        {/* Anchors the column instead of letting it float. Both claims are
-            true of this endpoint — no invented certification, no badge. */}
-        <p className="text-2xs text-ink-3 max-w-[336px] mx-auto lg:mx-0 leading-relaxed">
+        {/* Anchored to the foot of the surface. Both claims are true of this
+            endpoint — no invented certification, no security badge. */}
+        <p className="text-2xs text-ink-3 leading-relaxed mt-auto pt-8 max-w-[360px] lg:max-w-[336px]">
           Sign-in attempts are rate limited and recorded. Changing your PIN signs
           out every device.
         </p>

@@ -89,7 +89,7 @@ export default function BrowseGroups() {
   const totalSlots = pickedGroups.reduce((s, g) => s + (slotsFor[g.id] || 1), 0)
 
   return (
-    <div className="max-w-md mx-auto px-5 pt-6 animate-fade-in">
+    <div className="portal-w pt-6 animate-fade-in">
       <h1 className="text-2xl font-semibold text-ink">Join more groups</h1>
       <p className="text-sm text-ink-2 mt-1 leading-relaxed">
         Pick one or several — and take more than one slot in a group if you want multiple payout turns.
@@ -224,7 +224,7 @@ export default function BrowseGroups() {
       {/* Sticky commit bar. Sits above the tab bar, never over it. */}
       {picked.size > 0 && (
         <div className="fixed inset-x-0 bottom-[calc(var(--tabbar)+env(safe-area-inset-bottom))] z-30 px-5 pb-3 animate-rise-in">
-          <div className="max-w-md mx-auto">
+          <div className="portal-w">
             <Button variant="accent" size="lg" full loading={joining} onClick={join} className="shadow-md">
               Join {totalSlots} slot{totalSlots > 1 ? 's' : ''} in {picked.size} group{picked.size > 1 ? 's' : ''}
               {totalFees > 0 && ` · Reg. GHS ${ghs(totalFees)}`}

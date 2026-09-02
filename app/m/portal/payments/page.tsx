@@ -70,7 +70,7 @@ export default function Payments() {
 
   if (loading) return <LoadingBlock label="Loading your groups" className="h-[60vh]" />
   if (!state) return (
-    <div className="max-w-md mx-auto px-5 pt-10">
+    <div className="portal-w pt-10">
       <Notice tone="warn" title="We could not load your payments">
         Check your connection and try again.
       </Notice>
@@ -81,7 +81,7 @@ export default function Payments() {
   const owing = memberships.filter(m => m.due_today > 0.005 || m.overdue > 0.005).length
 
   return (
-    <div className="max-w-md mx-auto px-5 pt-6 space-y-4 animate-fade-in">
+    <div className="portal-w pt-6 space-y-4 animate-fade-in">
       <header>
         <h1 className="text-2xl font-semibold text-ink">Payments</h1>
         <p className="text-sm text-ink-2 mt-1">

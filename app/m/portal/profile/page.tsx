@@ -95,7 +95,7 @@ export default function Profile() {
 
   if (loading) return <LoadingBlock label="Loading your profile" className="h-[60vh]" />
   if (!d) return (
-    <div className="max-w-md mx-auto px-5 pt-10">
+    <div className="portal-w pt-10">
       <Notice tone="bad" title="Could not load your profile">
         Check your connection and try again.
       </Notice>
@@ -125,7 +125,7 @@ export default function Profile() {
   const collected   = payouts.filter(p => p.status === 'paid')
 
   return (
-    <div className="max-w-md mx-auto px-5 pt-6 space-y-3 animate-fade-in">
+    <div className="portal-w pt-6 space-y-3 animate-fade-in">
 
       <div className="flex items-center gap-3 mb-2">
         <Avatar name={member.full_name} size="lg" tone="ink" />

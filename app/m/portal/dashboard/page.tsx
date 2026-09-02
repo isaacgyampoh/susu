@@ -59,7 +59,7 @@ export default function Dashboard() {
   if (loading) return <DashboardSkeleton />
 
   if (!state || failed) return (
-    <div className="max-w-md mx-auto px-5 pt-10">
+    <div className="portal-w pt-10">
       <EmptyState
         icon={Wallet}
         title="Could not load your account"
@@ -74,7 +74,7 @@ export default function Dashboard() {
   const settled = memberships.filter(m => m.due_today <= 0.005 && m.coverage !== 'no-schedule')
 
   return (
-    <div className="max-w-md mx-auto px-5 pt-6 space-y-4 animate-fade-in">
+    <div className="portal-w pt-6 space-y-4 animate-fade-in">
 
       <header className="flex items-center gap-3">
         <Avatar name={member.full_name} size="lg" tone="ink" />
@@ -273,7 +273,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function DashboardSkeleton() {
   return (
-    <div className="max-w-md mx-auto px-5 pt-6 space-y-4" role="status" aria-label="Loading your account">
+    <div className="portal-w pt-6 space-y-4" role="status" aria-label="Loading your account">
       <div className="flex items-center gap-3">
         <Skeleton className="w-11 h-11 rounded-lg" />
         <div className="space-y-2 flex-1">
