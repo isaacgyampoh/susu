@@ -69,6 +69,52 @@ serveWithCors(async (req) => {
             .eq('group_id', gm.group_id).eq('payout_position', newPos)
             .neq('id', membershipId).maybeSingle()
           if (clash) return error(`Payout position #${newPos} is already taken in this group`, 409)
+
+          /*
+           * ── A SLOT IS SET WHEN THE GROUP STARTS ──────────────────────────
+           *
+           * The payout position is the member's turn in the rotation. Everyone
+           * else's turn is arranged around it, so moving one after the group is
+           * running reorders other people's expectations of when they collect.
+           *
+           * This used to be a bare field update: any admin, any time, no reason
+           * recorded, no audit entry, and permitted even on a membership whose
+           * payout had already been PAID — which would have moved the turn of
+           * someone who had already taken it.
+           *
+           * Contributions are keyed by membership_id, not by position, so no
+           * financial history moves either way. What changes is whose turn is
+           * when, and that is exactly the thing worth a reason and a record.
+           */
+          if (gm.payout_received) {
+            return error(
+              `${(gm.susu_groups as { name?: string } | null)?.name ?? 'This member'} has already ` +
+              `received the payout for slot #${gm.payout_position}. Its turn cannot be moved — ` +
+              `the money for it has already gone out.`, 409)
+          }
+
+          const { data: grp } = await supabaseAdmin
+            .from('susu_groups').select('status, name').eq('id', gm.group_id).single()
+          const started = grp && ['active', 'completed'].includes(grp.status as string)
+          const reason = typeof body.slot_change_reason === 'string' ? body.slot_change_reason.trim() : ''
+
+          if (started && reason.length < 10) {
+            return error(
+              `"${grp?.name}" has already started, so slot #${gm.payout_position} is part of a ` +
+              `running rotation. Moving it needs a reason of at least 10 characters, which is ` +
+              `written to the audit log.`, 400)
+          }
+
+          await supabaseAdmin.from('audit_log').insert({
+            admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
+            action: 'membership.slot_changed', entity_type: 'membership', entity_id: membershipId,
+            entity_label: `${grp?.name ?? 'group'} · slot #${gm.payout_position} → #${newPos}`,
+            details: {
+              from: gm.payout_position, to: newPos, group_started: !!started,
+              reason: reason || null, member_id: gm.member_id,
+            },
+          })
+
           updates.payout_position = newPos
         }
       }

@@ -9,6 +9,7 @@ import {
   Button, Checkbox, Field, Input, LoadingBlock, Modal, ModalActions,
   Money, Notice, Select, useToast, cx,
 } from '@/components/ui'
+import { PaymentPolicy } from '@/components/susu/payment-policy'
 
 /**
  * Choose an amount, see exactly what it will cover, then pay.
@@ -105,6 +106,11 @@ export default function PaySheet({
       description={`GHS ${ghs2(daily)} ${membership.frequency} · Slot ${membership.payout_position}`}
       size="lg"
       footer={
+        <>
+        {/* A quiet reminder at the point of payment. The strong treatment is
+            for registration, where the person is new and committing; a member
+            paying their daily contribution has seen it before. */}
+        <PaymentPolicy className="mb-3" />
         <ModalActions>
           <Button variant="outline" onClick={onClose} full className="sm:w-auto">Cancel</Button>
           <Button
@@ -115,6 +121,7 @@ export default function PaySheet({
             Pay GHS {ghs2(value)}
           </Button>
         </ModalActions>
+        </>
       }
     >
       <div className="space-y-5">

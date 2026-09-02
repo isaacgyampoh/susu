@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { callFunction } from '@/lib/supabase'
+import { PaymentPolicy } from '@/components/susu/payment-policy'
 import type { SusuGroup } from '@/types'
 
 /*
@@ -244,6 +245,11 @@ export default function JoinPage() {
             </div>
           </div>
 
+          {/* Before submitting, not after. Someone choosing five groups at
+              GHS 100 a day is committing to GHS 500 daily — that is the moment
+              affordability is worth saying out loud. */}
+          <PaymentPolicy variant="strong" />
+
           <button type="submit" disabled={sending || loading}
             className="w-full py-4 bg-ink text-white font-bold rounded-[12px] hover:brightness-105 transition-all active:scale-[.98] disabled:opacity-50">
             {sending ? 'Submitting…'
@@ -251,7 +257,9 @@ export default function JoinPage() {
               : 'Apply to Join'}
           </button>
           <p className="text-[11px] text-ink-3 text-center -mt-2">
-            By applying you agree to the group&rsquo;s contribution schedule. You&rsquo;ll receive your sign-in details by SMS once approved.
+            By applying you agree to the group&rsquo;s contribution schedule and to the
+            <a href="/policies" className="underline underline-offset-2">payment policy</a>.
+            You&rsquo;ll receive your sign-in details by SMS once approved.
           </p>
         </form>
       </div>

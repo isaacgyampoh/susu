@@ -139,9 +139,30 @@ export function adminNumbers(): string[] {
     .split(',').map(s => s.trim()).filter(Boolean)
 }
 
-/** Send an SMS to every configured admin number (no-op if none set). */
+/**
+ * Send an SMS to every configured admin number.
+ *
+ * ────────────────────────────────────────────────────────────────────────
+ * `ADMIN_SMS_NUMBERS` is UNSET in production, and has been for the life of the
+ * platform: 553 member receipts went out in the last 30 days and not one admin
+ * notification, because this returned early every time without saying so.
+ *
+ * Eight call sites are affected — every payment received, every settlement
+ * swept, every payout reminder, the daily digest. The operator has been
+ * running blind and had no way to know, because a silent no-op looks exactly
+ * like a quiet day.
+ *
+ * It still returns early — texting nobody is the correct behaviour when nobody
+ * is configured — but it now says so in the logs, once per call, with the
+ * message that was dropped. A missing configuration should be visible.
+ */
 export async function notifyAdmins(message: string): Promise<void> {
   const nums = adminNumbers()
-  if (nums.length === 0) return
+  if (nums.length === 0) {
+    console.warn(
+      'notifyAdmins: ADMIN_SMS_NUMBERS is not set — no administrator was told. ' +
+      `Dropped message: ${message}`)
+    return
+  }
   await sendSMS(nums, message)
 }

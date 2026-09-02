@@ -930,7 +930,7 @@ export default function MemberDetailPage() {
                 <li>Free up the slot in this group</li>
                 <li>Notify the member by SMS</li>
               </ul>
-              <p className="text-red text-xs mt-2 font-medium">Per platform s, no refund applies.</p>
+              <p className="text-red text-xs mt-2 font-medium">Per the platform rules, no refund applies.</p>
             </div>
 
             <div>

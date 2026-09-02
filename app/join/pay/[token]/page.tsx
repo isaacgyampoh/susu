@@ -8,6 +8,7 @@ import {
   Badge, Button, Card, DetailList, DetailRow, Field, Input, Select,
   LoadingBlock, Notice, useToast,
 } from '@/components/ui'
+import { PaymentPolicy } from '@/components/susu/payment-policy'
 
 /**
  * REGISTRATION FEE — the applicant's payment page.
@@ -264,6 +265,9 @@ export default function RegistrationPaymentPage() {
             </Field>
           </div>
 
+          {/* Stated BEFORE the button, not after the payment. */}
+          <PaymentPolicy variant="strong" className="mt-4" />
+
           <Button
             className="w-full mt-4" icon={Smartphone}
             loading={busy} disabled={busy || number.trim().length < 10}
@@ -274,7 +278,11 @@ export default function RegistrationPaymentPage() {
         </Card>
       )}
 
-      <p className="flex items-center justify-center gap-1.5 text-2xs text-ink-3 mt-5">
+      <p className="text-center text-2xs text-ink-3 mt-5">
+        <a href="/policies" className="underline underline-offset-2">Payment and membership policy</a>
+      </p>
+
+      <p className="flex items-center justify-center gap-1.5 text-2xs text-ink-3 mt-2">
         <ShieldCheck size={12} strokeWidth={2.2} aria-hidden="true" />
         This link is personal to your application and expires
         {reg.link_expires ? ` on ${new Date(reg.link_expires).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}.

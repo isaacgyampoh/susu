@@ -266,6 +266,13 @@ export default function Profile() {
         </Disclosure>
       </Card>
 
+      {/* The rules the membership runs on, reachable from inside the portal
+          and not only from the page someone saw once while joining. */}
+      <a href="/policies"
+         className="block text-center text-xs text-ink-2 underline underline-offset-2 py-1">
+        Payment and membership policy
+      </a>
+
       {/* Sign out lives here, not in the tab bar. A destructive control
           sitting beside four navigation targets gets hit by accident. */}
       <Button variant="outline" icon={LogOut} full onClick={signOut} className="!text-danger">
