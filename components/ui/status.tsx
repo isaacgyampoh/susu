@@ -75,8 +75,11 @@ const MAP: Record<string, { tone: Tone; label: string }> = {
   // kyc / transactions
   approved:    { tone: 'good',    label: 'Approved' },
   rejected:    { tone: 'bad',     label: 'Rejected' },
-  success:     { tone: 'good',    label: 'Success' },
+  success:     { tone: 'good',    label: 'Successful' },
   failed:      { tone: 'bad',     label: 'Failed' },
+  // A settled payment whose allocations were later reversed. Distinct from
+  // 'failed': the money arrived, and was then given back its days.
+  reversed:    { tone: 'warn',    label: 'Reversed' },
   // memberships
   defaulted:   { tone: 'bad',     label: 'Defaulted' },
 }

@@ -19,3 +19,5 @@ export { Segmented, Tabs, ChipRow } from './tabs'
 export type { TabItem } from './tabs'
 export { Avatar } from './avatar'
 export { Providers } from './providers'
+export { Metric, MetricRow, SearchBar, FilterChips, StatusTabs, MobileRecord,
+         DetailPanel, DetailSection, Facts, Timeline } from './workspace'

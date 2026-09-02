@@ -47,7 +47,7 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-ink">{title}</h1>
+          <h1 className="t-title">{title}</h1>
           {sub && <p className="text-sm text-ink-2 mt-1 leading-relaxed">{sub}</p>}
         </div>
         {actions && <div className="flex items-center gap-2 flex-wrap shrink-0">{actions}</div>}

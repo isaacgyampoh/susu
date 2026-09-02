@@ -50,6 +50,7 @@ export const ENDPOINTS: Record<string, Effect[]> = {
   'admin-reports':             ['READ_ONLY'],
   'admin-sms-log':             ['READ_ONLY'],
   'admin-transactions':        ['READ_ONLY'],
+  'admin-payments':            ['READ_ONLY'],
   'contributions-list':        ['READ_ONLY'],
   'groups-public':             ['READ_ONLY'],
   'member-profile':            ['READ_ONLY'],

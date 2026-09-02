@@ -20,7 +20,11 @@ const NAV: { group: string; items: NavItem[] }[] = [
     { href: '/admin/members',       label: 'Members' },
     { href: '/admin/groups',        label: 'Groups' },
   ]},
-  { group: 'Money detail', items: [
+  { group: 'Money', items: [
+    // The payments workspace: every payment, its status, and exactly which
+    // contribution days it settled. `/admin/transactions` above answers a
+    // different question — who paid on ONE day — and is kept for that.
+    { href: '/admin/payments',      label: 'Payments',      hint: 'every payment & allocation' },
     { href: '/admin/contributions', label: 'Contributions', hint: 'day-by-day dues' },
     // Money nobody has resolved yet. Filed under "Money detail" rather than
     // "Every day" because it is a periodic review, not a daily task — but it
