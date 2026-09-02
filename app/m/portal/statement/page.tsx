@@ -96,7 +96,7 @@ export default function StatementPage() {
     : data.memberships.filter(m => m.membership_id === membership)
 
   return (
-    <div className="max-w-2xl mx-auto px-5 pt-6 space-y-4 animate-fade-in">
+    <div className="portal-w pt-6 space-y-4 animate-fade-in">
       <header>
         <h1 className="text-2xl font-semibold text-ink">Statement</h1>
         <p className="text-sm text-ink-2 mt-1">

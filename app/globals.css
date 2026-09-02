@@ -149,7 +149,35 @@
      in the middle of a tablet — the "website centred in a screen" look the
      app is meant not to have. On a phone this is effectively full width; from
      `sm` up it widens so the device's screen is actually used. */
-  .portal-w { @apply w-full mx-auto px-5 sm:px-6 max-w-md sm:max-w-2xl lg:max-w-3xl; }
+  /* ── THE APPLICATION'S CONTENT WIDTH ───────────────────────────────────
+     On a phone there is NO max-width and NO centring. The application owns
+     the viewport edge to edge and the content sits inside it on an 18px
+     gutter — the frame is the device, not a container drawn on top of it.
+
+     The previous rule capped this at 28rem (448px) at every size. Under 448px
+     that is invisible, which is why it survived review; at 575px it produced a
+     448px island with 63px of dead gutter down each side. That is the
+     "website inside a phone" look, and it was introduced here, in one line.
+
+     A max-width only starts at 768px, where a constrained reading column is
+     genuinely better than a 1000px line of text — a tablet and desktop
+     decision that must not leak back down onto the phone. */
+  .portal-w {
+    width: 100%;
+    min-width: 0;
+    padding-left: 1.125rem;
+    padding-right: 1.125rem;
+  }
+  @media (min-width: 768px) {
+    .portal-w {
+      max-width: 46rem;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 1.75rem;
+      padding-right: 1.75rem;
+    }
+  }
+  @media (min-width: 1280px) { .portal-w { max-width: 56rem; } }
 
   /* Fine grain on dark app surfaces, so a dark band reads as a material
      rather than as an absence of colour. */

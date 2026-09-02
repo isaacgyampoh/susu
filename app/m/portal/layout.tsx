@@ -46,8 +46,12 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
         className="fixed inset-x-0 bottom-0 z-40 bg-surface/85 backdrop-blur-xl border-t border-line
                    pb-[env(safe-area-inset-bottom)]"
       >
-        <div className="w-full mx-auto max-w-md sm:max-w-2xl lg:max-w-3xl
-                        flex items-stretch h-[var(--tabbar)] px-2">
+        {/* Spans the viewport. A tab bar centred in a 448px box reads as a
+            navigation strip inside a web page; the application's navigation
+            should reach both edges of the device. It constrains only at the
+            width where the content column itself does. */}
+        <div className="w-full md:max-w-[46rem] md:mx-auto
+                        flex items-stretch h-[var(--tabbar)] px-1.5 md:px-2">
           {TABS.map(({ href, label, icon: Icon }) => {
             const on = pathname === href
             return (
