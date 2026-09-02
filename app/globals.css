@@ -163,29 +163,26 @@
      genuinely better than a 1000px line of text — a tablet and desktop
      decision that must not leak back down onto the phone. */
   /* ── THE BRAND IMAGE ───────────────────────────────────────────────────
-     Sits behind the wordmark on both sign-in screens.
+     Deliberately empty. Nothing is painted here until a real photograph
+     exists, because a drawing of a hand collided with the headline and read as
+     grey clip-art — worse than the clean field it replaced.
 
-     Anchored BOTTOM-RIGHT, which is the rule for cut-out photography of
-     people: a figure has to stand on the lower edge of the band or it floats.
-     `contain` so the subject is never cropped through the face.
-
-     TO USE A PHOTOGRAPH OF PEOPLE — the intended direction:
-       1. Get a licensed or original shot: members using the app, a collector
-          taking a contribution. Cut out on a transparent background, saved as
-          PNG or WebP so the dark field shows through around them.
-       2. Save it as /public/brand-collection.png and point the url() below at
-          it. Nothing else changes: bottom-right and `contain` are already the
-          right treatment for a cut-out.
-       3. Keep the subject to the RIGHT. The wordmark sits top-left and the
-          headline bottom-left, and the scrim below is built to protect that
-          column while leaving faces clear.
-
-     The SVG here is a placeholder standing in until that photograph exists. */
+     TO ADD THE PHOTOGRAPH:
+       1. A licensed or original shot of members using the app, cut out on a
+          transparent background and saved as PNG or WebP so the dark field
+          shows through around the subject.
+       2. Save to /public and uncomment the three lines below, pointing the
+          url() at it.
+       3. Keep the subject to the RIGHT and BELOW the type. The wordmark sits
+          top-left and the headline runs down the left of the panel; a subject
+          that crosses that column will collide with it exactly as the drawing
+          did. `right bottom` and `contain` are already the correct treatment
+          for a cut-out figure. */
   .brand-photo {
-    background-image: url('/brand-collection.svg');
-    background-size: contain;
-    background-position: right bottom;
-    background-repeat: no-repeat;
+    /* background-image: url('/brand-collection.png');
+       background-size: contain;
+       background-position: right bottom;
+       background-repeat: no-repeat; */
   }
 
   .portal-w {

@@ -179,7 +179,14 @@ export default function SignIn() {
       {/* ══ Sign-in surface ═══════════════════════════════════════════════
           Rises to meet the brand field and owns the rest of the viewport.
           A 16px top edge, not a floating rounded card. */}
-      <section className="relative flex flex-col min-w-0
+      {/*
+        A grid, not competing auto margins. The column had `my-auto` on the form
+        AND `mt-auto` on the footer; the two fought and left the entry sitting
+        high with roughly half the panel empty beneath it. Two rows — the form
+        centred in whatever is left, the footer pinned — is deterministic at
+        every height.
+      */}
+      <section className="relative grid grid-rows-[1fr_auto] min-w-0
                           bg-surface lg:border-l lg:border-line
                           rounded-t-2xl lg:rounded-none
                           -mt-4 lg:mt-0
@@ -189,7 +196,8 @@ export default function SignIn() {
 
         {/* No cap and no centring on a phone — see the member sign-in for
             what a fixed column does to a 575px screen. */}
-        <div className="w-full sm:max-w-[380px] lg:max-w-[336px] my-auto">
+        <div className="flex items-center min-h-0">
+         <div className="w-full sm:max-w-[380px] lg:max-w-[336px]">
           <span className="block w-8 h-[3px] rounded-full bg-accent mb-5 lg:mb-6" />
 
           <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
@@ -242,7 +250,7 @@ export default function SignIn() {
                                                    : 'w-[5px] h-[5px] opacity-[0.14]'}`} />
                     )}
                   </span>
-                  {/* Fills from the bottom, the way a slot in the ring fills. */}
+                  {/* Fills from the bottom as the digit lands. */}
                   <span aria-hidden="true"
                     className={`pointer-events-none absolute left-3 right-3 bottom-[9px] h-[2px] rounded-full
                                 transition-all duration-200
@@ -272,11 +280,12 @@ export default function SignIn() {
               </p>
             ) : null}
           </div>
+         </div>
         </div>
 
-        {/* Anchored to the foot of the surface. Both claims are true of this
-            endpoint — no invented certification, no security badge. */}
-        <p className="text-2xs text-ink-3 leading-relaxed mt-auto pt-7 sm:max-w-[380px] lg:max-w-[336px]">
+        {/* Both claims are true of this endpoint — no invented certification,
+            no security badge. */}
+        <p className="text-2xs text-ink-3 leading-relaxed pt-7 sm:max-w-[380px] lg:max-w-[336px]">
           Sign-in attempts are rate limited and recorded. Changing your PIN signs
           out every device.
         </p>

@@ -107,7 +107,10 @@ export default function MemberSignIn() {
       </section>
 
       {/* ══ Sign-in surface ════════════════════════════════════════════════ */}
-      <section className="relative flex flex-col min-w-0 bg-surface
+      {/* Two rows: the form centred in what is left, the footer pinned. An
+          earlier version put `my-auto` on the form and `mt-auto` on the footer;
+          they competed and pooled the spare height into one block. */}
+      <section className="relative grid grid-rows-[1fr_auto] min-w-0 bg-surface
                           sm:border-l sm:border-line rounded-t-2xl sm:rounded-none -mt-4 sm:mt-0
                           px-[1.125rem] sm:px-10 pt-7 sm:pt-0
                           pb-[max(1.25rem,env(safe-area-inset-bottom))]">
@@ -115,7 +118,8 @@ export default function MemberSignIn() {
             device. A 380px column on a 575px screen left 159px of dead gutter
             down the right-hand side — the application drawn inside the screen
             instead of as the screen. */}
-        <div className="w-full sm:max-w-[380px] my-auto">
+        <div className="flex items-center min-h-0">
+         <div className="w-full sm:max-w-[380px]">
           <span className="block w-8 h-[3px] rounded-full bg-accent mb-5" />
 
           <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
@@ -164,9 +168,10 @@ export default function MemberSignIn() {
               {busy ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
+         </div>
         </div>
 
-        <p className="text-2xs text-ink-3 leading-relaxed mt-auto pt-7 sm:max-w-[380px]">
+        <p className="text-2xs text-ink-3 leading-relaxed pt-7 sm:max-w-[380px]">
           Don&rsquo;t have a passcode? Ask your susu admin — they can send you a new one.
         </p>
       </section>
