@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Layers, RefreshCw, Wallet } from 'lucide-react'
+import { ArrowRight, CreditCard, Layers, FileText, RefreshCw, Users, Wallet } from 'lucide-react'
 import { format } from 'date-fns'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { MembershipView, PortalState } from '@/types/portal'
@@ -13,6 +13,7 @@ import {
   Avatar, Button, Card, EmptyState, IconButton, Money, Notice, Skeleton,
   useToast, cx,
 } from '@/components/ui'
+import { AppBar, AccountHero, QuickActions } from '@/components/susu/app-bar'
 
 /**
  * The member dashboard.
@@ -31,6 +32,18 @@ import {
  * cross-membership totals, is computed by get_member_portal_state() in the
  * database. The old dashboard summed money in a React `reduce`, which is how
  * the same number came to be calculated in four different places.
+ *
+ * ── THE COMPOSITION IS THE CHANGE ───────────────────────────────────────
+ *
+ * The data here was already right; the shape was a webpage. An avatar row, a
+ * dark card, then a stack of cards inside a padded column — which reads as a
+ * page of modules rather than as an account.
+ *
+ * It now opens the way a banking app opens: a dark band running to the top
+ * edge of the device, carrying the greeting and ONE figure with the weight,
+ * with today's numbers beneath a rule in support of it. Then a row of
+ * destinations, then the groups. The band runs edge to edge and the status bar
+ * sits inside it, which is most of what separates an application from a site.
  */
 export default function Dashboard() {
   const toast = useToast()
@@ -73,48 +86,66 @@ export default function Dashboard() {
   const owing = memberships.filter(m => m.due_today > 0.005)
   const settled = memberships.filter(m => m.due_today <= 0.005 && m.coverage !== 'no-schedule')
 
+  // Local to the greeting only. Nothing financial is derived in the browser.
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const firstName = member.full_name.split(' ')[0]
+
   return (
-    <div className="portal-w pt-6 space-y-4 animate-fade-in">
+    <div className="animate-fade-in">
 
-      <header className="flex items-center gap-3">
-        <Avatar name={member.full_name} size="lg" tone="ink" />
-        <div className="min-w-0 flex-1">
-          <p className="text-md font-semibold text-ink truncate">{member.full_name}</p>
-          <p className="text-xs text-ink-3 font-mono">{member.member_code}</p>
-        </div>
-        <IconButton
-          icon={RefreshCw} label="Refresh" variant="ghost"
-          onClick={() => load(true)}
-          className={cx(refreshing && 'pointer-events-none [&_svg]:animate-spin')}
+      <AppBar
+        variant="hero"
+        right={
+          <span className="flex items-center gap-1">
+            <IconButton
+              icon={RefreshCw} label="Refresh" variant="ghost"
+              onClick={() => load(true)}
+              className={cx('text-white/70 hover:text-white hover:bg-white/10',
+                            refreshing && 'pointer-events-none [&_svg]:animate-spin')}
+            />
+            <Link href="/m/portal/profile" aria-label="Your profile"
+              className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+              <Avatar name={member.full_name} size="sm" />
+            </Link>
+          </span>
+        }
+      >
+        <AccountHero
+          greeting={greeting}
+          name={firstName}
+          label={totals.remaining_today > 0.005 ? 'Still to pay today' : 'Paid so far'}
+          figure={
+            <>
+              <span className="text-lg font-medium opacity-55 mr-1.5">GHS</span>
+              {totals.remaining_today > 0.005 ? ghs2(totals.remaining_today) : ghs2(totals.paid_all_time)}
+            </>
+          }
+          note={
+            totals.remaining_today > 0.005
+              ? (totals.paid_today > 0.005
+                  ? `GHS ${ghs2(totals.paid_today)} of GHS ${ghs2(totals.obligation_today)} already paid today`
+                  : `Across ${totals.active_memberships} group${totals.active_memberships === 1 ? '' : 's'}`)
+              : `Across ${totals.active_memberships} group${totals.active_memberships === 1 ? '' : 's'} since you joined`
+          }
+          stats={[
+            { label: 'Groups',     value: String(totals.active_memberships) },
+            { label: 'Still owed', value: `GHS ${ghs(totals.outstanding)}`,
+              tone: totals.outstanding > 0.005 ? 'warn' : undefined },
+            { label: 'In advance', value: `GHS ${ghs(totals.advance_credit)}`,
+              tone: totals.advance_credit > 0.005 ? 'good' : undefined },
+          ]}
         />
-      </header>
+      </AppBar>
 
-      {/*
-        Today, in three figures rather than one.
-        A member holding several groups needs to see what today asks of them,
-        what they have already put in, and what is left — "due today" alone is
-        the third of those, and cannot be used to work out the other two.
-        All three come from `get_member_portal_state()`; nothing here adds up
-        rows in the browser.
-      */}
-      <Card tone="ink" pad="lg">
-        <p className="text-xs font-medium text-inverse/60">
-          {totals.remaining_today > 0.005 ? 'Still to pay today' : 'Today, across all your groups'}
-        </p>
-        <Money value={totals.remaining_today} exact size="xl" className="text-inverse mt-1.5" />
+      <QuickActions actions={[
+        { href: '/m/portal/payments',  label: 'Pay',       icon: CreditCard },
+        { href: '/m/portal/groups',    label: 'Groups',    icon: Users },
+        { href: '/m/portal/statement', label: 'Statement', icon: FileText },
+        { href: '/m/portal/profile',   label: 'Profile',   icon: Wallet },
+      ]} />
 
-        {totals.paid_today > 0.005 && (
-          <p className="text-xs text-inverse/70 mt-1.5 tnum">
-            GHS {ghs2(totals.paid_today)} of GHS {ghs2(totals.obligation_today)} already paid today
-          </p>
-        )}
-
-        <dl className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-inverse/15">
-          <Stat label="Groups" value={String(totals.active_memberships)} />
-          <Stat label="Paid so far" value={`GHS ${ghs(totals.paid_all_time)}`} />
-          <Stat label="Still to pay" value={`GHS ${ghs(totals.outstanding)}`} />
-        </dl>
-      </Card>
+      <div className="portal-w pt-5 space-y-4">
 
       {totals.overdue > 0.005 && (
         <Notice tone="bad" title={`GHS ${ghs2(totals.overdue)} overdue`}>
@@ -234,6 +265,8 @@ export default function Dashboard() {
         </Card>
       )}
 
+      </div>
+
       {paySheet && (
         <PaySheet
           membership={paySheet}
@@ -262,28 +295,26 @@ export default function Dashboard() {
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-2xs text-inverse/55 font-medium">{label}</dt>
-      <dd className="text-sm font-semibold text-inverse mt-1 tnum truncate">{value}</dd>
-    </div>
-  )
-}
 
 function DashboardSkeleton() {
   return (
-    <div className="portal-w pt-6 space-y-4" role="status" aria-label="Loading your account">
-      <div className="flex items-center gap-3">
-        <Skeleton className="w-11 h-11 rounded-lg" />
-        <div className="space-y-2 flex-1">
-          <Skeleton className="h-3.5 w-40" />
-          <Skeleton className="h-2.5 w-24" />
+    <div role="status" aria-label="Loading your account">
+      {/* Mirrors the real composition, so nothing jumps when data lands. */}
+      <div className="bg-[#0C0E12] pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-7">
+        <div className="portal-w space-y-3">
+          <Skeleton className="h-5 w-36 bg-white/10" />
+          <Skeleton className="h-3 w-24 bg-white/10 !mt-7" />
+          <Skeleton className="h-9 w-52 bg-white/10" />
+          <div className="grid grid-cols-3 gap-4 !mt-7 pt-5 border-t border-white/10">
+            {[0, 1, 2].map(i => <Skeleton key={i} className="h-8 bg-white/10" />)}
+          </div>
         </div>
       </div>
-      <Skeleton className="h-40 rounded-lg" />
-      <Skeleton className="h-64 rounded-lg" />
-      <Skeleton className="h-64 rounded-lg" />
+      <div className="h-[64px] border-y border-line bg-surface" />
+      <div className="portal-w pt-5 space-y-3">
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+      </div>
     </div>
   )
 }

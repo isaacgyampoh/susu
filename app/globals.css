@@ -151,6 +151,14 @@
      `sm` up it widens so the device's screen is actually used. */
   .portal-w { @apply w-full mx-auto px-5 sm:px-6 max-w-md sm:max-w-2xl lg:max-w-3xl; }
 
+  /* Fine grain on dark app surfaces, so a dark band reads as a material
+     rather than as an absence of colour. */
+  .app-grain::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    opacity: .04; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
   /* ---- Surfaces -------------------------------------------------------- */
   .card       { @apply bg-surface border border-line rounded-lg; }
   .card-hover { @apply transition-[border-color,box-shadow] duration-200 hover:border-ink/20 hover:shadow-sm; }
