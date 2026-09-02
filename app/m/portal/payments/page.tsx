@@ -1,7 +1,8 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { format } from 'date-fns'
-import { CheckCircle2, Receipt, Wallet } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Receipt, Wallet } from 'lucide-react'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { MembershipView, PortalState } from '@/types/portal'
 import PayPrompt from '@/components/susu/pay-prompt'
@@ -151,44 +152,51 @@ export default function Payments() {
 
       {/* ── Payment history ───────────────────────────────────────────── */}
       <section className="pt-2">
-        <p className="t-eyebrow mb-2">Payment history</p>
+        <h2 className="t-eyebrow mb-2">Payment history</h2>
         {payments.length === 0 ? (
           <Card pad="none">
             <EmptyState icon={Receipt} title="No payments yet"
               body="Your payments will appear here, showing exactly which days each one covered." compact />
           </Card>
         ) : (
-          <div className="space-y-2">
-            {payments.map(p => (
-              <Card key={p.reference} pad="md">
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-ink">
-                      {format(new Date(p.at), 'd MMM yyyy')}
+          /*
+            Compact rows that open a full screen, not cards that unfold every
+            allocation in place. A payment covering fifteen days made a card
+            fifteen lines tall, so scanning "what have I paid recently" meant
+            scrolling past detail nobody asked for yet. The row answers how much
+            and when; the detail screen answers what it paid for.
+          */
+          <div className="border border-line rounded-xl bg-surface divide-y divide-line-2
+                          px-[1.125rem] md:px-7">
+            {payments.map(p => {
+              const groups = [...new Set(p.items.map(i => i.group))]
+              return (
+                <Link
+                  key={p.reference}
+                  href={`/m/portal/payments/${encodeURIComponent(p.reference)}`}
+                  className="flex items-center gap-3 py-3.5 min-h-[56px] transition-colors
+                             hover:bg-surface-2 active:bg-surface-3
+                             -mx-[1.125rem] px-[1.125rem] md:-mx-7 md:px-7
+                             focus-visible:outline-none focus-visible:ring-2
+                             focus-visible:ring-inset focus-visible:ring-ink/30"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-semibold text-ink tnum">GHS {ghs2(p.total)}</p>
+                    <p className="text-xs text-ink-2 mt-0.5 truncate">
+                      {p.items.length} day{p.items.length === 1 ? '' : 's'}
+                      {groups.length === 1
+                        ? ` · ${groups[0]}`
+                        : groups.length > 1 ? ` · ${groups.length} groups` : ''}
                     </p>
-                    <p className="text-2xs text-ink-3 font-mono truncate">{p.reference}</p>
+                    <p className="text-xs text-ink-3 mt-0.5 tnum">
+                      {format(new Date(p.at), 'd MMM yyyy · HH:mm')}
+                    </p>
                   </div>
-                  <Money value={p.total} size="sm" sign="in" className="shrink-0" />
-                </div>
-
-                {/* What the money actually covered, per group and per day —
-                    never a bare "paid" against an ambiguous total. */}
-                <div className="mt-2.5 pt-2.5 border-t border-line-2 space-y-1">
-                  {p.items.map((it, i) => (
-                    <div key={`${it.membership_id}-${it.due_date}-${i}`}
-                         className="flex items-baseline justify-between gap-3">
-                      <span className="text-xs text-ink-2 truncate">
-                        {it.group} · {format(new Date(it.due_date), 'd MMM')}
-                      </span>
-                      <span className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-xs text-ink tnum">GHS {ghs2(it.amount)}</span>
-                        {it.kind === 'part' && <Badge tone="warn">part</Badge>}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            ))}
+                  <ChevronRight size={15} strokeWidth={2} aria-hidden="true"
+                    className="text-ink-3 shrink-0" />
+                </Link>
+              )
+            })}
           </div>
         )}
       </section>
