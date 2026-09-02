@@ -49,6 +49,81 @@ serveWithCors(async (req) => {
     supabaseAdmin.from('audit_log').insert({ ...actor, ...row })
 
   try {
+    // ── Bulk provider classification: READ ONLY ───────────────────────
+    // 315 of the 402 stuck payments can only be resolved by asking NaloPay,
+    // and `refresh` asks about one at a time — 315 clicks is not a workflow.
+    //
+    // This asks in bulk and SETTLES NOTHING. Classification is a report;
+    // moving money stays a per-payment, deliberate act through `refresh`,
+    // which goes through the canonical engine. Separating the two means a
+    // reconciliation sweep can never settle 315 payments as a side effect of
+    // someone wanting to know where they stand.
+    if (req.method === 'GET' && new URL(req.url).searchParams.get('action') === 'classify') {
+      if (provider() !== 'nalo') return error('No payment provider is configured to ask.', 503)
+
+      const url = new URL(req.url)
+      const limit = Math.min(Math.max(Number(url.searchParams.get('limit') ?? 50), 1), 200)
+      const offset = Math.max(Number(url.searchParams.get('offset') ?? 0), 0)
+
+      const { data: rows, error: dbErr } = await supabaseAdmin
+        .from('transactions')
+        .select('id, reference, amount, type, created_at, member_id, related_id, paystack_data')
+        .eq('status', 'pending')
+        .lt('created_at', new Date(Date.now() - 48 * 3600e3).toISOString())
+        .order('created_at', { ascending: true })
+        .range(offset, offset + limit - 1)
+      if (dbErr) return error(dbErr.message, 500)
+
+      const out: Record<string, unknown>[] = []
+      for (const t of rows ?? []) {
+        const orderId = (t.paystack_data as { provider_order_id?: string } | null)?.provider_order_id
+        const base = {
+          id: t.id, reference: t.reference, amount: Number(t.amount), type: t.type,
+          created: t.created_at, provider_reference: orderId ?? null,
+          age_days: Math.floor((Date.now() - new Date(t.created_at).getTime()) / 86_400_000),
+        }
+
+        // No provider reference: the prompt never reached NaloPay, so no money
+        // can have moved against it. That is evidence, not a guess.
+        if (!orderId) { out.push({ ...base, classification: 'NEVER_REACHED_PROVIDER' }); continue }
+
+        const s = await paymentStatus(orderId)
+        // NaloPay not answering is NOT evidence of anything.
+        if (!s)          { out.push({ ...base, classification: 'UNKNOWN_REQUIRES_REVIEW', note: 'NaloPay did not answer' }); continue }
+        if (s.pending)   { out.push({ ...base, classification: 'STILL_PENDING', provider_amount: s.amount }); continue }
+        if (!s.settled)  { out.push({ ...base, classification: 'CONFIRMED_FAILED', provider_amount: s.amount }); continue }
+
+        out.push({
+          ...base,
+          classification: 'CONFIRMED_SUCCESS',
+          provider_amount: s.amount,
+          // Surfaced, never acted on here: a provider amount below the
+          // recorded one is a short payment and needs a human.
+          amount_matches: Math.abs(s.amount - Number(t.amount)) < 0.005,
+        })
+      }
+
+      const counts: Record<string, number> = {}
+      const values: Record<string, number> = {}
+      for (const r of out) {
+        const c = r.classification as string
+        counts[c] = (counts[c] ?? 0) + 1
+        values[c] = (values[c] ?? 0) + (r.amount as number)
+      }
+
+      await audit({
+        action: 'reconciliation.classified', entity_type: 'system', entity_id: null,
+        entity_label: `${out.length} payment(s) classified against NaloPay`,
+        details: { counts, values, offset, limit },
+      })
+
+      return json({
+        checked: out.length, offset, limit, counts, values, items: out,
+        note: 'Read only. Nothing was settled. Use action "refresh" on an individual '
+            + 'payment to settle one NaloPay confirms.',
+      })
+    }
+
     // ── GET: everything awaiting a decision ─────────────────────────────
     if (req.method === 'GET') {
       const { data, error: rpcErr } = await supabaseAdmin.rpc('get_reconciliation_queue')
