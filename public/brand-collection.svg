@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img" aria-label="A hand holding out a banknote">
+  <!--
+    A CONTRIBUTION, DRAWN.
+
+    One open hand holding out a note. That is what a susu is at its smallest: a
+    person handing money over, today, and every day until their turn comes.
+
+    ── WHY ONE HAND AND NOT TWO ────────────────────────────────────────────
+    Two earlier attempts drew a hand on each side of the note. Both failed the
+    same way: two hands have to relate to each other and to the note, and when
+    the geometry is even slightly off they stop reading as an exchange and start
+    reading as floating shapes near some money. One hand has to be right about
+    itself and nothing else, which is a problem that can actually be solved.
+
+    Everything is built so the fingers stay ATTACHED: they start inside the palm
+    and grow upward from it, rather than being placed near it. That was the
+    failure in the second attempt.
+
+    Flat silhouette throughout. This sits behind a wordmark under a heavy scrim
+    at whatever size the device gives it, so it has to survive being half
+    covered — anything finer would turn to mud.
+  -->
+
+  <defs>
+    <linearGradient id="note" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#D3EEDF"/>
+      <stop offset="1" stop-color="#8AC8AC"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(520 620) rotate(-8)">
+
+    <!-- forearm, running off the bottom of the frame -->
+    <rect x="-78" y="70" width="156" height="460" rx="78" fill="#FFFFFF" opacity="0.9"/>
+
+    <!-- palm -->
+    <rect x="-150" y="-120" width="300" height="290" rx="106" fill="#FFFFFF" opacity="0.9"/>
+
+    <!-- thumb, out to the left and slightly up -->
+    <rect x="-236" y="-96" width="76" height="216" rx="38"
+          transform="rotate(-32 -198 12)" fill="#FFFFFF" opacity="0.9"/>
+
+    <!--
+      Fingers. Each starts at y=-40, INSIDE the palm, and runs up past its top
+      edge, so palm and finger are one continuous silhouette with no seam. The
+      fan is deliberately narrow: a wide spread reads as a wave, a narrow one as
+      an open hand offering something.
+    -->
+    <g fill="#FFFFFF" opacity="0.9">
+      <rect x="-133" y="-274" width="72" height="240" rx="36" transform="rotate(-7 -97 -40)"/>
+      <rect x="-53"  y="-296" width="72" height="262" rx="36" transform="rotate(-2 -17 -40)"/>
+      <rect x="27"   y="-288" width="72" height="254" rx="36" transform="rotate(3  63 -40)"/>
+      <rect x="105"  y="-252" width="68" height="218" rx="34" transform="rotate(9 139 -40)"/>
+    </g>
+
+    <!--
+      The note, lying across the fingers. It sits IN FRONT, covering their lower
+      third, which is what makes the hand look like it is holding something
+      rather than standing behind it.
+    -->
+    <g transform="translate(-6 -196) rotate(-13)">
+      <rect x="-215" y="-96" width="430" height="192" rx="12" fill="url(#note)"/>
+      <circle cx="8" cy="0" r="50" fill="none" stroke="#0C0E12" stroke-opacity="0.22" stroke-width="7"/>
+      <circle cx="8" cy="0" r="25" fill="#0C0E12" fill-opacity="0.15"/>
+      <rect x="-184" y="-70" width="74" height="13" rx="6.5" fill="#0C0E12" fill-opacity="0.20"/>
+      <rect x="-184" y="-45" width="46" height="13" rx="6.5" fill="#0C0E12" fill-opacity="0.13"/>
+      <rect x="110"  y="45"  width="74" height="13" rx="6.5" fill="#0C0E12" fill-opacity="0.20"/>
+      <rect x="138"  y="20"  width="46" height="13" rx="6.5" fill="#0C0E12" fill-opacity="0.13"/>
+    </g>
+  </g>
+</svg>

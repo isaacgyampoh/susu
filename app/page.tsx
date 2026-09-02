@@ -22,12 +22,11 @@ import { callFunction, setAdminToken } from '@/lib/supabase'
  *
  * ── THE BRAND FIELD ─────────────────────────────────────────────────────
  *
- * A photograph of a collection — money changing hands — behind the wordmark,
- * loaded from `public/brand-collection.jpg` via the `.brand-photo` class. It is
- * a CSS background rather than an <img>, so if the file is not there the field
- * simply stays dark: no broken image and nothing for anyone to notice. The
- * scrim over it is heavy on the left where the type sits and nearly clear on
- * the right, so the picture survives instead of being washed out.
+ * A drawing of a hand holding out a note, behind the wordmark, loaded via the
+ * `.brand-photo` class. It is a CSS background rather than an <img>, so if the
+ * file is ever missing the field simply stays dark: nothing broken to notice.
+ * The scrim over it is heavy on the left where the type sits and nearly clear
+ * on the right, so the picture survives instead of being washed out.
  *
  * An earlier revision drew a rotation diagram here instead. It was accurate
  * about what a susu is and still read as decoration; a picture of the actual
@@ -140,13 +139,11 @@ export default function SignIn() {
 
         {/*
           ── THE PICTURE ───────────────────────────────────────────────────
-          Drop a photograph at `public/brand-collection.jpg` (optionally a .webp
-          beside it) and it appears here — the same image the member sign-in
-          uses, so the two screens read as one product.
+          The same drawing the member sign-in uses — a hand holding out a note —
+          so the two screens read as one product.
 
-          A CSS background rather than an <img>: if the file is absent the
-          browser paints nothing and the dark field shows through. No broken
-          image, nothing to notice. Ships safely before the photograph exists.
+          A CSS background rather than an <img>: if the file is ever missing the
+          dark field simply shows through, with nothing broken to notice.
         */}
         <div aria-hidden="true" className="brand-photo absolute inset-0" />
         <div aria-hidden="true"

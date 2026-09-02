@@ -70,18 +70,14 @@ export default function MemberSignIn() {
 
         {/*
           ── THE PICTURE ───────────────────────────────────────────────────
-          Drop a photograph at `public/brand-collection.jpg` (and optionally a
-          .webp beside it) and it appears here: a collector taking a
-          contribution, money changing hands, the thing this product is for.
+          A hand holding out a note — the gesture this whole product is built
+          around. Drawn as SVG (public/brand-collection.svg): a few kilobytes,
+          sharp at any size, no licence to worry about.
 
-          It is a CSS background rather than an <img> on purpose. If the file is
-          not there the band simply stays the dark brand field — no broken
-          image, no empty frame, nothing for a member to notice. So this ships
-          safely before the photograph exists.
-
-          Shoot or choose it with the crop in mind: the wordmark sits top-left
-          and the headline bottom-left, so keep faces and hands to the RIGHT of
-          centre. `object-position: right center` is doing that below.
+          A CSS background rather than an <img>, so if the file is ever missing
+          the band simply stays the dark brand field: no broken image, nothing
+          for a member to notice. See .brand-photo in globals.css to swap in a
+          photograph instead.
         */}
         <div aria-hidden="true" className="brand-photo absolute inset-0" />
 
