@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { ArrowRight, CreditCard, Layers, FileText, RefreshCw, Users, Wallet } from 'lucide-react'
 import { format } from 'date-fns'
 import { callFunction, getMemberToken } from '@/lib/supabase'
-import type { PortalState } from '@/types/portal'
+import type { MembershipView, PortalState } from '@/types/portal'
 import { ghs, ghs2 } from '@/lib/money'
 import GroupList from '@/components/susu/group-list'
+import PaySheet from '@/components/susu/pay-sheet'
 import PayPrompt from '@/components/susu/pay-prompt'
 import {
   Avatar, Button, Card, EmptyState, IconButton, Money, Skeleton,
@@ -51,6 +52,7 @@ export default function Dashboard() {
   const [failed, setFailed] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [pending, setPending] = useState<any>(null)
+  const [paySheet, setPaySheet] = useState<MembershipView | null>(null)
 
   const load = useCallback(async (quiet = false) => {
     if (quiet) setRefreshing(true)
@@ -85,6 +87,12 @@ export default function Dashboard() {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const firstName = member.full_name.split(' ')[0]
+
+  // Groups with something still owing TODAY. Ordered by the largest first, so
+  // the biggest obligation is the one under the member's thumb.
+  const dueToday = memberships
+    .filter(m => m.due_today > 0.005)
+    .sort((a, b) => b.due_today - a.due_today)
 
   return (
     <div className="animate-fade-in">
@@ -134,30 +142,87 @@ export default function Dashboard() {
       </AppBar>
 
       {/*
-        ONE primary action.
-        The four-up row duplicated the bottom navigation almost exactly — Pay,
-        Groups, Statement, Profile against Home, Payments, Statement, Profile —
-        so it cost a band of screen and offered nothing new. A member opens this
-        to pay; that is the action, and everything else already has a tab.
+        WHAT YOU OWE TODAY, FIRST.
+
+        This is the reason a member opens the app: not their lifetime total, not
+        their overdue history — what has to be paid before the day is out. It
+        sits directly under the headline figure and above everything else,
+        because anything above it is something they have to scroll past to do
+        the one thing they came for.
+
+        One row per group that is due, each opening the pay sheet for THAT
+        membership. Amounts are per-membership and never pooled: a member owing
+        in three groups owes three separate things, and paying one does not
+        touch the others.
       */}
-      <div className="portal-w -mt-5 relative z-10">
-        <Link
-          href="/m/portal/payments"
-          className="flex items-center justify-between gap-3 h-[54px] px-4
-                     rounded-xl bg-ink text-inverse shadow-sm
-                     transition-transform active:scale-[.995]
-                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40
-                     focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
-        >
-          <span className="flex items-center gap-2.5">
-            <CreditCard size={18} strokeWidth={1.9} aria-hidden="true" />
-            <span className="text-base font-medium">
-              {totals.remaining_today > 0.005 ? 'Pay today\u2019s contribution' : 'Make a contribution'}
+      {dueToday.length > 0 ? (
+        <div className="portal-w -mt-5 relative z-10">
+          <section aria-labelledby="due" className="rounded-xl border border-line bg-surface shadow-sm">
+            {/* The headline above already states today's total; repeating it
+                here would just be the same number twice. This says how the
+                total breaks down instead. */}
+            <div className="flex items-baseline justify-between gap-3 px-4 pt-3.5 pb-2">
+              <h2 id="due" className="t-eyebrow">Due today</h2>
+              <span className="text-xs text-ink-3 tnum">
+                {dueToday.length} group{dueToday.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <div className="divide-y divide-line-2">
+              {dueToday.map(m => (
+                <button
+                  key={m.membership_id}
+                  type="button"
+                  onClick={() => setPaySheet(m)}
+                  className="w-full flex items-center gap-3 px-4 py-3 min-h-[56px] text-left
+                             transition-colors hover:bg-surface-2 active:bg-surface-3
+                             focus-visible:outline-none focus-visible:ring-2
+                             focus-visible:ring-inset focus-visible:ring-ink/30"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-medium text-ink truncate">{m.group_name}</p>
+                    <p className="text-xs text-ink-2 mt-0.5 tnum">
+                      Slot {m.payout_position}
+                      {m.paid_today > 0.005 &&
+                        ` · GHS ${ghs2(m.paid_today)} of GHS ${ghs2(m.due_today + m.paid_today)} paid`}
+                    </p>
+                  </div>
+                  <span className="text-base font-semibold text-ink tnum shrink-0">
+                    GHS {ghs2(m.due_today)}
+                  </span>
+                  <span aria-hidden="true"
+                    className="shrink-0 text-xs font-medium text-inverse bg-ink rounded-lg px-3 py-1.5">
+                    Pay
+                  </span>
+                </button>
+              ))}
+            </div>
+            {/* Tapping a group lets a member pay MORE than today's amount; the
+                sheet shows which future days that would cover before they
+                approve anything. */}
+            <p className="px-4 pb-3.5 pt-2.5 text-xs text-ink-3 leading-relaxed">
+              Tap a group to pay. You can pay more than today&rsquo;s amount and
+              see exactly which days it covers before you confirm.
+            </p>
+          </section>
+        </div>
+      ) : (
+        <div className="portal-w -mt-5 relative z-10">
+          <Link
+            href="/m/portal/payments"
+            className="flex items-center justify-between gap-3 h-[54px] px-4
+                       rounded-xl bg-ink text-inverse shadow-sm
+                       transition-transform active:scale-[.995]
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/40
+                       focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+          >
+            <span className="flex items-center gap-2.5">
+              <CreditCard size={18} strokeWidth={1.9} aria-hidden="true" />
+              <span className="text-base font-medium">Nothing due today — pay ahead</span>
             </span>
-          </span>
-          <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" className="opacity-70" />
-        </Link>
-      </div>
+            <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" className="opacity-70" />
+          </Link>
+        </div>
+      )}
 
       <div className="portal-w pt-5 space-y-4">
 
@@ -276,6 +341,18 @@ export default function Dashboard() {
       )}
 
       </div>
+
+      {paySheet && (
+        <PaySheet
+          membership={paySheet}
+          defaultNumber={member.mobile_money_number ?? member.phone}
+          defaultNetwork={member.mobile_money_provider ?? 'MTN'}
+          hasOtherMemberships={memberships.length > 1}
+          onClose={() => setPaySheet(null)}
+          onPrompted={p => { setPaySheet(null); setPending(p) }}
+          onBusy={() => {}}
+        />
+      )}
 
       {pending && (
         <PayPrompt
