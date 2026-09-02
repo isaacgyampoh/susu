@@ -5,20 +5,43 @@
 | | |
 |---|---|
 | Production URL | `https://abbiewealthsusu.com` (public) · `my.` (member) · `admin.` (console) — all HTTP 200 |
-| Git commit | `0d3ae16` — 214 files, +38,925 / −2,626 |
-| Branch | `phase-09-production-hardening` (local; **push blocked — see below**) |
+| Git commit | `2b465ca` on `main`, pushed — remote and local agree |
+| Merge | `phase-09-production-hardening` → `main`, no fast-forward |
 | Database | migration v42, 27 functions, 0 drift |
-| Edge functions | **52/52 deployed**, 44 updated this phase |
-| Frontend | **NOT deployed** — Vercel still serves commit `c4704bc` |
+| Edge functions | **52/52 deployed**, 47 updated this phase |
+| Frontend | **DEPLOYED** — Vercel serving `2b465ca` |
 
-The database and edge functions deploy through the Supabase CLI and are fully
-live. The frontend deploys from GitHub, so it is the one part still local.
+Production smoke, all live:
 
 ```
-GET https://abbiewealthsusu.com/join/pay/<token>   →  404
+my.abbiewealthsusu.com/m/login                   200
+my.abbiewealthsusu.com/join                      200
+my.abbiewealthsusu.com/join/pay/<token>          200   ← new
+admin.abbiewealthsusu.com                        200
+admin.abbiewealthsusu.com/admin/reconciliation   200   ← new
+my.…/admin/*    → 404      admin.…/m/*  → 404          ← hostname isolation holds
 ```
 
-That 404 is the proof: the backend route works, the page has not shipped.
+### The bug that shipping found
+
+`publicSiteUrl()` defaulted to `https://abbiewealthsusu.com`, which reads like
+the obvious home for a public page. **It is a separate Vercel project** — a
+marketing site that does not serve this application:
+
+```
+abbiewealthsusu.com/join/pay/<token>      404
+my.abbiewealthsusu.com/join/pay/<token>   200
+```
+
+Every registration payment link would have pointed at a page that does not
+exist — sent by SMS, to applicants, as the only copy of a token that cannot be
+recovered. This is precisely the mistake `_shared/urls.ts` was written to
+prevent, made in the file that warns about it, and it survived every local
+test because a local test cannot tell you which Vercel project owns a domain.
+
+Caught by requesting the route in production. Fixed and re-verified end to end:
+a real token now loads the page and returns the right applicant, fee (GHS 150),
+charge (GHS 152.25) and state.
 
 ## Tests
 
@@ -143,28 +166,38 @@ documented instead.
 valid and must be rotated by the account owner. Do not paste the new credential
 into chat.**
 
-**BLOCKER 2: `git push` is denied by this environment's permission classifier.**
-The commit exists locally at `0d3ae16` on `phase-09-production-hardening`. I did
-not attempt to route around the control. One command completes it:
+**BLOCKER 2: the repository's `SUPABASE_ACCESS_TOKEN` secret is present but
+cannot reach the project.** CI has not deployed a function since 2026-07-24.
+
+The workflow now diagnoses this itself, in step names visible without log
+access:
 
 ```
-git push -u origin phase-09-production-hardening
+PASS   Preflight - is SUPABASE_ACCESS_TOKEN present
+FAIL   Preflight - can that token reach the project     ← expired or revoked
+skip   Deploy all Edge Functions
 ```
 
-Then merge to `main` — which triggers both the Vercel deployment and the
-edge-function GitHub Action.
+Rotate it in repository settings → Secrets → Actions. **Production is
+unaffected**: functions are deployed directly and are current.
 
-**Until that push, three things behave differently in production:**
+### What that workflow would have done
 
-```
-kyc-review  action=mark_fee_paid   backend needs a reason; live console sends none
-admin-undo-payment                 backend needs a reason; live console sends none
-member-change-passcode             backend ends the session; live portal does not say so
-```
+Its first step ran `supabase secrets set JWT_SECRET=…` on every push to main,
+from a GitHub secret never updated when JWT_SECRET was rotated in Phase 05. The
+next successful run would have **replaced the rotated signing key with the
+published one** — ending every session in production and restoring a key anyone
+could read from this repository's history.
 
-All three fail *safely* — they refuse and explain — but an operator is blocked
-from recording a cash fee or reversing a payment, and a member changing their
-passcode is signed out without being told why.
+It also pushed `MOOLRE_*` credentials for a removed provider, and never pushed
+the `NALO_*` credentials for the provider actually in use, so an unset secret
+would have written an empty string over a working value.
+
+None of it happened only because the step failed. The workflow no longer manages
+secrets at all: a pipeline should ship code, and re-asserting a signing key on
+every push means a stale value in one place silently undoes a rotation in
+another. It now also fails the deploy if `nalo-webhook` comes back behind JWT
+verification, which is the single easiest way to stop settlement.
 
 ## Business decisions, still open
 
