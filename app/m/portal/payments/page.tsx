@@ -1,236 +1,206 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
-import { CalendarPlus, CheckCircle2, ChevronRight } from 'lucide-react'
-import { callFunction, getMemberToken } from '@/lib/supabase'
-import type { Contribution } from '@/types'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
+import { CheckCircle2, Receipt, Wallet } from 'lucide-react'
+import { callFunction, getMemberToken } from '@/lib/supabase'
+import type { MembershipView, PortalState } from '@/types/portal'
 import PayPrompt from '@/components/susu/pay-prompt'
-import PayNumberSheet from '@/components/susu/pay-number-sheet'
+import PaySheet from '@/components/susu/pay-sheet'
+import MembershipCard from '@/components/susu/membership-card'
 import { ghs2 } from '@/lib/money'
 import {
-  Badge, Button, Card, EmptyState, LoadingBlock, Modal, ModalActions, Money,
-  Segmented, Tabs, useToast, cx,
+  Badge, Card, EmptyState, LoadingBlock, Money, Notice, Segmented, useToast,
 } from '@/components/ui'
 
-const PRESETS = [7, 14, 30]
-type Filter = 'all' | 'pending' | 'paid'
+/**
+ * Payments — every group, not whichever one happened to fit on a page.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * THE BUG THIS REPLACES
+ *
+ * This screen used to load `contributions-list?page=1`: twenty contribution
+ * rows, ordered by `due_date DESC`. A member's groups do not take turns in that
+ * ordering — whichever group has the furthest-future due dates fills all twenty
+ * slots, and every other group vanishes.
+ *
+ * Measured on the real member holding eighteen groups and 2,421 obligations:
+ * page one contained ONE group. They could see one group and pay into one
+ * group. It looked like a hard-coded filter and was in fact pagination.
+ *
+ * The screen is now membership-first. `get_member_portal_state()` returns every
+ * active membership with its full financial position in ONE round trip — 30
+ * memberships in 18ms — so there is no page to fall off the end of.
+ *
+ * WHAT THIS SCREEN DOES NOT DO
+ *
+ * It computes no money. Every figure is rendered from the portal state, which
+ * the database produced. The payment itself goes through `PaySheet`, which
+ * previews against `preview_settlement()` and pays against the membership — so
+ * the group being paid is chosen server-side from a membership the caller is
+ * proven to own, never from anything this page holds.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+
+type Filter = 'all' | 'owing' | 'covered'
 
 export default function Payments() {
   const toast = useToast()
-  const [rows, setRows]   = useState<Contribution[]>([])
-  const [loading, setL]   = useState(true)
-  const [filter, setF]    = useState<Filter>('all')
-  const [paying, setP]    = useState<string | null>(null)
+  const [state, setState]   = useState<PortalState | null>(null)
+  const [loading, setL]     = useState(true)
+  const [filter, setFilter] = useState<Filter>('all')
+  const [paying, setPaying] = useState<string | null>(null)
+  const [paySheet, setPaySheet] = useState<MembershipView | null>(null)
   const [pending, setPending]   = useState<any>(null)
-  const [numSheet, setNumSheet] = useState<Contribution | null>(null)
-
-  // Pay-ahead sheet
-  const [sheet, setSheet]    = useState(false)
-  const [days, setDays]      = useState(7)
-  const [prev, setPrev]      = useState<any>(null)
-  const [loadingPrev, setLP] = useState(false)
-  const [bulkBusy, setBB]    = useState(false)
-
-  const groupCount = new Set(
-    rows.map(r => (r as any).group_id ?? (r as any).susu_groups?.name).filter(Boolean),
-  ).size
 
   const load = useCallback(async () => {
-    setL(true)
-    const q = filter === 'all' ? 'page=1' : `status=${filter}&page=1`
-    const { data, error } = await callFunction<{ contributions: Contribution[] }>(
-      `contributions-list?${q}`, { token: getMemberToken()! },
-    )
-    if (error) toast.error({ title: 'Could not load payments', body: error })
-    setRows(data?.contributions ?? []); setL(false)
-  }, [filter, toast])
+    const { data, error } = await callFunction<PortalState>('member-profile', { token: getMemberToken()! })
+    if (error) toast.error({ title: 'Could not load your payments', body: error })
+    else setState(data)
+    setL(false)
+  }, [toast])
 
   useEffect(() => { load() }, [load])
 
-  useEffect(() => {
-    if (!sheet) return
-    setLP(true)
-    callFunction<any>(`payments-bulk?days=${days}`, { token: getMemberToken()! })
-      .then(({ data }) => setPrev(data))
-      .finally(() => setLP(false))
-  }, [sheet, days])
+  const memberships = useMemo(() => state?.memberships ?? [], [state])
+  const shown = useMemo(() => {
+    if (filter === 'owing')   return memberships.filter(m => m.due_today > 0.005 || m.overdue > 0.005)
+    if (filter === 'covered') return memberships.filter(m => m.due_today <= 0.005 && m.overdue <= 0.005)
+    return memberships
+  }, [memberships, filter])
 
-  async function doPayOne(c: Contribution, payNumber?: string, payNetwork?: string, payAmount?: number, thisGroupOnly?: boolean) {
-    setNumSheet(null)
-    setP(c.id)
-    const { data, error } = await callFunction<any>('payments-initialize', {
-      method: 'POST', token: getMemberToken()!,
-      body: {
-        contribution_id: c.id, pay_number: payNumber, pay_network: payNetwork,
-        pay_amount: payAmount, this_group_only: thisGroupOnly,
-      },
-    })
-    setP(null)
-    if (error) { toast.error({ title: 'Payment could not start', body: error }); return }
-    if (data?.dev_mode) { toast.success('Payment recorded.'); return load() }
-    if (data?.status === 'prompted' || data?.status === 'otp_required') {
-      setPending({ ...data, amount: data.amount ?? c.amount }); return
-    }
-    if (data?.authorization_url) window.location.href = data.authorization_url
-  }
+  if (loading) return <LoadingBlock label="Loading your groups" className="h-[60vh]" />
+  if (!state) return (
+    <div className="max-w-md mx-auto px-5 pt-10">
+      <Notice tone="warn" title="We could not load your payments">
+        Check your connection and try again.
+      </Notice>
+    </div>
+  )
 
-  async function payBulk() {
-    setBB(true)
-    const { data, error } = await callFunction<any>('payments-bulk', {
-      method: 'POST', body: { days }, token: getMemberToken()!,
-    })
-    setBB(false)
-    if (error) { toast.error({ title: 'Could not start the payment', body: error }); return }
-    if (data?.dev_mode) { setSheet(false); toast.success('Payment recorded.'); return load() }
-    if (data?.authorization_url) window.location.href = data.authorization_url
-  }
-
-  const unpaid = rows.filter(r => r.status !== 'paid').length
+  const { member, totals, payments } = state
+  const owing = memberships.filter(m => m.due_today > 0.005 || m.overdue > 0.005).length
 
   return (
-    <div className="max-w-md mx-auto px-5 pt-6 animate-fade-in">
-      <h1 className="text-2xl font-semibold text-ink">Payments</h1>
-      <p className="text-sm text-ink-2 mt-1">Pay day by day, or clear a stretch in one MoMo payment.</p>
+    <div className="max-w-md mx-auto px-5 pt-6 space-y-4 animate-fade-in">
+      <header>
+        <h1 className="text-2xl font-semibold text-ink">Payments</h1>
+        <p className="text-sm text-ink-2 mt-1">
+          {memberships.length === 1
+            ? 'Your group, what it needs, and what you have paid.'
+            : `All ${memberships.length} of your groups. Each one is paid separately.`}
+        </p>
+      </header>
 
-      {unpaid > 0 && (
-        <button
-          type="button" onClick={() => setSheet(true)}
-          className="w-full mt-5 flex items-center gap-3.5 p-4 rounded-lg bg-surface border border-line
-                     text-left transition-colors hover:border-ink/20 active:bg-surface-2"
-        >
-          <span className="w-10 h-10 rounded-md bg-accent-soft grid place-items-center shrink-0">
-            <CalendarPlus size={18} strokeWidth={2.1} className="text-accent" aria-hidden="true" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-base font-semibold text-ink">Pay ahead</span>
-            <span className="block text-xs text-ink-2 mt-0.5">
-              Cover several days at once — one prompt, one PIN
-            </span>
-          </span>
-          <ChevronRight size={17} strokeWidth={2.2} className="text-ink-3 shrink-0" aria-hidden="true" />
-        </button>
-      )}
-
-      <Tabs
-        className="mt-6"
-        ariaLabel="Filter payments"
-        value={filter} onChange={setF}
-        items={[
-          { value: 'all',     label: 'All' },
-          { value: 'pending', label: 'Due' },
-          { value: 'paid',    label: 'Paid' },
-        ]}
-      />
-
-      {loading ? (
-        <LoadingBlock label="Loading your payments" />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon={CheckCircle2}
-          title={filter === 'paid' ? 'Nothing paid yet' : "You're all caught up"}
-          body={filter === 'paid'
-            ? 'Payments appear here as soon as they settle.'
-            : 'Nothing is owing right now. Your next contribution will show up on its due date.'}
-        />
-      ) : (
-        <ul className="divide-y divide-line-2">
-          {rows.map(c => {
-            const paid = c.status === 'paid'
-            const late = c.status === 'overdue' || c.is_flagged
-            const penalty = Number(c.penalty_due ?? 0)
-            return (
-              <li key={c.id} className="flex items-center justify-between gap-3 py-3.5">
-                <div className="min-w-0">
-                  <p className="text-base font-medium text-ink truncate">{c.susu_groups?.name}</p>
-                  <p className="text-xs text-ink-3 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                    {format(new Date(c.due_date), 'd MMM yyyy')}
-                    {late && <Badge tone="bad">Late</Badge>}
-                    {penalty > 0 && (
-                      <span className="text-danger font-medium tnum">+{ghs2(penalty)} penalty</span>
-                    )}
-                  </p>
-                </div>
-                {paid ? (
-                  <span className="flex items-center gap-1.5 text-sm font-semibold text-ink tnum shrink-0">
-                    <CheckCircle2 size={15} strokeWidth={2.3} className="text-success" aria-hidden="true" />
-                    {ghs2(c.amount)}
-                  </span>
-                ) : (
-                  <Button
-                    variant="accent" size="sm" className="shrink-0"
-                    loading={paying === c.id}
-                    onClick={() => setNumSheet(c)}
-                  >
-                    Pay {ghs2(c.amount)}
-                  </Button>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-
-      {/* ---- Pay ahead ---- */}
-      <Modal
-        open={sheet} onClose={() => setSheet(false)} busy={bulkBusy}
-        title="Pay ahead"
-        description="One MoMo payment, several days covered."
-        footer={prev?.count > 0 ? (
-          <Button variant="accent" size="lg" full loading={bulkBusy} onClick={payBulk}>
-            Pay GHS {ghs2(prev.total)}
-          </Button>
-        ) : undefined}
-      >
-        <Segmented
-          className="w-full"
-          ariaLabel="Days to pay ahead"
-          value={String(days)} onChange={v => setDays(Number(v))}
-          items={PRESETS.map(d => ({ value: String(d), label: `${d} days` }))}
-        />
-
-        <div className="mt-5">
-          <div className="flex justify-between items-baseline mb-2">
-            <label htmlFor="days" className="text-xs text-ink-2">Or choose exactly</label>
-            <span className="text-sm font-semibold text-ink tnum">{days} days</span>
-          </div>
-          <input
-            id="days" type="range" min={1} max={60} value={days}
-            onChange={e => setDays(parseInt(e.target.value))}
-            className="w-full accent-accent h-6 cursor-pointer"
-          />
-        </div>
-
-        {loadingPrev ? (
-          <LoadingBlock label="Working out the total" className="py-10" />
-        ) : prev?.count > 0 ? (
-          <div className="mt-5 rounded-md border border-line divide-y divide-line-2">
-            <Row label={`${prev.count} contribution${prev.count === 1 ? '' : 's'}`} value={ghs2(prev.subtotal)} />
-            {prev.penalties > 0 && <Row label="Penalties" value={ghs2(prev.penalties)} tone="danger" />}
-            <div className="px-3.5 py-2.5">
-              <p className="text-xs text-ink-3">
-                {prev.from && format(new Date(prev.from), 'd MMM')} – {prev.to && format(new Date(prev.to), 'd MMM yyyy')}
-              </p>
-            </div>
-            <div className="flex items-center justify-between gap-3 px-3.5 py-3 bg-surface-2">
-              <span className="text-xs font-semibold text-ink">Total</span>
-              <Money value={prev.total} exact size="md" />
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-ink-3 py-10 text-center">Nothing left to pay.</p>
+      {/* Today across every group — the three figures separately, because one
+          cannot be worked out from the others. All from the database. */}
+      <Card tone="ink" pad="lg">
+        <p className="text-xs font-medium text-inverse/60">
+          {totals.remaining_today > 0.005 ? 'Still to pay today' : 'Nothing due today'}
+        </p>
+        <Money value={totals.remaining_today} exact size="xl" className="text-inverse mt-1.5" />
+        {totals.paid_today > 0.005 && (
+          <p className="text-xs text-inverse/70 mt-1.5 tnum">
+            GHS {ghs2(totals.paid_today)} of GHS {ghs2(totals.obligation_today)} already paid today
+          </p>
         )}
-      </Modal>
+        <p className="text-2xs text-inverse/50 mt-3 pt-3 border-t border-inverse/15">
+          {owing === 0
+            ? 'Every group is up to date.'
+            : `${owing} of ${memberships.length} ${owing === 1 ? 'group needs' : 'groups need'} a payment.`}
+        </p>
+      </Card>
 
-      {numSheet && (
-        <PayNumberSheet
-          amount={Number(numSheet.amount ?? 0)}
-          hasOtherGroups={groupCount > 1}
-          groupName={(numSheet as any).susu_groups?.name}
-          slotLabel={(numSheet as any).group_memberships?.payout_position
-            ? `Slot ${(numSheet as any).group_memberships.payout_position}` : undefined}
-          dueDate={(numSheet as any).due_date}
-          onConfirm={(num, net, amt, only) => doPayOne(numSheet, num, net, amt, only)}
-          onClose={() => setNumSheet(null)}
+      {memberships.length > 1 && (
+        <Segmented
+          ariaLabel="Filter groups"
+          value={filter} onChange={setFilter}
+          items={[
+            { value: 'all',     label: `All · ${memberships.length}` },
+            { value: 'owing',   label: `Needs paying · ${owing}` },
+            { value: 'covered', label: `Up to date · ${memberships.length - owing}` },
+          ]}
+        />
+      )}
+
+      {/* ── My groups ─────────────────────────────────────────────────── */}
+      {shown.length === 0 ? (
+        <Card pad="none">
+          <EmptyState
+            icon={filter === 'owing' ? CheckCircle2 : Wallet}
+            title={filter === 'owing' ? 'Nothing owing' : filter === 'covered' ? 'Nothing settled yet' : 'No groups yet'}
+            body={filter === 'all'
+              ? 'When you are approved into a group it will appear here.'
+              : undefined}
+            compact
+          />
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {shown.map(m => (
+            <MembershipCard
+              key={m.membership_id} m={m}
+              onPay={setPaySheet}
+              paying={paying === m.membership_id}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Payment history ───────────────────────────────────────────── */}
+      <section className="pt-2">
+        <p className="t-eyebrow mb-2">Payment history</p>
+        {payments.length === 0 ? (
+          <Card pad="none">
+            <EmptyState icon={Receipt} title="No payments yet"
+              body="Your payments will appear here, showing exactly which days each one covered." compact />
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {payments.map(p => (
+              <Card key={p.reference} pad="md">
+                <div className="flex items-baseline justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink">
+                      {format(new Date(p.at), 'd MMM yyyy')}
+                    </p>
+                    <p className="text-2xs text-ink-3 font-mono truncate">{p.reference}</p>
+                  </div>
+                  <Money value={p.total} size="sm" sign="in" className="shrink-0" />
+                </div>
+
+                {/* What the money actually covered, per group and per day —
+                    never a bare "paid" against an ambiguous total. */}
+                <div className="mt-2.5 pt-2.5 border-t border-line-2 space-y-1">
+                  {p.items.map((it, i) => (
+                    <div key={`${it.membership_id}-${it.due_date}-${i}`}
+                         className="flex items-baseline justify-between gap-3">
+                      <span className="text-xs text-ink-2 truncate">
+                        {it.group} · {format(new Date(it.due_date), 'd MMM')}
+                      </span>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-xs text-ink tnum">GHS {ghs2(it.amount)}</span>
+                        {it.kind === 'part' && <Badge tone="warn">part</Badge>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Paying is membership-scoped: the sheet is opened FOR one membership,
+          and the server re-checks ownership before it creates anything. */}
+      {paySheet && (
+        <PaySheet
+          membership={paySheet}
+          defaultNumber={member.mobile_money_number}
+          defaultNetwork={member.mobile_money_provider}
+          hasOtherMemberships={memberships.length > 1}
+          onClose={() => setPaySheet(null)}
+          onPrompted={p => { setPaySheet(null); setPending(p) }}
+          onBusy={setPaying}
         />
       )}
 
@@ -238,6 +208,7 @@ export default function Payments() {
         <PayPrompt
           reference={pending.reference}
           amount={Number(pending.amount ?? 0)}
+          phone={member.mobile_money_number ?? member.phone}
           initial={pending.status}
           message={pending.message}
           ussd={pending.ussd}
@@ -245,15 +216,6 @@ export default function Payments() {
           onClose={() => setPending(null)}
         />
       )}
-    </div>
-  )
-}
-
-function Row({ label, value, tone }: { label: string; value: string; tone?: 'danger' }) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-      <span className={cx('text-sm', tone === 'danger' ? 'text-danger' : 'text-ink-2')}>{label}</span>
-      <span className={cx('text-sm font-medium tnum', tone === 'danger' ? 'text-danger' : 'text-ink')}>{value}</span>
     </div>
   )
 }

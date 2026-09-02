@@ -96,15 +96,52 @@ serveWithCors(async (req) => {
       .select('id, amount, reason, is_paid, created_at, susu_groups(name)')
       .eq('member_id', memberId).eq('is_paid', false)
 
+    /*
+     * Payouts the member has actually collected.
+     *
+     * The profile screen has always shown a "Collected" section, and this
+     * endpoint stopped returning `payouts` when it was rebuilt on
+     * get_member_portal_state() — so the page read `undefined` and threw. The
+     * membership rows carry `payout_received` and `payout_amount`, but not
+     * WHEN it was paid, which is the part a member actually wants to see.
+     *
+     * Scoped to the caller, like everything else here: `memberId` comes from
+     * the verified session, never from the request.
+     */
+    const { data: payouts } = await supabaseAdmin
+      .from('payouts')
+      .select('id, total_amount, status, scheduled_date, paid_at, susu_groups(name)')
+      .eq('member_id', memberId)
+      .order('paid_at', { ascending: false, nullsFirst: false })
+      .limit(50)
+
+    /*
+     * The profile screen shows details the portal-state projection does not
+     * carry — email, occupation, address, and when they joined. Those live on
+     * `members` and are the member's own, so they are fetched here and merged
+     * rather than widened into get_member_portal_state(), which every screen
+     * calls and most of which do not need them.
+     *
+     * The profile page read all four straight off `member` and got undefined;
+     * `format(new Date(undefined))` throws RangeError, which is one of the
+     * things that made the page crash rather than merely look empty.
+     */
+    const { data: detail } = await supabaseAdmin
+      .from('members')
+      .select('email, occupation, residential_address, created_at, whatsapp_number')
+      .eq('id', memberId)
+      .maybeSingle()
+
     return json({
       as_of: s.as_of,
-      member: s.member,
+      member: { ...(s.member as Record<string, unknown>), ...(detail ?? {}) },
       /** Every active membership, each financially independent. */
       memberships: s.memberships,
       /** Aggregates across all memberships, computed in the database. */
       totals: s.totals,
       payments,
       penalties: penalties ?? [],
+      payouts: payouts ?? [],
       announcements: announcements ?? [],
       myMessages: myMessages ?? [],
     })

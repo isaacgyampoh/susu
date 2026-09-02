@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Check, Layers } from 'lucide-react'
 import { callFunction, getMemberToken } from '@/lib/supabase'
-import type { MemberDashboard, SusuGroup } from '@/types'
+import type { SusuGroup } from '@/types'
+import type { PortalState } from '@/types/portal'
 import { ghs } from '@/lib/money'
 import {
   Badge, Button, Card, EmptyState, LoadingBlock, Notice, useToast, cx,
@@ -36,10 +37,21 @@ export default function BrowseGroups() {
     setLoading(true)
     const [{ data: pub }, { data: me }] = await Promise.all([
       callFunction<{ groups: SusuGroup[] }>('groups-public'),
-      callFunction<MemberDashboard>('member-profile', { token: getMemberToken()! }),
+      callFunction<PortalState>('member-profile', { token: getMemberToken()! }),
     ])
     setGroups(pub?.groups ?? [])
-    setMine(new Set((me?.plans ?? []).map(p => p.susu_groups?.id).filter(Boolean) as string[]))
+    /*
+     * Which groups the member is ALREADY in, so this screen does not offer them
+     * again.
+     *
+     * This read `me.plans`, which `member-profile` has not returned since it
+     * was rebuilt on get_member_portal_state(). The `?? []` meant it never
+     * threw — it silently produced an EMPTY set, so the page believed the
+     * member belonged to no groups and happily offered every one they were
+     * already a member of. A quiet wrong answer, which is worse than the crash
+     * on the Profile screen, because nothing looked broken.
+     */
+    setMine(new Set((me?.memberships ?? []).map(m => m.group_id).filter(Boolean)))
     setLoading(false)
   }, [])
 

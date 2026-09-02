@@ -117,11 +117,28 @@ export interface PortalState {
     status: string
     mobile_money_number: string | null
     mobile_money_provider: string | null
+    /* Merged in by member-profile from the `members` row — the profile screen
+       shows these, the other screens do not need them. All optional: a member
+       may have given none of them at registration. */
+    email?: string | null
+    occupation?: string | null
+    residential_address?: string | null
+    whatsapp_number?: string | null
+    created_at?: string | null
   }
   memberships: MembershipView[]
   totals: PortalTotals
   payments: PaymentRecord[]
   penalties: { id: string; amount: number; reason: string; susu_groups?: { name: string } }[]
+  /** Payouts on record for this member. `paid_at` is null until one is paid. */
+  payouts: {
+    id: string
+    total_amount: number
+    status: 'upcoming' | 'processing' | 'paid'
+    scheduled_date: string | null
+    paid_at: string | null
+    susu_groups?: { name: string } | null
+  }[]
   announcements: { id: string; title: string; content: string; created_at: string }[]
   myMessages: {
     id: string; subject: string; message: string

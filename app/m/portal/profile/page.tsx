@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, KeyRound, LogOut, MessageSquare, type LucideIcon } from 'lucide-react'
 import { callFunction, clearMemberAuth, getMemberToken } from '@/lib/supabase'
-import type { MemberDashboard } from '@/types'
+import type { PortalState } from '@/types/portal'
 import { format } from 'date-fns'
 import { ghs } from '@/lib/money'
 import {
@@ -16,7 +16,7 @@ export default function Profile() {
   const ask    = useConfirm()
   const router = useRouter()
 
-  const [d, setD]       = useState<MemberDashboard | null>(null)
+  const [d, setD]       = useState<PortalState | null>(null)
   const [loading, setL] = useState(true)
 
   // Change passcode
@@ -34,7 +34,7 @@ export default function Profile() {
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
-    const { data } = await callFunction<MemberDashboard>('member-profile', { token: getMemberToken()! })
+    const { data } = await callFunction<PortalState>('member-profile', { token: getMemberToken()! })
     setD(data); setL(false)
   }, [])
   useEffect(() => { load() }, [load])
@@ -102,8 +102,27 @@ export default function Profile() {
     </div>
   )
 
-  const { member, plans, payouts, myMessages } = d
-  const collected = payouts.filter(p => p.status === 'paid')
+  /*
+   * `member-profile` returns `memberships`, not `plans`.
+   *
+   * This line read `plans` and `payouts` — neither of which the endpoint has
+   * returned since it was rebuilt on get_member_portal_state(). `payouts` was
+   * undefined, `.filter()` on it threw, and every member opening Profile got
+   * "Application error: a client-side exception has occurred".
+   *
+   * TypeScript did not catch it because the page was typed as
+   * `MemberDashboard`, a type still describing the old shape — a stale type
+   * masking a broken contract is worse than no type at all. It is now typed as
+   * `PortalState`, which is what actually comes back.
+   *
+   * Defaults on every array: a member with no memberships, no payouts or no
+   * messages is a normal state, not an error.
+   */
+  const member      = d.member
+  const memberships = d.memberships ?? []
+  const payouts     = d.payouts ?? []
+  const myMessages  = d.myMessages ?? []
+  const collected   = payouts.filter(p => p.status === 'paid')
 
   return (
     <div className="max-w-md mx-auto px-5 pt-6 space-y-3 animate-fade-in">
@@ -112,35 +131,36 @@ export default function Profile() {
         <Avatar name={member.full_name} size="lg" tone="ink" />
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-ink truncate">{member.full_name}</h1>
-          <p className="text-xs text-ink-3 font-mono mt-0.5">{member.member_id}</p>
+          <p className="text-xs text-ink-3 font-mono mt-0.5">{member.member_code}</p>
         </div>
         <Status value={member.status} className="ml-auto shrink-0" />
       </div>
 
-      {plans.length > 0 && (
+      {memberships.length > 0 && (
         <Card pad="lg">
-          <p className="t-h2 mb-3">Your plans</p>
+          <p className="t-h2 mb-3">
+            Your groups{memberships.length > 1 ? ` · ${memberships.length}` : ''}
+          </p>
           <div className="divide-y divide-line-2">
-            {plans.map(p => {
-              const g = p.susu_groups!
-              const cashout = Number(p.payout_amount ?? g.cashout_amount ?? 0)
-              return (
-                <div key={p.id} className="py-3 flex items-start justify-between gap-4 first:pt-0 last:pb-0">
-                  <div className="min-w-0">
-                    <p className="text-base font-semibold text-ink truncate">{g.name}</p>
-                    <p className="text-xs text-ink-2 mt-0.5 tnum">
-                      Slot {p.payout_position} of {g.max_members} · GHS {ghs(g.contribution_amount)} {g.contribution_frequency}
-                    </p>
-                    {p.payout_date && (
-                      <p className="text-xs text-ink-3 mt-0.5">
-                        Collects {format(new Date(p.payout_date), 'd MMM yyyy')}
-                      </p>
-                    )}
-                  </div>
-                  <Money value={cashout} size="sm" className="shrink-0" />
+            {memberships.map(m => (
+              <div key={m.membership_id} className="py-3 flex items-start justify-between gap-4 first:pt-0 last:pb-0">
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-ink truncate">{m.group_name}</p>
+                  <p className="text-xs text-ink-2 mt-0.5 tnum">
+                    Slot {m.payout_position} · GHS {ghs(m.contribution_amount)} {m.frequency}
+                  </p>
+                  {/* Never fabricated: a membership with no date says so. */}
+                  <p className="text-xs text-ink-3 mt-0.5">
+                    {m.payout_date
+                      ? `Collects ${format(new Date(m.payout_date), 'd MMM yyyy')}`
+                      : 'Collection date not yet assigned'}
+                  </p>
                 </div>
-              )
-            })}
+                {m.payout_amount != null
+                  ? <Money value={m.payout_amount} size="sm" className="shrink-0" />
+                  : <span className="text-xs text-ink-3 shrink-0">Not yet set</span>}
+              </div>
+            ))}
           </div>
         </Card>
       )}
@@ -176,7 +196,11 @@ export default function Profile() {
           </DetailRow>
           <DetailRow label="Occupation">{member.occupation}</DetailRow>
           <DetailRow label="Address">{member.residential_address}</DetailRow>
-          <DetailRow label="Member since">{format(new Date(member.created_at), 'd MMMM yyyy')}</DetailRow>
+          {/* `format(new Date(undefined))` throws RangeError — one of the
+              things that crashed this page rather than leaving a blank row. */}
+          <DetailRow label="Member since">
+            {member.created_at ? format(new Date(member.created_at), 'd MMMM yyyy') : null}
+          </DetailRow>
         </DetailList>
         <p className="text-xs text-ink-3 mt-3 leading-relaxed">
           To change anything here, message your collector below.

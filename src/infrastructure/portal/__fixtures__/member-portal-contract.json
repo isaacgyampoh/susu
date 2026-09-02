@@ -1,0 +1,79 @@
+{
+  "profile": {
+    "status": 200,
+    "keys": [
+      "announcements",
+      "as_of",
+      "member",
+      "memberships",
+      "myMessages",
+      "payments",
+      "payouts",
+      "penalties",
+      "totals"
+    ],
+    "membership_count": 3,
+    "has_payouts_key": true,
+    "member_fields": [
+      "created_at",
+      "email",
+      "full_name",
+      "id",
+      "member_code",
+      "occupation",
+      "phone",
+      "residential_address",
+      "status"
+    ],
+    "group_names": [
+      "P11-A",
+      "P11-B",
+      "P11-C"
+    ]
+  },
+  "paginated_list": {
+    "rows_returned": 20,
+    "total_rows": 75,
+    "distinct_groups_on_page_1": 1
+  },
+  "previews": [
+    {
+      "membership": "P11-A",
+      "status": 200,
+      "groups_touched": [
+        "P11-A"
+      ],
+      "memberships_touched": [
+        "3919a2a3-216e-4dfe-a0e5-316d8ed0d438"
+      ],
+      "expected_membership_id": "3919a2a3-216e-4dfe-a0e5-316d8ed0d438"
+    },
+    {
+      "membership": "P11-B",
+      "status": 200,
+      "groups_touched": [
+        "P11-B"
+      ],
+      "memberships_touched": [
+        "dee761be-61fe-4dfa-a38a-84e78c0e6274"
+      ],
+      "expected_membership_id": "dee761be-61fe-4dfa-a38a-84e78c0e6274"
+    },
+    {
+      "membership": "P11-C",
+      "status": 200,
+      "groups_touched": [
+        "P11-C"
+      ],
+      "memberships_touched": [
+        "1459b68f-adba-47d0-bd61-a9ece94e7854"
+      ],
+      "expected_membership_id": "1459b68f-adba-47d0-bd61-a9ece94e7854"
+    }
+  ],
+  "idor": {
+    "preview_other_membership": 404,
+    "initialize_other_membership": 404,
+    "initialize_fabricated_membership": 404
+  }
+}
