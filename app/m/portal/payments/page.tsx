@@ -11,6 +11,7 @@ import { ghs2 } from '@/lib/money'
 import {
   Badge, Card, EmptyState, LoadingBlock, Money, Notice, Segmented, useToast,
 } from '@/components/ui'
+import { AppBar } from '@/components/susu/app-bar'
 
 /**
  * Payments — every group, not whichever one happened to fit on a page.
@@ -81,9 +82,11 @@ export default function Payments() {
   const owing = memberships.filter(m => m.due_today > 0.005 || m.overdue > 0.005).length
 
   return (
-    <div className="portal-w pt-6 space-y-4 animate-fade-in">
+    <div className="animate-fade-in">
+      <AppBar title="Payments" />
+      <div className="portal-w pt-5 space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold text-ink">Payments</h1>
+        <span className="sr-only">Payments</span>
         <p className="text-sm text-ink-2 mt-1">
           {memberships.length === 1
             ? 'Your group, what it needs, and what you have paid.'
@@ -216,6 +219,7 @@ export default function Payments() {
           onClose={() => setPending(null)}
         />
       )}
+      </div>
     </div>
   )
 }

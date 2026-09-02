@@ -4,11 +4,10 @@ import Link from 'next/link'
 import { ArrowRight, CreditCard, Layers, FileText, RefreshCw, Users, Wallet } from 'lucide-react'
 import { format } from 'date-fns'
 import { callFunction, getMemberToken } from '@/lib/supabase'
-import type { MembershipView, PortalState } from '@/types/portal'
+import type { PortalState } from '@/types/portal'
 import { ghs, ghs2 } from '@/lib/money'
-import MembershipCard from '@/components/susu/membership-card'
+import GroupList from '@/components/susu/group-list'
 import PayPrompt from '@/components/susu/pay-prompt'
-import PaySheet from '@/components/susu/pay-sheet'
 import {
   Avatar, Button, Card, EmptyState, IconButton, Money, Skeleton,
   useToast, cx,
@@ -51,8 +50,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState('')
   const [refreshing, setRefreshing] = useState(false)
-  const [paySheet, setPaySheet] = useState<MembershipView | null>(null)
-  const [paying, setPaying] = useState<string | null>(null)
   const [pending, setPending] = useState<any>(null)
 
   const load = useCallback(async (quiet = false) => {
@@ -83,8 +80,6 @@ export default function Dashboard() {
   )
 
   const { member, memberships, totals, payments, penalties } = state
-  const owing = memberships.filter(m => m.due_today > 0.005)
-  const settled = memberships.filter(m => m.due_today <= 0.005 && m.coverage !== 'no-schedule')
 
   // Local to the greeting only. Nothing financial is derived in the browser.
   const hour = new Date().getHours()
@@ -167,40 +162,42 @@ export default function Dashboard() {
       <div className="portal-w pt-5 space-y-4">
 
       {/*
-        One line per fact, on one surface — not three full-width tinted boxes
-        stacked down the screen. Three coloured blocks in a row is most of the
-        colour on this page, and it pushes the groups (the reason the member
-        opened the app) below the fold. Tone is carried by a single marker and
-        the figure, which is enough to separate "owed" from "in credit".
+        One "Attention" section, not three tinted boxes stacked down the screen.
+        Three full-width coloured blocks were most of the colour on this page and
+        pushed the groups — the reason the member opened the app — below the
+        fold. Each line is a fact with its figure; tone is carried by the number
+        and a marker, which is enough to separate owed from in-credit.
       */}
       {(totals.overdue > 0.005 || penalties.length > 0 || totals.advance_credit > 0.005) && (
-        <section aria-label="Account status"
-          className="border border-line rounded-xl bg-surface divide-y divide-line-2">
-          {totals.overdue > 0.005 && (
-            <StatusLine
-              tone="bad"
-              amount={`GHS ${ghs2(totals.overdue)}`}
-              label="overdue"
-              detail={`Across ${memberships.filter(m => m.overdue > 0.005).length} group${
-                memberships.filter(m => m.overdue > 0.005).length === 1 ? '' : 's'}. Anything still owing on a collection date is deducted from what you receive.`}
-            />
-          )}
-          {penalties.length > 0 && (
-            <StatusLine
-              tone="warn"
-              amount={`GHS ${ghs2(penalties.reduce((t, x) => t + Number(x.amount), 0))}`}
-              label="late payment penalties"
-              detail="Charged on contributions settled after their due date."
-            />
-          )}
-          {totals.advance_credit > 0.005 && (
-            <StatusLine
-              tone="good"
-              amount={`GHS ${ghs2(totals.advance_credit)}`}
-              label="paid in advance"
-              detail="Held against specific groups. Credit in one group is only ever spent on that group's contributions."
-            />
-          )}
+        <section aria-labelledby="attn">
+          <h2 id="attn" className="t-eyebrow mb-2">Attention</h2>
+          <div className="border border-line rounded-xl bg-surface divide-y divide-line-2">
+            {totals.overdue > 0.005 && (
+              <StatusLine
+                tone="bad"
+                amount={`GHS ${ghs2(totals.overdue)}`}
+                label="overdue"
+                detail={`Across ${memberships.filter(m => m.overdue > 0.005).length} group${
+                  memberships.filter(m => m.overdue > 0.005).length === 1 ? '' : 's'}. Anything still owing on a collection date is deducted from what you receive.`}
+              />
+            )}
+            {penalties.length > 0 && (
+              <StatusLine
+                tone="warn"
+                amount={`GHS ${ghs2(penalties.reduce((t, x) => t + Number(x.amount), 0))}`}
+                label="late payment penalties"
+                detail="Charged on contributions settled after their due date."
+              />
+            )}
+            {totals.advance_credit > 0.005 && (
+              <StatusLine
+                tone="good"
+                amount={`GHS ${ghs2(totals.advance_credit)}`}
+                label="paid in advance"
+                detail="Held against specific groups. Credit in one group is only ever spent on that group's contributions."
+              />
+            )}
+          </div>
         </section>
       )}
 
@@ -214,56 +211,24 @@ export default function Dashboard() {
           />
         </Card>
       ) : (
-        <>
-          {owing.length > 0 && (
-            <section>
-              <h2 className="t-eyebrow mb-2">
-                Needs paying today · {owing.length} of {memberships.length}
-              </h2>
-              <div className="space-y-3">
-                {owing.map(m => (
-                  <MembershipCard key={m.membership_id} m={m}
-                    onPay={setPaySheet} paying={paying === m.membership_id} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {settled.length > 0 && (
-            <section>
-              {/*
-                This read "Your groups · 22" for a member holding 33 slots: a
-                SECTION count wearing the label of a total. Counting 33 on one
-                screen and 22 on another is the kind of thing that makes someone
-                stop trusting a money screen. The heading now says what the
-                number counts.
-              */}
-              <h2 className="t-eyebrow mb-2 mt-5">
-                Up to date today · {settled.length}
-              </h2>
-              <div className="space-y-3">
-                {settled.map(m => (
-                  <MembershipCard key={m.membership_id} m={m}
-                    onPay={setPaySheet} paying={paying === m.membership_id} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {memberships.filter(m => m.coverage === 'no-schedule').length > 0 && (
-            <section>
-              <h2 className="t-eyebrow mb-2 mt-5">
-                Not started yet · {memberships.filter(m => m.coverage === 'no-schedule').length}
-              </h2>
-              <div className="space-y-3">
-                {memberships.filter(m => m.coverage === 'no-schedule').map(m => (
-                  <MembershipCard key={m.membership_id} m={m}
-                    onPay={setPaySheet} paying={paying === m.membership_id} />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
+        <section aria-labelledby="grps">
+          {/*
+            One list, grouped by group — not a card per slot. A member holding
+            33 slots got 33 cards, each with a progress bar and four stat
+            quadrants: roughly fifteen screens of scrolling in which the thing
+            they came for is buried in repetition. Tapping a slot opens its own
+            full screen, which is where the detail belongs.
+          */}
+          <div className="flex items-baseline justify-between gap-3 mb-2">
+            <h2 id="grps" className="t-eyebrow">Your groups</h2>
+            <span className="text-xs text-ink-3 tnum">
+              {memberships.length} slot{memberships.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div className="border border-line rounded-xl bg-surface px-[1.125rem] md:px-7">
+            <GroupList memberships={memberships} />
+          </div>
+        </section>
       )}
 
       {/* Recent payments, each showing what it actually covered — a single
@@ -311,18 +276,6 @@ export default function Dashboard() {
       )}
 
       </div>
-
-      {paySheet && (
-        <PaySheet
-          membership={paySheet}
-          defaultNumber={member.mobile_money_number ?? member.phone}
-          defaultNetwork={member.mobile_money_provider ?? 'MTN'}
-          hasOtherMemberships={memberships.length > 1}
-          onClose={() => setPaySheet(null)}
-          onPrompted={p => { setPaySheet(null); setPending(p) }}
-          onBusy={setPaying}
-        />
-      )}
 
       {pending && (
         <PayPrompt
