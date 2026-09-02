@@ -7,31 +7,80 @@ import { callFunction, setAdminToken } from '@/lib/supabase'
  * ADMINISTRATOR SIGN-IN.
  *
  * ────────────────────────────────────────────────────────────────────────
- * Four digits, typed on the device's own keyboard.
- *
- * An earlier revision drew an on-screen 1-2-3 keypad. It worked, but it made a
- * financial operations console look like a cash machine, and on desktop it
- * asked an administrator to click at numbers they could simply type. The
- * keypad is gone. What remains is four cells and a caret.
- *
- * `inputMode="numeric"` is what brings up the phone's number pad — the OS
- * keyboard, which the person already knows, rather than a bespoke one drawn in
- * a div. That is the whole reason a custom keypad was never needed.
+ * Four digits, typed on the device's own keyboard. `inputMode="numeric"`
+ * raises the phone's number pad — the OS keyboard the person already knows —
+ * which is why no on-screen keypad is drawn here.
  *
  * ── WHAT THE PIN TOUCHES ────────────────────────────────────────────────
  *
- * It lives in one piece of component state for the length of a submit and goes
- * nowhere else: not localStorage, not the URL, not a form a browser would offer
- * to save. Each cell renders a dot, never the digit, so the PIN is not
- * shoulder-readable and not sitting in the DOM as text. Autocomplete is off on
- * every cell — four digits that open an entire administration are not something
- * a shared browser should remember.
+ * One piece of component state, for the length of one submit. Not
+ * localStorage, not the URL, not a form a browser would offer to save. Each
+ * cell paints a dot and never the digit, so the PIN is neither
+ * shoulder-readable nor sitting in the DOM as text, and autocomplete is off on
+ * every cell — four digits that open an entire administration are not
+ * something a shared browser should remember.
  *
- * What persists after a successful sign-in is the token the server issues,
- * which is what the email login used to leave behind too.
+ * ── WHY THE LEFT PANEL LOOKS LIKE THAT ──────────────────────────────────
+ *
+ * A susu is a rotation: a fixed ring of slots, everyone paying in, one member
+ * collecting per turn. That is the whole product, and it happens to be a
+ * shape. So the ring is drawn properly and at scale — seven slots settled, one
+ * lit as the current turn, the rest still ahead — rather than used as abstract
+ * circles in a corner. It is the one image on this screen, it means something
+ * specific, and it is the reason the page needs no stock photography, no
+ * gradient and no padlock illustration.
  */
 
 const CELLS = 4
+
+/* Rotation state. Static: this is the sign-in screen, so there is no member
+   and nothing real to read. It illustrates the idea, and claims no figures. */
+const SLOTS = 12
+const SETTLED = 7
+const CURRENT = 7
+
+function RotationRing() {
+  const R = 74
+  return (
+    <svg viewBox="0 0 200 200" className="w-full h-full" aria-hidden="true">
+      <circle cx="100" cy="100" r={R}      fill="none" stroke="rgb(255 255 255 / .10)" strokeWidth="1" />
+      <circle cx="100" cy="100" r={R - 22} fill="none" stroke="rgb(255 255 255 / .05)" strokeWidth="1" />
+      <circle cx="100" cy="100" r={R + 22} fill="none" stroke="rgb(255 255 255 / .04)" strokeWidth="1" />
+
+      {Array.from({ length: SLOTS }).map((_, i) => {
+        const a = (i / SLOTS) * Math.PI * 2 - Math.PI / 2
+        const x = 100 + Math.cos(a) * R
+        const y = 100 + Math.sin(a) * R
+        const settled = i < SETTLED
+        const current = i === CURRENT
+        return (
+          <g key={i} className="ring-node" style={{ animationDelay: `${i * 55}ms` }}>
+            {current && (
+              <circle cx={x} cy={y} r="13" fill="none" stroke="#A7DCC4" strokeWidth="1" opacity=".45" />
+            )}
+            <circle
+              cx={x} cy={y} r={current ? 7 : 5.5}
+              fill={current ? '#A7DCC4' : settled ? 'rgb(255 255 255 / .92)' : 'transparent'}
+              stroke={current ? 'none' : settled ? 'none' : 'rgb(255 255 255 / .30)'}
+              strokeWidth="1.25"
+            />
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+/** Ring with a settled arc — the rotation, small enough to sit beside a name. */
+function Mark({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" opacity=".28" />
+      <path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="3" r="2.1" fill="currentColor" />
+    </svg>
+  )
+}
 
 export default function SignIn() {
   const router = useRouter()
@@ -84,32 +133,28 @@ export default function SignIn() {
     setErr('')
     const digits = raw.replace(/\D/g, '')
     if (!digits) return
-
-    // One field accepts a whole pasted PIN, so pasting works without the
-    // person having to land the cursor in the first cell.
+    // One field accepts a whole pasted PIN, so pasting works without the person
+    // having to land the cursor in the first cell.
     const next = [...pin]
     for (let k = 0; k < digits.length && i + k < CELLS; k++) next[i + k] = digits[k]
-    const landed = Math.min(i + digits.length, CELLS - 1)
     commit(next)
-    refs.current[landed]?.focus()
+    refs.current[Math.min(i + digits.length, CELLS - 1)]?.focus()
   }
 
   function onKeyDown(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
     if (busy) return
     if (e.key === 'Backspace') {
-      e.preventDefault()
-      setErr('')
+      e.preventDefault(); setErr('')
       const next = [...pin]
-      // Backspace clears this cell, or steps back into the previous one when
-      // this cell is already empty — the behaviour every OTP field has, and the
-      // absence of which makes segmented inputs infuriating.
-      if (next[i]) { next[i] = '' ; setPin(next) }
+      // Clears this cell, or steps back into the previous one when this cell is
+      // already empty — the absence of which makes segmented inputs infuriating.
+      if (next[i]) { next[i] = ''; setPin(next) }
       else if (i > 0) { next[i - 1] = ''; setPin(next); refs.current[i - 1]?.focus() }
       return
     }
     if (e.key === 'ArrowLeft'  && i > 0)         { e.preventDefault(); refs.current[i - 1]?.focus() }
     if (e.key === 'ArrowRight' && i < CELLS - 1) { e.preventDefault(); refs.current[i + 1]?.focus() }
-    if (e.key === 'Escape')                      { setPin(Array(CELLS).fill('')); setErr(''); refs.current[0]?.focus() }
+    if (e.key === 'Escape') { setPin(Array(CELLS).fill('')); setErr(''); refs.current[0]?.focus() }
   }
 
   function onPaste(e: React.ClipboardEvent) {
@@ -123,127 +168,175 @@ export default function SignIn() {
   }
 
   const filled = pin.filter(Boolean).length
+  const active = pin.findIndex(d => !d)
 
   return (
-    <main className="min-h-[100dvh] grid lg:grid-cols-[1.05fr_minmax(420px,.85fr)] bg-bg">
+    <main className="min-h-[100dvh] lg:grid lg:grid-cols-[1.12fr_minmax(440px,.88fr)] bg-bg">
 
-      {/* ── Brand side. A flat ink field and a statement — no photograph, no
-             gradient, no illustration. The restraint is the identity. ───── */}
-      <div className="relative hidden lg:flex flex-col justify-between bg-ink p-14 overflow-hidden">
-        {/* One quiet geometric mark, drawn from the rotation the product is
-            about: fixed slots, filled in turn. It is not decoration for its own
-            sake — it is the thing the business does. */}
-        <div aria-hidden="true" className="absolute right-[-90px] bottom-[-90px] opacity-[0.07]">
-          <svg width="420" height="420" viewBox="0 0 100 100" fill="none">
-            {Array.from({ length: 12 }).map((_, i) => {
-              const a = (i / 12) * Math.PI * 2 - Math.PI / 2
-              return (
-                <circle key={i} cx={50 + Math.cos(a) * 34} cy={50 + Math.sin(a) * 34}
-                  r={i < 7 ? 5.5 : 4} fill={i < 7 ? '#fff' : 'none'}
-                  stroke="#fff" strokeWidth="1" />
-              )
-            })}
-          </svg>
+      {/* ══ Brand side ══════════════════════════════════════════════════ */}
+      <section className="signin-dark relative hidden lg:flex flex-col justify-between
+                          overflow-hidden bg-[#0C0E12] text-white p-14 xl:p-16">
+
+        {/* Sits behind the words, bleeding off the lower-right so the ring
+            reads as continuing past the panel rather than being cropped. */}
+        <div aria-hidden="true"
+          className="pointer-events-none absolute -right-[14%] -bottom-[18%]
+                     w-[min(760px,78%)] aspect-square opacity-[0.5]">
+          <RotationRing />
         </div>
 
-        <span className="font-display text-md font-semibold text-white tracking-[-.01em]">
-          Abbie Wealth
-        </span>
+        <div className="relative flex items-center gap-2.5">
+          <Mark className="w-[19px] h-[19px] text-[#A7DCC4]" />
+          <span className="font-display text-md font-semibold tracking-[-.01em]">Abbie Wealth</span>
+        </div>
 
-        <div className="relative max-w-[460px]">
-          <h1 className="font-display text-[40px] leading-[1.08] font-semibold text-white tracking-[-.03em] text-balance">
-            Every cedi accounted for, every slot in its turn.
+        <div className="relative max-w-[520px]">
+          <p className="t-eyebrow !text-white/40 mb-5">Susu operations</p>
+          <h1 className="font-display text-[clamp(34px,3.2vw,46px)] leading-[1.06] font-semibold
+                         tracking-[-.032em] text-balance">
+            Every cedi accounted for,
+            <br className="hidden xl:block" /> every slot in its turn.
           </h1>
-          <p className="mt-5 text-md text-white/55 leading-relaxed">
+          <p className="mt-6 text-md text-white/55 leading-relaxed max-w-[430px]">
             Contributions, allocations and payouts — recorded once, by one engine,
             with a trail behind every figure.
           </p>
         </div>
 
-        <span className="text-xs text-white/35">Administrator console</span>
-      </div>
-
-      {/* ── Sign-in side ─────────────────────────────────────────────────── */}
-      <div className="flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14
-                      bg-surface lg:border-l lg:border-line
-                      [padding-top:max(3rem,env(safe-area-inset-top))]
-                      [padding-bottom:max(3rem,env(safe-area-inset-bottom))]">
-        <div className="w-full max-w-[340px] mx-auto">
-
-          <span className="lg:hidden font-display text-md font-semibold text-ink tracking-[-.01em]">
-            Abbie Wealth
+        {/* Names the diagram, so it reads as information rather than ornament. */}
+        <div className="relative flex items-end justify-between gap-8">
+          <span className="text-xs text-white/35">Administrator console</span>
+          <span className="flex items-center gap-2.5 text-xs text-white/35">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#A7DCC4]" />
+            Slot {CURRENT + 1} of {SLOTS} · {SETTLED} settled
           </span>
+        </div>
+      </section>
 
-          <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.02em] mt-7 lg:mt-0">
-            Enter your admin PIN
-          </h2>
-          <p className="text-sm text-ink-2 mt-2">
-            Four digits. Five wrong attempts locks this device for fifteen minutes.
-          </p>
+      {/* ══ Sign-in side ════════════════════════════════════════════════ */}
+      <section className="relative flex flex-col min-h-[100dvh] lg:min-h-0
+                          bg-surface lg:border-l lg:border-line
+                          px-6 sm:px-10 lg:px-14
+                          pt-[max(2rem,env(safe-area-inset-top))]
+                          pb-[max(2rem,env(safe-area-inset-bottom))]">
 
-          <div
-            role="group"
-            aria-label="Administrator PIN, 4 digits"
-            onPaste={onPaste}
-            className={`flex gap-3 mt-8 ${shake ? 'animate-[shake_.38s_ease-in-out]' : ''}`}
-          >
-            {pin.map((d, i) => (
-              <div key={i} className="relative flex-1">
-                <input
-                  ref={el => { refs.current[i] = el }}
-                  value={d}
-                  onChange={e => onChange(i, e.target.value)}
-                  onKeyDown={e => onKeyDown(i, e)}
-                  onFocus={e => e.target.select()}
-                  disabled={busy}
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  maxLength={CELLS}
-                  aria-label={`Digit ${i + 1} of ${CELLS}`}
-                  // The value is kept in state and rendered as a dot below, so
-                  // the digit itself is never painted on screen.
-                  className={`peer w-full h-[62px] rounded-xl border bg-surface-2 text-center
-                              text-transparent caret-ink outline-none
-                              transition-[border-color,box-shadow,background-color] duration-150
-                              ${err ? 'border-danger/50' : 'border-line'}
-                              focus:border-ink focus:bg-surface focus:ring-4 focus:ring-ink/[0.07]
-                              disabled:opacity-50`}
-                />
-                <span aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <span className={`rounded-full bg-ink transition-all duration-150
-                                    ${d ? 'w-[11px] h-[11px] opacity-100' : 'w-[6px] h-[6px] opacity-15'}`} />
-                </span>
-              </div>
-            ))}
-          </div>
+        <div className="lg:hidden flex items-center gap-2.5 text-ink">
+          <Mark className="w-[19px] h-[19px] text-accent" />
+          <span className="font-display text-md font-semibold tracking-[-.01em]">Abbie Wealth</span>
+        </div>
 
-          {/* Progress, never the digits. */}
-          <p className="sr-only" aria-live="polite">
-            {busy ? 'Checking your PIN' : `${filled} of ${CELLS} digits entered`}
-          </p>
+        {/* The optical centre, not a floating box: this column owns the full
+            height and the entry sits in the middle of it. */}
+        <div className="flex-1 flex flex-col justify-center py-10">
+          <div className="w-full max-w-[336px] mx-auto lg:mx-0">
 
-          <div className="min-h-[52px] mt-4">
-            {err ? (
-              <p role="alert"
-                className="text-sm text-danger bg-danger-soft border border-danger-line rounded-lg px-3 py-2.5">
-                {err}
-              </p>
-            ) : busy ? (
-              <p className="text-sm text-ink-3 flex items-center gap-2">
-                <span aria-hidden="true"
-                  className="w-3.5 h-3.5 rounded-full border-2 border-ink-3/30 border-t-ink-3 animate-spin" />
-                Signing in…
-              </p>
-            ) : null}
+            <span className="block w-8 h-[3px] rounded-full bg-accent mb-6" />
+
+            <h2 className="font-display text-2xl font-semibold text-ink tracking-[-.022em]">
+              Enter your admin PIN
+            </h2>
+            <p className="text-sm text-ink-2 mt-2 leading-relaxed">
+              Four digits. Five wrong attempts locks this device for fifteen minutes.
+            </p>
+
+            <div
+              role="group"
+              aria-label="Administrator PIN, 4 digits"
+              onPaste={onPaste}
+              className={`flex gap-2.5 mt-7 ${shake ? 'animate-[shake_.38s_ease-in-out]' : ''}`}
+            >
+              {pin.map((d, i) => {
+                const isActive = i === active && !busy
+                return (
+                  <div key={i} className="relative flex-1">
+                    <input
+                      ref={el => { refs.current[i] = el }}
+                      value={d}
+                      onChange={e => onChange(i, e.target.value)}
+                      onKeyDown={e => onKeyDown(i, e)}
+                      onFocus={e => e.target.select()}
+                      disabled={busy}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      maxLength={CELLS}
+                      aria-label={`Digit ${i + 1} of ${CELLS}`}
+                      // Value lives in state and is painted as a dot below, so
+                      // the digit itself is never drawn on screen.
+                      className={`peer w-full h-[68px] rounded-[14px] bg-surface-2 text-center
+                                  text-transparent caret-transparent outline-none border
+                                  transition-[border-color,background-color,box-shadow] duration-150
+                                  ${err ? 'border-danger/45' : d ? 'border-ink/25' : 'border-line'}
+                                  focus:border-ink focus:bg-surface focus:ring-[3px] focus:ring-ink/[0.08]
+                                  disabled:opacity-50`}
+                    />
+                    <span aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      {d ? (
+                        <span className="w-[10px] h-[10px] rounded-full bg-ink animate-[popIn_.16s_ease-out]" />
+                      ) : (
+                        <span className={`rounded-full bg-ink transition-all duration-200
+                                          ${isActive ? 'w-[2px] h-6 opacity-70 animate-[caret_1.1s_steps(1)_infinite]'
+                                                     : 'w-[5px] h-[5px] opacity-[0.14]'}`} />
+                      )}
+                    </span>
+                    {/* Settled-slot rule: the cell fills from the bottom, the
+                        same way a slot in the ring fills. */}
+                    <span aria-hidden="true"
+                      className={`pointer-events-none absolute left-3 right-3 bottom-[9px] h-[2px] rounded-full
+                                  transition-all duration-200
+                                  ${d ? 'bg-accent opacity-100' : 'bg-ink opacity-0'}`} />
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Progress, never the digits. */}
+            <p className="sr-only" aria-live="polite">
+              {busy ? 'Checking your PIN' : `${filled} of ${CELLS} digits entered`}
+            </p>
+
+            <div className="min-h-[54px] mt-4">
+              {err ? (
+                <p role="alert"
+                  className="text-sm text-danger bg-danger-soft border border-danger-line
+                             rounded-[10px] px-3 py-2.5 animate-[riseIn_.18s_ease-out]">
+                  {err}
+                </p>
+              ) : busy ? (
+                <p className="text-sm text-ink-3 flex items-center gap-2">
+                  <span aria-hidden="true"
+                    className="w-3.5 h-3.5 rounded-full border-2 border-ink-3/25 border-t-ink-3 animate-spin" />
+                  Signing in…
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Anchors the column instead of letting it float. Both claims are
+            true of this endpoint — no invented certification, no badge. */}
+        <p className="text-2xs text-ink-3 max-w-[336px] mx-auto lg:mx-0 leading-relaxed">
+          Sign-in attempts are rate limited and recorded. Changing your PIN signs
+          out every device.
+        </p>
+      </section>
 
       <style jsx global>{`
+        /* Fine grain, so the dark panel reads as a surface rather than a fill. */
+        .signin-dark::after {
+          content: '';
+          position: absolute; inset: 0; pointer-events: none;
+          opacity: .035; mix-blend-mode: overlay;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+        .ring-node { opacity: 0; animation: nodeIn .5s ease-out forwards; }
+        @keyframes nodeIn { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+        .ring-node { transform-box: fill-box; transform-origin: center; }
+        @keyframes popIn { from { transform: scale(.4); opacity: .4; } to { transform: none; opacity: 1; } }
+        @keyframes caret  { 0%, 49% { opacity: .7 } 50%, 100% { opacity: 0 } }
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
           25%      { transform: translateX(-6px); }
@@ -251,7 +344,10 @@ export default function SignIn() {
           75%      { transform: translateX(-3px); }
         }
         @media (prefers-reduced-motion: reduce) {
-          @keyframes shake { 0%, 100% { transform: none; } }
+          .ring-node { opacity: 1; animation: none; }
+          @keyframes shake  { 0%, 100% { transform: none; } }
+          @keyframes popIn  { from, to { transform: none; opacity: 1; } }
+          @keyframes caret  { 0%, 100% { opacity: .7 } }
         }
       `}</style>
     </main>
