@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { CheckCircle2, Clock, FileText, Printer } from 'lucide-react'
 import { callFunction, getMemberToken } from '@/lib/supabase'
@@ -96,6 +97,28 @@ export default function StatementPage() {
     ? data.memberships
     : data.memberships.filter(m => m.membership_id === membership)
 
+  /*
+    A UI grouping of rows the server already returned — newest first, then by
+    day. No figure is added up and no balance is derived: `applied` is the
+    amount that payment put towards contributions, exactly as recorded.
+  */
+  const ledger = (() => {
+    const rows = shown.flatMap(m =>
+      (m.payments ?? []).map(p => ({ ...p, group: m.group_name })))
+    rows.sort((a, b) => b.at.localeCompare(a.at))
+    const today = format(new Date(), 'yyyy-MM-dd')
+    const yest  = format(new Date(Date.now() - 864e5), 'yyyy-MM-dd')
+    const byDay = new Map<string, typeof rows>()
+    for (const r of rows) {
+      const d = r.at.slice(0, 10)
+      const label = d === today ? 'Today' : d === yest ? 'Yesterday'
+                  : format(new Date(r.at), 'd MMMM yyyy')
+      if (!byDay.has(label)) byDay.set(label, [])
+      byDay.get(label)!.push(r)
+    }
+    return [...byDay.entries()]
+  })()
+
   return (
     <div className="animate-fade-in">
       <AppBar title="Statement" />
@@ -137,6 +160,58 @@ export default function StatementPage() {
         <Notice tone="warn" title="Limited payment detail for this period">
           {data.attribution_note}
         </Notice>
+      )}
+
+      {/*
+        THE LEDGER LEADS.
+        A member opening Statement wants "what have I paid", and the answer is a
+        list of payments — not a reconciliation table they have to interpret
+        first. The per-group accounting below is still here and still
+        authoritative; it is simply no longer the thing they meet on arrival.
+
+        Rows are the payments the statement already returned, per group, sorted
+        newest first and grouped by day. Nothing is summed across groups and no
+        balance is invented: each figure is the amount that payment applied, as
+        the server recorded it. Tapping one opens the payment's own screen.
+      */}
+      {ledger.length > 0 && (
+        <section aria-labelledby="ldg" className="print:hidden">
+          <h2 id="ldg" className="t-eyebrow mb-2">Payments in this period</h2>
+          <div className="border border-line rounded-xl bg-surface overflow-hidden">
+            {ledger.map(([label, rows]) => (
+              <div key={label}>
+                <p className="px-[1.125rem] md:px-7 py-2 text-2xs font-semibold uppercase
+                              tracking-[.07em] text-ink-3 bg-surface-2 border-b border-line-2">
+                  {label}
+                </p>
+                <div className="divide-y divide-line-2 px-[1.125rem] md:px-7">
+                  {rows.map(r => (
+                    <Link
+                      key={r.reference}
+                      href={`/m/portal/payments/${encodeURIComponent(r.reference)}`}
+                      className="flex items-center gap-3 py-3 min-h-[56px] transition-colors
+                                 hover:bg-surface-2 active:bg-surface-3
+                                 -mx-[1.125rem] px-[1.125rem] md:-mx-7 md:px-7
+                                 focus-visible:outline-none focus-visible:ring-2
+                                 focus-visible:ring-inset focus-visible:ring-ink/30"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-ink">Contribution</p>
+                        <p className="text-xs text-ink-2 mt-0.5 truncate">{r.group}</p>
+                        <p className="text-xs text-ink-3 mt-0.5 tnum">
+                          {format(new Date(r.at), 'HH:mm')} · {r.days} day{r.days === 1 ? '' : 's'}
+                        </p>
+                      </div>
+                      <span className="text-base font-semibold text-ink tnum shrink-0">
+                        GHS {ghs2(r.applied)}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {shown.length === 0 ? (
