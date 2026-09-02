@@ -51,6 +51,28 @@ jobs:
         with:
           version: latest
 
+      # Named so the failure is identifiable from the run summary alone: the
+      # step names are visible without permission to read the logs, so whoever
+      # looks next can tell a bad credential from a bad function.
+      - name: Preflight - is SUPABASE_ACCESS_TOKEN present
+        run: |
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN is not set on this repository."
+            exit 1
+          fi
+          echo "present (${#SUPABASE_ACCESS_TOKEN} characters)"
+
+      - name: Preflight - can that token reach the project
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/functions")
+          echo "Management API → HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN cannot reach project $PROJECT_REF (HTTP $code). It is missing, expired or revoked — rotate it in repository settings."
+            exit 1
+          fi
+
       - name: Deploy all Edge Functions
         run: |
           set -euo pipefail
