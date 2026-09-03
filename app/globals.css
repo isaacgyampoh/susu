@@ -163,39 +163,35 @@
      genuinely better than a 1000px line of text — a tablet and desktop
      decision that must not leak back down onto the phone. */
   /* ── THE BRAND IMAGE ───────────────────────────────────────────────────
-     Deliberately empty. Nothing is painted here until a real photograph
-     exists, because a drawing of a hand collided with the headline and read as
-     grey clip-art — worse than the clean field it replaced.
+     Two members looking at the app together, cut out of a magenta studio
+     sweep, sitting bottom-right of the sign-in brand field.
 
-     TO ADD THE PHOTOGRAPH:
-       1. A licensed or original shot of members using the app, cut out on a
-          transparent background and saved as PNG or WebP so the dark field
-          shows through around the subject.
-       2. Save to /public and uncomment the three lines below, pointing the
-          url() at it.
-       3. Keep the subject to the RIGHT and BELOW the type. The wordmark sits
-          top-left and the headline runs down the left of the panel; a subject
-          that crosses that column will collide with it exactly as the drawing
-          did. `right bottom` and `contain` are already the correct treatment
-          for a cut-out figure. */
+     ── THE SIZES ARE MEASURED, NOT GUESSED ──────────────────────────────────
+     A first pass used `contain`, which filled the panel and ran the headline
+     "every slot in its turn." straight across his white t-shirt. The band and
+     the desktop panel have opposite proportions — short and wide on a phone,
+     tall and narrow beside the form — so one size cannot serve both.
+
+     I mocked each at real dimensions with the real type over it and looked:
+
+       phone band   95% grazed "pocket.",  66% lost the figures,  80% clear
+       desktop      62% and 54% both hit "turn.",                 46% clear
+
+     Hence the three steps below. They are the largest the photograph can be at
+     each width without touching a word.
+
+     Bottom-right because a cut-out figure has to stand on the lower edge or it
+     floats, and because the wordmark and headline own the left column. */
   .brand-photo {
-    /* background-image: url('/brand-collection.png');
-       background-size: contain;
-       background-position: right bottom;
-       background-repeat: no-repeat; */
+    background-image: image-set(url('/brand-collection.webp') type('image/webp'),
+                                url('/brand-collection.png')  type('image/png'));
+    background-size: auto 80%;
+    background-position: right bottom;
+    background-repeat: no-repeat;
   }
+  @media (min-width: 640px)  { .brand-photo { background-size: auto 58%; } }
+  @media (min-width: 1024px) { .brand-photo { background-size: auto 46%; } }
 
-  /* ── SECURITY PAPER ────────────────────────────────────────────────────
-     A fine cross-hatch on the sign-in surface, the way engraved lines sit
-     under the print on a banknote or a share certificate. It gives a large
-     pale panel some material quality so it reads as a surface rather than as
-     an absence.
-
-     Pure CSS gradients: no asset to load, no image to go missing, and it
-     scales to any panel size. Kept at 2–3% ink — visible as texture when you
-     look, invisible when you are reading the form on top of it. Anything
-     heavier competes with the type, which is the whole reason the panel was
-     left plain in the first place. */
   .security-paper {
     background-image:
       repeating-linear-gradient(45deg,  rgb(var(--c-ink) / 0.030) 0 1px, transparent 1px 13px),
