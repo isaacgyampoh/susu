@@ -44,6 +44,45 @@ export default function Dashboard() {
     { v: n0(stats.pendingKYC),           l: 'Applications',   href: '/admin/kyc' },
   ]
 
+  /*
+   * The anomaly counts, turned into things somebody can act on. Each entry
+   * states the fact, why it matters and where it is resolved. Zeroes are
+   * dropped rather than shown as "0 problems", which is noise.
+   */
+  const an = (d?.anomalies ?? {}) as Record<string, number>
+  const attention = ([
+    {
+      key: 'pending', n: an.pending_over_48h ?? 0, tone: 'bad' as const,
+      head: `${n0(an.pending_over_48h)} payments pending over 48 hours`,
+      why: `GHS ${n0(an.pending_over_48h_value)} the provider has never confirmed. Until it does, none of it counts as collected.`,
+      cta: 'Reconcile', href: '/admin/reconciliation',
+    },
+    {
+      key: 'reg', n: an.approved_registrations_unpaid ?? 0, tone: 'bad' as const,
+      head: `${n0(an.approved_registrations_unpaid)} approved registrations unpaid`,
+      why: 'These members were let in but their registration fee was never received.',
+      cta: 'Registrations', href: '/admin/kyc',
+    },
+    {
+      key: 'sched', n: an.memberships_no_schedule ?? 0, tone: 'warn' as const,
+      head: `${n0(an.memberships_no_schedule)} memberships with no schedule`,
+      why: 'They owe nothing and are never asked to pay, because their group has not started.',
+      cta: 'Groups', href: '/admin/groups',
+    },
+    {
+      key: 'payout', n: an.active_group_memberships_no_payout_date ?? 0, tone: 'warn' as const,
+      head: `${n0(an.active_group_memberships_no_payout_date)} slots with no collection date`,
+      why: 'These members cannot be told when they collect. The system will not guess a date.',
+      cta: 'Payouts', href: '/admin/payouts',
+    },
+    {
+      key: 'alloc', n: an.allocations_vs_unpaid ?? 0, tone: 'bad' as const,
+      head: `${n0(an.allocations_vs_unpaid)} payments allocated to unpaid days`,
+      why: 'Money was applied to a day that is still marked unpaid. Worth investigating.',
+      cta: 'Reconcile', href: '/admin/reconciliation',
+    },
+  ]).filter(a => a.n > 0)
+
   return (
     <div className="px-5 sm:px-8 py-7 pb-16 animate-fade-in">
       <header className="flex items-start justify-between gap-4 flex-wrap mb-7">
@@ -59,6 +98,48 @@ export default function Dashboard() {
           <Link href="/admin/members/new" className="btn-dark btn-sm">Add member</Link>
         </div>
       </header>
+
+      {/*
+        ── WHAT NEEDS ATTENTION ──────────────────────────────────────────────
+        admin-dashboard has always returned these counts and this page always
+        threw them away: the console showed how much had been collected but not
+        that 324 payments had been pending for over two days.
+
+        First on the page, and first on a phone, because it is the only part
+        with anything to DO. Each line says what happened, why it matters and
+        where to fix it — a number alone tells an administrator nothing they can
+        act on.
+
+        Only real counts appear. When every one is zero the section says so
+        rather than rendering an empty box.
+      */}
+      <section aria-labelledby="attention" className="mb-3">
+        <h2 id="attention" className="t-label mb-2">Needs attention</h2>
+
+        {attention.length === 0 ? (
+          <div className="card p-4">
+            <p className="text-sm text-ink-2">Nothing is waiting. Everything reconciles.</p>
+          </div>
+        ) : (
+          <div className="card divide-y divide-line-2 p-0 overflow-hidden">
+            {attention.map(a => (
+              <Link key={a.key} href={a.href}
+                className="flex items-start gap-3 p-4 transition-colors hover:bg-bg
+                           focus-visible:outline-none focus-visible:ring-2
+                           focus-visible:ring-inset focus-visible:ring-ink/30">
+                <span aria-hidden="true"
+                  className={`mt-[7px] w-1.5 h-1.5 rounded-full shrink-0 ${
+                    a.tone === 'bad' ? 'bg-red' : 'bg-gold'}`} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-medium text-ink">{a.head}</span>
+                  <span className="block text-[12px] text-ink-2 mt-0.5 leading-relaxed">{a.why}</span>
+                </span>
+                <span className="text-[12px] text-ink-3 shrink-0 mt-0.5 whitespace-nowrap">{a.cta} &rarr;</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Figures */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">

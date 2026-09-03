@@ -115,6 +115,19 @@ export interface AdminDashboard {
     dueTodayGross?: number
     contributionsOutstanding?: number
   }
+  /**
+   * Live operational counts from get_admin_totals. The endpoint has always
+   * returned these; the type omitted them, so the console could not read the
+   * one part of the payload that says what needs doing.
+   */
+  anomalies?: {
+    pending_over_48h?: number
+    pending_over_48h_value?: number
+    approved_registrations_unpaid?: number
+    memberships_no_schedule?: number
+    active_group_memberships_no_payout_date?: number
+    allocations_vs_unpaid?: number
+  }
   recentKYC: KYCApplication[]
   recentTransactions: Transaction[]
   upcomingPayouts: Payout[]
