@@ -1,46 +1,97 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { callFunction, getAdminToken } from '@/lib/supabase'
 import { format } from 'date-fns'
+import { callFunction, getAdminToken } from '@/lib/supabase'
+import { ghs, ghs2 } from '@/lib/money'
+import {
+  Page, PageHeader, ButtonLink, Status, Skeleton, EmptyState, Notice,
+  SearchBar, Metric, MetricRow, MobileRecord,
+  TableWrap, THead, TH, TBody, TR, TD, cx,
+} from '@/components/ui'
 
-/*
- * Group roster — every slot in this group and who holds it, plus the OTHER
- * groups each member belongs to, so one person can be tracked across the
- * whole operation from a single screen.
+/**
+ * ONE GROUP, AS THE OPERATION SEES IT.
+ *
+ * ────────────────────────────────────────────────────────────────────────
+ * This screen already existed as a roster: who holds which slot, and what else
+ * they are in. That part was good and is kept. What it could not answer was
+ * anything financial — an administrator had to leave the page to find out
+ * whether the group was actually being paid — and on a phone it answered even
+ * that by scrolling a 720px table sideways.
+ *
+ * Added rather than rebuilt: the money, the portions, the group's own state,
+ * and a mobile presentation. The roster's structure, its grouping by member and
+ * its cross-group links are unchanged.
+ *
+ * ── THE MONEY IS THIS GROUP'S ONLY ──────────────────────────────────────
+ *
+ * Expected, received and outstanding come from the contributions of THIS
+ * group's memberships. A member in four groups has four separate obligations;
+ * pooling them is exactly what the membership model exists to prevent. The
+ * figures are computed by get_group_financials_v2 — nothing is added up here.
  */
 
-const n0 = (v: any) => Number(v ?? 0).toLocaleString('en-GH')
+interface Portion {
+  id: string; label: string; fraction: number
+  contribution_amount: number; payout_amount: number; registration_fee: number
+  is_active: boolean; sort_order: number
+}
+interface Financials {
+  expected: number; received: number; outstanding: number
+  days_total: number; days_paid: number; days_overdue: number
+  members: number; slots_taken: number; payouts_paid: number
+}
+
+const when = (d?: string | null) => (d ? format(new Date(d), 'd MMM yyyy') : null)
 
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [group, setGroup]     = useState<any>(null)
-  const [roster, setRoster]   = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [err, setErr]         = useState('')
-  const [q, setQ]             = useState('')
+  const [group, setGroup]       = useState<any>(null)
+  const [roster, setRoster]     = useState<any[]>([])
+  const [portions, setPortions] = useState<Portion[]>([])
+  const [fin, setFin]           = useState<Financials | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [err, setErr]           = useState('')
+  const [q, setQ]               = useState('')
 
-  useEffect(() => {
-    const token = getAdminToken()
-    callFunction<{ group: any; roster: any[] }>(`groups-create?id=${id}`, { token: token! })
-      .then(({ data, error }) => {
-        setErr(error ?? '')
-        setGroup(data?.group ?? null)
-        setRoster(data?.roster ?? [])
-      })
-      .finally(() => setLoading(false))
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await callFunction<{
+      group: any; roster: any[]; portions: Portion[]; financials: Financials
+    }>(`groups-create?id=${id}`, { token: getAdminToken()! })
+    setLoading(false)
+    setErr(error ?? '')
+    setGroup(data?.group ?? null)
+    setRoster(data?.roster ?? [])
+    setPortions(data?.portions ?? [])
+    setFin(data?.financials ?? null)
   }, [id])
 
-  if (loading) return <div className="px-5 sm:px-8 lg:px-10 py-7">Loading…</div>
-  if (err || !group) return (
-    <div className="px-5 sm:px-8 lg:px-10 py-7 text-ink-2">
-      {err ? `Could not load group: ${err}` : 'Group not found.'}{' '}
-      <Link href="/admin/groups" className="text-ink underline">Back to groups</Link>
-    </div>
+  useEffect(() => { load() }, [load])
+
+  if (loading) return (
+    <Page>
+      <div className="space-y-4" role="status" aria-label="Loading this group">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-20 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    </Page>
   )
 
-  // Group rows by member so multi-slot holders read as one person
+  if (err || !group) return (
+    <Page>
+      <EmptyState
+        title="Could not load this group"
+        body={err || 'It may have been removed.'}
+        action={<ButtonLink href="/admin/groups" variant="outline">Back to groups</ButtonLink>}
+      />
+    </Page>
+  )
+
+  // Grouped by member, so a holder of several slots reads as one person.
   const byMember = new Map<string, { member: any; slots: any[]; other: any[] }>()
   for (const r of roster) {
     const mid = r.members?.id ?? r.id
@@ -56,92 +107,196 @@ export default function GroupDetailPage() {
     p.member?.phone?.includes(needle))
 
   const activeSlots = roster.filter(r => r.status === 'active').length
+  const free = Math.max(0, (group.max_members ?? 0) - activeSlots)
 
   return (
-    <div className="px-5 sm:px-8 lg:px-10 py-7 pb-16 animate-fade-in">
-      <Link href="/admin/groups" className="text-ink-2 hover:text-ink text-sm transition-colors">Back to Groups</Link>
+    <Page>
+      <PageHeader
+        back={{ href: '/admin/groups', label: 'All groups' }}
+        title={group.name}
+        sub={
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Status value={group.status} />
+            <span className="tnum">
+              GHS {ghs(group.contribution_amount)} {group.contribution_frequency}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span className="tnum">{activeSlots} of {group.max_members} slots</span>
+            {when(group.start_date) && <><span aria-hidden="true">·</span><span>starts {when(group.start_date)}</span></>}
+            {when(group.end_date)   && <><span aria-hidden="true">·</span><span>ends {when(group.end_date)}</span></>}
+          </span>
+        }
+        actions={<ButtonLink href={`/admin/groups/${id}/edit`} variant="outline">Edit group</ButtonLink>}
+      />
 
-      <div className="flex items-start justify-between gap-4 flex-wrap mt-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-ink">{group.name}</h1>
-          <p className="text-ink-2 text-sm mt-1">
-            {activeSlots}/{group.max_members} slots filled · {byMember.size} member{byMember.size === 1 ? '' : 's'} ·
-            GHS {n0(group.contribution_amount)}/{group.contribution_frequency} · {group.status}
-          </p>
+      {/* Money, for this group alone. */}
+      {fin && (
+        <MetricRow>
+          <Metric label="Expected" value={fin.expected} primary
+            sub={`${fin.days_total.toLocaleString()} contribution days`} />
+          <Metric label="Received" value={fin.received} tone="good"
+            sub={`${fin.days_paid.toLocaleString()} days settled`} />
+          <Metric label="Outstanding" value={fin.outstanding}
+            tone={fin.outstanding > 0.005 ? 'warn' : undefined}
+            sub={fin.days_overdue > 0 ? `${fin.days_overdue} overdue` : 'nothing overdue'} />
+          <Metric label="Paid out" value={fin.payouts_paid}
+            sub={`${fin.members} member${fin.members === 1 ? '' : 's'}`} />
+        </MetricRow>
+      )}
+
+      {/* What a place in this group costs and pays. */}
+      <section aria-labelledby="portions" className="mt-6">
+        <div className="flex items-baseline justify-between gap-3 mb-2">
+          <h2 id="portions" className="t-eyebrow">Portions</h2>
+          <span className="text-xs text-ink-3">{free} slot{free === 1 ? '' : 's'} free</span>
         </div>
-        <Link href={`/admin/groups/${id}/edit`}
-          className="px-4 py-2.5 border border-line text-ink font-semibold rounded-[10px] text-sm hover:bg-tint transition-colors">
-          Edit group
-        </Link>
-      </div>
 
-      <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search this group by name, ID or phone…"
-        className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] mb-5 focus:outline-none focus:border-ink" />
+        {portions.length === 0 ? (
+          <Notice tone="warn" title="No portions configured">
+            Members joining this group fall back to proportional amounts — a half
+            slot pays and collects exactly half. Set them on the edit screen to
+            state what each portion actually costs and pays.
+          </Notice>
+        ) : (
+          <div className="border border-line rounded-xl bg-surface overflow-hidden">
+            <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_1fr] gap-3 px-4 py-2
+                            bg-surface-2 border-b border-line text-2xs font-semibold
+                            uppercase tracking-[.06em] text-ink-3">
+              <span>Portion</span><span>Contributes</span><span>Collects</span><span>Registration</span>
+            </div>
+            <div className="divide-y divide-line-2">
+              {portions.map(p => (
+                <div key={p.id}
+                  className={cx('grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_1fr] gap-x-3 gap-y-1 px-4 py-3',
+                                !p.is_active && 'opacity-50')}>
+                  <span className="text-sm font-medium text-ink col-span-2 sm:col-span-1">
+                    {p.label}
+                    {!p.is_active && <span className="ml-2 text-xs font-normal text-ink-3">not offered</span>}
+                  </span>
+                  {([['Contributes', p.contribution_amount],
+                     ['Collects', p.payout_amount],
+                     ['Registration', p.registration_fee]] as const).map(([k, v]) => (
+                    <span key={k} className="text-sm text-ink tnum">
+                      <span className="sm:hidden text-2xs text-ink-3 block">{k}</span>
+                      GHS {ghs2(v)}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
 
-      {people.length === 0 ? (
-        <div className="border border-line rounded-[10px] p-10 text-center text-ink-2">
-          {roster.length === 0 ? 'No members in this group yet.' : 'No members match your search.'}
-        </div>
-      ) : (
-        <div className="border border-line rounded-[10px] overflow-hidden">
-          <div className="scroll-x">
-            <table className="w-full text-sm min-w-[720px] lg:min-w-0">
-              <thead className="border-b border-line">
-                <tr className="text-ink-2 text-left">
-                  <th className="px-5 py-3 font-medium">Member</th>
-                  <th className="px-5 py-3 font-medium">In this group</th>
-                  <th className="px-5 py-3 font-medium">Payout</th>
-                  <th className="px-5 py-3 font-medium">Also in</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {people.map(({ member, slots, other }) => (
-                  <tr key={member?.id ?? Math.random()} className="hover:bg-tint transition-colors align-top">
-                    <td className="px-5 py-4">
-                      <Link href={`/admin/members/${member?.id}`} className="font-medium text-ink hover:underline underline-offset-2">
-                        {member?.full_name ?? '—'}
-                      </Link>
-                      <p className="text-xs text-ink-2 mt-0.5">{member?.member_id} · {member?.phone}</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="text-ink font-medium">{slots.length} slot{slots.length > 1 ? 's' : ''}</span>
-                      <p className="text-xs text-ink-2 mt-0.5">
-                        {slots.map((s: any) => `#${s.payout_position}`).join(', ')}
-                      </p>
-                    </td>
-                    <td className="px-5 py-4">
-                      {slots.map((s: any) => (
-                        <div key={s.id} className="text-xs mb-1 last:mb-0">
-                          <span className="text-ink-2">#{s.payout_position}: </span>
-                          {s.payout_received
-                            ? <span className="text-green">received</span>
-                            : s.payout_date
-                              ? <span className="text-ink">{format(new Date(s.payout_date), 'MMM d, yyyy')} · GHS {n0(s.payout_amount)}</span>
-                              : <span className="text-gold">no date set</span>}
-                        </div>
-                      ))}
-                    </td>
-                    <td className="px-5 py-4">
-                      {other.length === 0 ? (
-                        <span className="text-xs text-ink-3">—</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {other.map((o: any) => (
-                            <Link key={o.id} href={`/admin/groups/${o.id}`}
-                              className="inline-flex items-center px-2 py-0.5 bg-tint border border-line rounded-full text-[11px] text-ink hover:border-ink transition-colors">
-                              {o.name}{o.slots > 1 ? ` ×${o.slots}` : ''}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Roster. */}
+      <section aria-labelledby="roster" className="mt-8">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h2 id="roster" className="t-eyebrow">
+            Members <span className="font-normal text-ink-3">· {byMember.size}</span>
+          </h2>
+          <div className="w-full sm:w-[300px]">
+            <SearchBar value={q} onChange={setQ} placeholder="Name, member ID or phone…" />
           </div>
         </div>
-      )}
-    </div>
+
+        {people.length === 0 ? (
+          <EmptyState
+            title={roster.length === 0 ? 'No members yet' : 'No members match your search'}
+            body={roster.length === 0
+              ? 'Members appear here as they join or are added to this group.'
+              : 'Try a different name, member ID or phone number.'}
+            compact
+          />
+        ) : (
+          <>
+            {/* Desktop */}
+            <div className="hidden lg:block border border-line rounded-xl overflow-hidden bg-surface">
+              <TableWrap>
+                <THead>
+                  <TH>Member</TH><TH>In this group</TH><TH>Payout</TH><TH>Also in</TH>
+                </THead>
+                <TBody>
+                  {people.map(({ member, slots, other }) => (
+                    <TR key={member?.id ?? Math.random()}>
+                      <TD>
+                        <Link href={`/admin/members/${member?.id}`}
+                          className="font-medium text-ink hover:underline underline-offset-2">
+                          {member?.full_name ?? '—'}
+                        </Link>
+                        <span className="block text-2xs text-ink-3 mt-0.5 tnum">
+                          {member?.member_id} · {member?.phone}
+                        </span>
+                      </TD>
+                      <TD>
+                        <span className="text-ink">{slots.length} slot{slots.length > 1 ? 's' : ''}</span>
+                        <span className="block text-2xs text-ink-3 mt-0.5 tnum">
+                          {slots.map((s: any) => `#${s.payout_position}`).join(', ')}
+                        </span>
+                      </TD>
+                      <TD>
+                        {slots.map((s: any) => (
+                          <span key={s.id} className="block text-xs mb-1 last:mb-0">
+                            <span className="text-ink-3">#{s.payout_position}: </span>
+                            {s.payout_received
+                              ? <span className="text-success">received</span>
+                              : s.payout_date
+                                ? <span className="text-ink tnum">{when(s.payout_date)} · GHS {ghs(s.payout_amount)}</span>
+                                : <span className="text-warning">no date set</span>}
+                          </span>
+                        ))}
+                      </TD>
+                      <TD>
+                        {other.length === 0 ? <span className="text-ink-3">—</span> : (
+                          <span className="flex flex-wrap gap-1.5">
+                            {other.map((o: any) => (
+                              <Link key={o.id} href={`/admin/groups/${o.id}`}
+                                className="inline-flex items-center px-2 py-0.5 bg-surface-2 border border-line
+                                           rounded-md text-2xs text-ink hover:border-ink transition-colors">
+                                {o.name}{o.slots > 1 ? ` ×${o.slots}` : ''}
+                              </Link>
+                            ))}
+                          </span>
+                        )}
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </TableWrap>
+            </div>
+
+            {/* Mobile and tablet: records, not a 720px table dragged sideways. */}
+            <div className="lg:hidden border border-line rounded-xl overflow-hidden bg-surface divide-y divide-line">
+              {people.map(({ member, slots, other }) => (
+                <MobileRecord
+                  key={member?.id ?? Math.random()}
+                  href={`/admin/members/${member?.id}`}
+                  lead={<span className="text-base font-semibold text-ink">{member?.full_name ?? '—'}</span>}
+                  status={<span className="text-xs text-ink-3 tnum shrink-0">
+                    {slots.length} slot{slots.length > 1 ? 's' : ''}
+                  </span>}
+                  title={<span className="text-sm font-normal text-ink-2 tnum">
+                    {member?.member_id} · {member?.phone}
+                  </span>}
+                  meta={
+                    <span className="flex flex-col gap-0.5">
+                      <span className="tnum">
+                        {slots.map((s: any) => `#${s.payout_position}`).join(', ')}
+                        {slots.some((s: any) => s.payout_date) && ' · '}
+                        {slots.filter((s: any) => s.payout_date).map((s: any) => when(s.payout_date)).join(', ')}
+                      </span>
+                      {other.length > 0 && (
+                        <span className="text-ink-3">
+                          also in {other.map((o: any) => o.name).join(', ')}
+                        </span>
+                      )}
+                    </span>
+                  }
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+    </Page>
   )
 }

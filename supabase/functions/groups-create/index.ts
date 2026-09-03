@@ -269,7 +269,26 @@ serveWithCors(async (req) => {
           other_groups: otherByMember[r.members?.id] ?? [],
         }))
 
-        return json({ group, roster: enriched })
+        /*
+         * ── WHAT THE GROUP IS WORTH, AND WHAT HAS ARRIVED ─────────────────
+         * The roster answered "who is in this group" and nothing else, so an
+         * administrator had to leave the page to learn whether it was being
+         * paid. Expected, received and outstanding come from the contributions
+         * of THIS group's memberships only — never pooled across a member's
+         * other groups, which is the whole reason memberships are separate.
+         *
+         * `settled` follows contribution status, not amount_paid: thousands of
+         * historical days are settled with no amount recorded against them, and
+         * subtracting would report money as outstanding that was paid long ago.
+         */
+        const { data: fin } = await supabaseAdmin.rpc('get_group_financials_v2', { p_group_id: id })
+
+        const { data: portions } = await supabaseAdmin
+          .from('group_portions')
+          .select('id, label, fraction, contribution_amount, payout_amount, registration_fee, is_active, sort_order')
+          .eq('group_id', id).order('sort_order')
+
+        return json({ group, roster: enriched, portions: portions ?? [], financials: fin ?? null })
       }
 
       const { data, error: e } = await supabaseAdmin
