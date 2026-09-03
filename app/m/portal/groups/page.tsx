@@ -1,268 +1,268 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
-import { Check, Layers } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { Check, Layers, Users } from 'lucide-react'
+import { format } from 'date-fns'
 import { callFunction, getMemberToken } from '@/lib/supabase'
-import type { SusuGroup } from '@/types'
 import type { PortalState } from '@/types/portal'
-import { ghs } from '@/lib/money'
+import { ghs, ghs2 } from '@/lib/money'
+import { AppBar } from '@/components/susu/app-bar'
+import GroupList from '@/components/susu/group-list'
+import { FinancialSection } from '@/components/susu/financial'
 import {
-  Badge, Button, Card, EmptyState, LoadingBlock, Notice, useToast, cx,
+  Button, Card, EmptyState, Notice, Skeleton, useToast, cx,
 } from '@/components/ui'
 
-/*
- * Browse every open susu group and join more of them. A member already in one
- * group can tick two or three others and join them all in one go — each becomes
- * its own plan on their dashboard.
+/**
+ * GROUPS — what I am in, and what I can join.
  *
- * A slot can also be taken in fractions: a quarter slot pays a quarter of the
- * daily contribution and collects a quarter of the cashout. That is how members
- * who cannot afford a whole slot still take part, so the maths is spelled out
- * on the card rather than left for them to work out.
+ * ────────────────────────────────────────────────────────────────────────
+ * This screen used to be "browse and join" only: a member could see the open
+ * groups but not their own, so answering "which groups am I in, and what else
+ * is there" meant going back to the home screen and comparing by memory.
+ *
+ * Both live here now, in that order — what you hold first, what you could take
+ * second. Joining is the secondary act; knowing where you stand is the reason
+ * you opened it.
+ *
+ * ── THE PORTIONS ARE THE GROUP'S, NOT A CALCULATION ─────────────────────
+ *
+ * The chips here used to read ¼ / ½ / Full and the amounts beside them were
+ * worked out in the browser by multiplying. A group can now configure what a
+ * half portion actually costs and collects — a half that pays GHS 500 and
+ * collects GHS 950 is a legitimate arrangement — so every figure on this page
+ * comes from `group_portions` as the administrator set it. Nothing here
+ * multiplies anything.
  */
 
-const FRACTIONS: [number, string][] = [[0.25, '¼'], [0.5, '½'], [1, 'Full']]
+interface Portion {
+  id: string; label: string; fraction: number
+  contribution_amount: number; payout_amount: number; registration_fee: number
+  sort_order: number
+}
+interface OpenGroup {
+  id: string; name: string; description: string | null
+  contribution_amount: number; contribution_frequency: string
+  cycle_days: number; max_members: number; current_members: number
+  registration_fee: number; cashout_amount: number
+  status: string; start_date: string | null; end_date: string | null
+  rules: string | null
+  group_portions: Portion[] | null
+}
 
-export default function BrowseGroups() {
+export default function GroupsPage() {
   const toast = useToast()
-  const [groups, setGroups]     = useState<SusuGroup[]>([])
-  const [mine, setMine]         = useState<Set<string>>(new Set())
-  const [picked, setPicked]     = useState<Set<string>>(new Set())
-  const [slotsFor, setSlotsFor] = useState<Record<string, number>>({})
-  const [fracFor, setFracFor]   = useState<Record<string, number>>({})
-  const [loading, setLoading]   = useState(true)
-  const [joining, setJoining]   = useState(false)
-  const [result, setResult]     = useState<any>(null)
+  const [state, setState]   = useState<PortalState | null>(null)
+  const [open, setOpen]     = useState<OpenGroup[]>([])
+  const [loading, setLoad]  = useState(true)
+  const [failed, setFailed] = useState('')
+  const [choice, setChoice] = useState<Record<string, string>>({})   // group -> portion id
+  const [joining, setJoin]  = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    setLoading(true)
-    const [{ data: pub }, { data: me }] = await Promise.all([
-      callFunction<{ groups: SusuGroup[] }>('groups-public'),
+    setLoad(true); setFailed('')
+    const [pub, me] = await Promise.all([
+      callFunction<{ groups: OpenGroup[] }>('groups-public'),
       callFunction<PortalState>('member-profile', { token: getMemberToken()! }),
     ])
-    setGroups(pub?.groups ?? [])
-    /*
-     * Which groups the member is ALREADY in, so this screen does not offer them
-     * again.
-     *
-     * This read `me.plans`, which `member-profile` has not returned since it
-     * was rebuilt on get_member_portal_state(). The `?? []` meant it never
-     * threw — it silently produced an EMPTY set, so the page believed the
-     * member belonged to no groups and happily offered every one they were
-     * already a member of. A quiet wrong answer, which is worse than the crash
-     * on the Profile screen, because nothing looked broken.
-     */
-    setMine(new Set((me?.memberships ?? []).map(m => m.group_id).filter(Boolean)))
-    setLoading(false)
+    setLoad(false)
+    if (me.error) { setFailed(me.error); return }
+    setState(me.data ?? null)
+    setOpen(pub.data?.groups ?? [])
   }, [])
 
   useEffect(() => { load() }, [load])
 
-  const toggle = (id: string) =>
-    setPicked(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
-      return next
-    })
+  const mineIds = useMemo(
+    () => new Set((state?.memberships ?? []).map(m => m.group_id).filter(Boolean)),
+    [state],
+  )
 
-  async function join() {
-    setJoining(true)
-    const { data, error } = await callFunction<any>('member-join-group', {
+  // Groups with room that this member is not already in.
+  const available = useMemo(
+    () => open.filter(g => !mineIds.has(g.id) && g.current_members < g.max_members),
+    [open, mineIds],
+  )
+
+  async function join(g: OpenGroup, portion: Portion) {
+    setJoin(g.id)
+    const { error } = await callFunction('member-join-group', {
       method: 'POST', token: getMemberToken()!,
-      body: {
-        selections: Array.from(picked).map(id => ({
-          group_id: id, slots: slotsFor[id] || 1, fraction: fracFor[id] ?? 1,
-        })),
-      },
+      body: { selections: [{ group_id: g.id, slots: 1, fraction: portion.fraction }] },
     })
-    setJoining(false)
+    setJoin(null)
     if (error) { toast.error({ title: 'Could not join', body: error }); return }
-    setResult(data)
-    setPicked(new Set())
+    toast.success({
+      title: `Joined ${g.name}`,
+      body: `Your ${portion.label.toLowerCase()} portion is on your home screen.`,
+    })
     load()
   }
 
-  if (loading) return <LoadingBlock label="Loading groups" className="h-[60vh]" />
-
-  const pickedGroups = groups.filter(g => picked.has(g.id))
-  const totalFees = pickedGroups.reduce(
-    (s, g) => s + Number(g.registration_fee || 0) * (slotsFor[g.id] || 1) * (fracFor[g.id] ?? 1), 0)
-  const totalSlots = pickedGroups.reduce((s, g) => s + (slotsFor[g.id] || 1), 0)
-
-  return (
-    <div className="portal-w pt-6 animate-fade-in">
-      <h1 className="text-2xl font-semibold text-ink">Join more groups</h1>
-      <p className="text-sm text-ink-2 mt-1 leading-relaxed">
-        Pick one or several — and take more than one slot in a group if you want multiple payout turns.
-      </p>
-
-      {result && (
-        <Notice
-          tone={result.failed?.length ? 'warn' : 'good'}
-          title={result.message}
-          className="mt-5"
-          action={
-            <button type="button" onClick={() => setResult(null)}
-              className="text-xs font-medium text-ink-3 hover:text-ink transition-colors">
-              Dismiss
-            </button>
-          }
-        >
-          <ul className="space-y-0.5">
-            {result.joined?.map((j: any, i: number) => (
-              <li key={i}>
-                {j.group} — payout position #{j.payout_position}
-                {j.registration_fee > 0 && <> · registration fee GHS {ghs(j.registration_fee)} to be paid</>}
-              </li>
-            ))}
-            {result.failed?.map((f: any, i: number) => (
-              <li key={`f${i}`} className="text-danger">{f.group ?? 'A group'}: {f.reason}</li>
-            ))}
-          </ul>
-        </Notice>
-      )}
-
-      <div className="space-y-3 mt-5 pb-32">
-        {groups.map(g => {
-          const joined  = mine.has(g.id)
-          const full    = g.current_members >= g.max_members
-          const checked = picked.has(g.id)
-          const frac    = fracFor[g.id] ?? 1
-          const slots   = slotsFor[g.id] || 1
-
-          return (
-            <Card
-              key={g.id} pad="none"
-              className={cx(
-                'overflow-hidden transition-colors',
-                checked ? 'border-ink' : full && !joined ? 'opacity-60' : '',
-              )}
-            >
-              {/* The whole header row is the toggle. The controls that appear
-                  underneath sit outside it, so tapping "½" cannot also
-                  un-tick the group — which is what nesting them inside one
-                  <label> used to do. */}
-              <button
-                type="button"
-                onClick={() => !full && toggle(g.id)}
-                disabled={full && !joined}
-                aria-pressed={checked}
-                className="w-full flex items-start gap-3 p-4 text-left disabled:cursor-not-allowed"
-              >
-                <span
-                  aria-hidden="true"
-                  className={cx(
-                    'w-5 h-5 rounded-xs border grid place-items-center shrink-0 mt-0.5 transition-colors',
-                    checked ? 'bg-accent border-accent text-inverse' : 'border-line bg-surface',
-                    full && !joined && 'opacity-40',
-                  )}
-                >
-                  {checked && <Check size={13} strokeWidth={3} />}
-                </span>
-
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="text-md font-semibold text-ink truncate">{g.name}</span>
-                    {joined && <Badge tone="good">{checked ? 'Adding slots' : 'Joined'}</Badge>}
-                    {!joined && full && <Badge tone="warn">Full</Badge>}
-                  </span>
-
-                  <span className="block text-xs text-ink-2 mt-1 tnum">
-                    GHS {ghs(g.contribution_amount)} {g.contribution_frequency}
-                    {' · '}Cashout GHS {ghs(g.cashout_amount)}
-                  </span>
-                  <span className="block text-xs text-ink-3 mt-0.5 tnum">
-                    {g.current_members}/{g.max_members} members
-                    {Number(g.registration_fee) > 0 && <> · Reg. fee GHS {ghs(g.registration_fee)}</>}
-                  </span>
-                  {g.description && (
-                    <span className="block text-xs text-ink-3 mt-1.5 leading-relaxed">{g.description}</span>
-                  )}
-                </span>
-              </button>
-
-              {checked && (
-                <div className="px-4 pb-4 pt-1 space-y-3 border-t border-line-2 animate-fade-in">
-                  {frac < 1 && (
-                    <p className="text-xs text-ink-2 leading-relaxed bg-accent-soft border border-accent-line rounded-sm p-2.5 tnum">
-                      Your {frac === 0.25 ? 'quarter' : 'half'} slot: pay{' '}
-                      <strong className="text-ink">GHS {ghs(Number(g.contribution_amount) * frac)}</strong>{' '}
-                      {g.contribution_frequency}, collect{' '}
-                      <strong className="text-ink">GHS {ghs(Number(g.cashout_amount ?? 0) * frac)}</strong>.
-                    </p>
-                  )}
-
-                  <Picker
-                    label="Slot size"
-                    options={FRACTIONS.map(([v, l]) => ({ value: v, label: l }))}
-                    value={frac}
-                    onChange={v => setFracFor(p => ({ ...p, [g.id]: v }))}
-                  />
-                  <Picker
-                    label="How many slots"
-                    options={[1, 2, 3, 4, 5].map(n => ({
-                      value: n, label: String(n),
-                      disabled: g.current_members + n > g.max_members,
-                    }))}
-                    value={slots}
-                    onChange={v => setSlotsFor(p => ({ ...p, [g.id]: v }))}
-                  />
-                </div>
-              )}
-            </Card>
-          )
-        })}
-
-        {groups.length === 0 && (
-          <EmptyState
-            icon={Layers}
-            title="No groups are open"
-            body="Nothing is taking new members right now. Your collector will let you know when a group opens."
-          />
-        )}
+  if (loading) return (
+    <div>
+      <AppBar title="Groups" />
+      <div className="portal-w pt-6 space-y-3" role="status" aria-label="Loading groups">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
       </div>
-
-      {/* Sticky commit bar. Sits above the tab bar, never over it. */}
-      {picked.size > 0 && (
-        <div className="fixed inset-x-0 bottom-[calc(var(--tabbar)+env(safe-area-inset-bottom))] z-30 px-5 pb-3 animate-rise-in">
-          <div className="portal-w">
-            <Button variant="accent" size="lg" full loading={joining} onClick={join} className="shadow-md">
-              Join {totalSlots} slot{totalSlots > 1 ? 's' : ''} in {picked.size} group{picked.size > 1 ? 's' : ''}
-              {totalFees > 0 && ` · Reg. GHS ${ghs(totalFees)}`}
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   )
-}
 
-function Picker<T extends number>({
-  label, options, value, onChange,
-}: {
-  label: string
-  options: { value: T; label: string; disabled?: boolean }[]
-  value: T
-  onChange: (v: T) => void
-}) {
-  return (
+  if (failed) return (
     <div>
-      <p className="t-eyebrow mb-1.5">{label}</p>
-      <div className="flex gap-1.5 flex-wrap">
-        {options.map(o => (
-          <button
-            key={o.value} type="button" disabled={o.disabled}
-            onClick={() => onChange(o.value)}
-            aria-pressed={value === o.value}
-            className={cx(
-              'min-w-[44px] h-9 px-3 rounded-sm text-sm font-semibold transition-colors disabled:opacity-30',
-              value === o.value
-                ? 'bg-ink text-inverse'
-                : 'bg-surface border border-line text-ink-2 hover:text-ink hover:border-ink/25',
+      <AppBar title="Groups" />
+      <div className="portal-w pt-10">
+        <EmptyState
+          icon={Layers}
+          title="Could not load your groups"
+          body={failed}
+          action={<Button onClick={load}>Try again</Button>}
+        />
+      </div>
+    </div>
+  )
+
+  const memberships = state?.memberships ?? []
+
+  return (
+    <div className="animate-fade-in">
+      <AppBar title="Groups" />
+
+      <div className="portal-w pt-6 pb-4">
+
+        {/* What you hold. The same grouped list the home screen uses, so the
+            two screens cannot describe your memberships differently. */}
+        <section aria-labelledby="mine">
+          <div className="flex items-baseline justify-between gap-3 mb-2">
+            <h2 id="mine" className="t-eyebrow">Your groups</h2>
+            {memberships.length > 0 && (
+              <span className="text-xs text-ink-3 tnum">
+                {memberships.length} slot{memberships.length === 1 ? '' : 's'}
+              </span>
             )}
-          >
-            {o.label}
-          </button>
-        ))}
+          </div>
+
+          {memberships.length === 0 ? (
+            <Card pad="none">
+              <EmptyState
+                icon={Layers}
+                title="You are not in a group yet"
+                body="Pick one below to get started, or ask your collector to add you."
+                compact
+              />
+            </Card>
+          ) : (
+            <div className="border border-line rounded-xl bg-surface px-[1.125rem] md:px-7">
+              <GroupList memberships={memberships} />
+            </div>
+          )}
+        </section>
+
+        {/* What you could take. */}
+        <FinancialSection
+          title="Groups you can join"
+          note={available.length > 0 ? `${available.length}` : undefined}
+        >
+          {available.length === 0 ? (
+            <p className="text-sm text-ink-3 leading-relaxed">
+              {open.length === 0
+                ? 'No groups are open for new members right now. Your collector will let you know when one starts.'
+                : 'You are already in every group that is open at the moment.'}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {available.map(g => {
+                const portions = (g.group_portions ?? [])
+                  .slice()
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                const picked = portions.find(p => p.id === choice[g.id]) ?? portions[0]
+                const spaces = g.max_members - g.current_members
+
+                return (
+                  <div key={g.id} className="border border-line rounded-xl bg-surface p-4">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3 className="text-base font-semibold text-ink min-w-0 truncate">{g.name}</h3>
+                      <span className={cx('text-xs shrink-0 tnum',
+                        spaces <= 3 ? 'text-warning' : 'text-ink-3')}>
+                        {spaces} space{spaces === 1 ? '' : 's'}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-ink-2 mt-1 tnum">
+                      GHS {ghs(g.contribution_amount)} {g.contribution_frequency}
+                      {g.cycle_days ? ` · ${g.cycle_days} days` : ''}
+                      {g.start_date && ` · starts ${format(new Date(g.start_date), 'd MMM yyyy')}`}
+                    </p>
+
+                    {g.description && (
+                      <p className="text-xs text-ink-3 mt-1.5 leading-relaxed">{g.description}</p>
+                    )}
+
+                    {/* The group's own portions, at the amounts it configured. */}
+                    {portions.length > 0 && (
+                      <>
+                        <div role="radiogroup" aria-label={`Portion for ${g.name}`}
+                          className="flex flex-wrap gap-2 mt-3.5">
+                          {portions.map(p => {
+                            const on = p.id === picked?.id
+                            return (
+                              <button key={p.id} type="button" role="radio" aria-checked={on}
+                                onClick={() => setChoice(c => ({ ...c, [g.id]: p.id }))}
+                                className={cx(
+                                  'h-9 px-3 rounded-lg text-sm font-medium transition-colors',
+                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30',
+                                  on ? 'bg-ink text-inverse' : 'bg-surface-2 text-ink-2 hover:text-ink',
+                                )}>
+                                {p.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {picked && (
+                          <dl className="grid grid-cols-3 gap-3 mt-3.5 pt-3.5 border-t border-line-2">
+                            {[
+                              ['You pay',    `GHS ${ghs2(picked.contribution_amount)}`, g.contribution_frequency],
+                              ['You collect', `GHS ${ghs(picked.payout_amount)}`, 'at your turn'],
+                              ['To register', `GHS ${ghs2(picked.registration_fee)}`, 'once'],
+                            ].map(([k, v, note]) => (
+                              <div key={k} className="min-w-0">
+                                <dt className="text-2xs text-ink-3">{k}</dt>
+                                <dd className="text-sm font-semibold text-ink tnum mt-0.5 truncate">{v}</dd>
+                                <dd className="text-2xs text-ink-3 truncate">{note}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        )}
+                      </>
+                    )}
+
+                    {g.rules && (
+                      <p className="text-2xs text-ink-3 mt-3 leading-relaxed">{g.rules}</p>
+                    )}
+
+                    <Button
+                      full className="mt-4"
+                      disabled={!picked || joining === g.id}
+                      onClick={() => picked && join(g, picked)}
+                    >
+                      {joining === g.id
+                        ? 'Joining…'
+                        : picked ? `Join — ${picked.label.toLowerCase()} portion` : 'Join'}
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </FinancialSection>
+
+        <p className="text-2xs text-ink-3 mt-6 leading-relaxed">
+          Joining takes a place immediately. The registration fee becomes payable
+          and your contribution schedule starts on the group&rsquo;s start date.
+        </p>
       </div>
     </div>
   )

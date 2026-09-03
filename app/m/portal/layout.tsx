@@ -2,13 +2,16 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Wallet, FileText, User, type LucideIcon } from 'lucide-react'
+import { Home, Wallet, Users, FileText, User, type LucideIcon } from 'lucide-react'
 import InstallApp from '@/components/install-app'
 import { cx } from '@/components/ui'
 
 const TABS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/m/portal/dashboard', label: 'Home',     icon: Home },
   { href: '/m/portal/payments',  label: 'Payments', icon: Wallet },
+  // Groups was reachable only by a link from the home screen, which made
+  // "what else could I join" something a member had to already know about.
+  { href: '/m/portal/groups',    label: 'Groups',   icon: Users },
   { href: '/m/portal/statement', label: 'Statement',icon: FileText },
   { href: '/m/portal/profile',   label: 'Profile',  icon: User },
 ]

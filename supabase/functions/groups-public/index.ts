@@ -26,7 +26,17 @@ serveWithCors(async (req) => {
         'cashout_amount',          // what the member is actually paid
         'payment_deadline',        // shown on the card and the join page
         'penalty_per_late_day',    // shown in the rules
-        'status', 'start_date', 'rules', 'image_url',
+        'status', 'start_date', 'end_date', 'rules', 'image_url',
+        /*
+         * The portions this group offers, with the amounts as CONFIGURED. A
+         * member choosing a half slot has to see what a half slot actually
+         * costs and collects in THIS group — not a proportion the browser works
+         * out, which is exactly what the old ¼ / ½ / Full chips did.
+         *
+         * Embedded rather than fetched per card: a page listing twenty groups
+         * would otherwise make twenty more requests.
+         */
+        'group_portions(id, label, fraction, contribution_amount, payout_amount, registration_fee, sort_order)',
       ].join(', '))
       .in('status', ['open', 'full', 'active'])
       .neq('show_on_website', false)   // admin's visibility toggle (v19)
