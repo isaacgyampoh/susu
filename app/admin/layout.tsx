@@ -14,7 +14,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
   ]},
   // Grouped by what the operator is doing, not by which table it touches.
   { group: 'Every day', items: [
-    { href: '/admin/transactions',  label: 'Daily Payments', hint: 'who paid today' },
+    { href: '/admin/transactions',  label: "Today's collection", hint: 'who has paid today' },
     { href: '/admin/kyc',           label: 'Registrations',  hint: 'who has paid, who is waiting' },
     { href: '/admin/payouts',       label: 'Payouts',        hint: 'who collects' },
   ]},

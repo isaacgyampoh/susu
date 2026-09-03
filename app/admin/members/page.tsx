@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Member } from '@/types'
 import { format } from 'date-fns'
+import { MobileRecord } from '@/components/ui'
 type StatusFilter = 'active' | 'pending' | 'suspended' | 'all'
 
 export default function MembersPage() {
@@ -123,7 +124,14 @@ export default function MembersPage() {
         </div>
       ) : (
         <div className="border border-line rounded-[10px] overflow-hidden">
-          <div className="scroll-x">
+          {/*
+            The table stays on desktop, where seven columns earn their width.
+            Below `lg` it becomes member records: the same data re-ranked so a
+            phone reads it top to bottom instead of dragging a 620px table
+            sideways. Both render from the same `members` array, so they cannot
+            disagree.
+          */}
+          <div className="hidden lg:block scroll-x">
             <table className="w-full text-sm min-w-[620px] lg:min-w-0">
             <thead className="border-b border-line">
               <tr className="text-ink-2">
@@ -170,6 +178,34 @@ export default function MembersPage() {
               ))}
             </tbody>
             </table>
+          </div>
+
+          <div className="lg:hidden divide-y divide-line">
+            {members.map(m => {
+              const groups = ((m as any).group_memberships?.[0]?.count) ?? 0
+              return (
+                <MobileRecord
+                  key={m.id}
+                  href={`/admin/members/${m.id}`}
+                  lead={<span className="text-base font-semibold text-ink">{m.full_name}</span>}
+                  status={statusBadge(m.status)}
+                  title={<span className="text-sm font-normal text-ink-2 tnum">{m.phone}</span>}
+                  meta={
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-mono">{m.member_id}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{groups > 0 ? `${groups} group${groups > 1 ? 's' : ''}` : 'No group'}</span>
+                      {m.created_at && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="tnum">joined {format(new Date(m.created_at), 'd MMM yyyy')}</span>
+                        </>
+                      )}
+                    </span>
+                  }
+                />
+              )
+            })}
           </div>
 
           {total > 20 && (
