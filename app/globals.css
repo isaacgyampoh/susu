@@ -186,7 +186,10 @@
     background-image: image-set(url('/brand-collection.webp') type('image/webp'),
                                 url('/brand-collection.png')  type('image/png'));
     background-size: auto 80%;
-    background-position: right bottom;
+    /* Inset from the right edge. Flush against it, the panel boundary sliced
+       straight down his shoulder and he read as cut off rather than standing
+       there. A few percent of breathing room is the difference. */
+    background-position: right 4% bottom;
     background-repeat: no-repeat;
   }
   @media (min-width: 640px)  { .brand-photo { background-size: auto 58%; } }
@@ -194,8 +197,13 @@
 
   .security-paper {
     background-image:
-      repeating-linear-gradient(45deg,  rgb(var(--c-ink) / 0.030) 0 1px, transparent 1px 13px),
-      repeating-linear-gradient(-45deg, rgb(var(--c-ink) / 0.020) 0 1px, transparent 1px 19px);
+      repeating-linear-gradient(45deg,  rgb(var(--c-ink) / 0.055) 0 1px, transparent 1px 13px),
+      repeating-linear-gradient(-45deg, rgb(var(--c-ink) / 0.038) 0 1px, transparent 1px 19px),
+      /* A tonal wash under the hatch, so the panel is not a flat white
+         rectangle. Surface to surface-2 across its height — a shift small
+         enough that you would not name it, large enough that the surface stops
+         reading as absence. */
+      linear-gradient(to bottom, rgb(var(--c-surface)), rgb(var(--c-surface-2)));
   }
 
   .portal-w {

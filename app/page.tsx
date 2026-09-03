@@ -280,6 +280,33 @@ export default function SignIn() {
               </p>
             ) : null}
           </div>
+
+          {/*
+            Security context, which is the one kind of supporting content an
+            operations sign-in should carry. Every line is true of THIS endpoint
+            — the lockout is check_admin_pin_gate, the record is login_attempts,
+            the hash is bcrypt in admin_users. No invented certification, no
+            badge, nothing that would stop being true if the code changed
+            without this list changing with it.
+
+            From `lg` only: on a phone the form already owns the surface.
+          */}
+          <ul className="hidden lg:block mt-9 space-y-3.5 border-t border-line pt-6">
+            {[
+              ['Rate limited',           'Five wrong attempts locks this device for fifteen minutes.'],
+              ['Every sign-in recorded', 'Time, outcome and source are kept for each attempt.'],
+              ['PIN never stored',       'Only a one-way hash of it is, and it is compared in the database.'],
+            ].map(([head, body]) => (
+              <li key={head} className="flex gap-3">
+                <span aria-hidden="true" className="mt-[9px] w-3.5 h-px bg-accent shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink">{head}</p>
+                  <p className="text-xs text-ink-2 mt-0.5 leading-relaxed">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
          </div>
         </div>
 
