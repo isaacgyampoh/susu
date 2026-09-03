@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { clearAdminAuth } from '@/lib/supabase'
 import { useSwipeDrawer } from '@/components/swipe-drawer'
+import { CreditCard, LayoutGrid, Menu, Users, type LucideIcon } from 'lucide-react'
+import { cx } from '@/components/ui'
 
 type NavItem = { href: string; label: string; exact?: boolean; hint?: string }
 const NAV: { group: string; items: NavItem[] }[] = [
@@ -45,11 +47,34 @@ const NAV: { group: string; items: NavItem[] }[] = [
   ]},
 ]
 
+/*
+ * MOBILE NAVIGATION FOR THE CONSOLE.
+ *
+ * The four an administrator opens daily sit in a tab bar; everything else lives
+ * behind More, which is the drawer that was already here. A hamburger holding
+ * eighteen items is a desktop sidebar in a costume — it makes the two things
+ * somebody does twenty times a day cost the same as the one they do monthly.
+ *
+ * Four, not eight: a tab bar is thumb-reachable, and past four the targets stop
+ * being.
+ */
+const TABS: { href: string; label: string; icon: LucideIcon; exact?: boolean }[] = [
+  { href: '/admin',          label: 'Home',     icon: LayoutGrid, exact: true },
+  { href: '/admin/payments', label: 'Payments', icon: CreditCard },
+  { href: '/admin/members',  label: 'Members',  icon: Users },
+]
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router   = useRouter()
   const DRAWER = 264
   const { open, setOpen, close, shown, dragging } = useSwipeDrawer(DRAWER)
+
+  // The current section's own label, so the bar says where you are without
+  // every page having to pass a title down into the shell.
+  const section = NAV.flatMap(g => g.items)
+    .filter(i => (i.exact ? pathname === i.href : pathname.startsWith(i.href)))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.label ?? ''
   const [admin, setAdmin] = useState<{ full_name: string; role: string; must_change_password?: boolean } | null>(null)
 
   useEffect(() => {
@@ -131,24 +156,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {nav}
       </aside>
 
-      {/* Mobile bar. Swipe from the left edge opens the drawer, but a gesture
-          alone is not discoverable and does not exist on every device — so
-          there is always a control. Three bars, drawn in CSS: a standard
-          affordance rather than a decorative icon. */}
-      <div className="lg:hidden sticky top-0 z-30 h-14 bg-surface border-b border-line flex items-center gap-3 px-4">
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Open navigation"
-          aria-expanded={open}
-          className="-ml-1 w-10 h-10 rounded-lg grid place-items-center active:bg-bg transition-colors"
-        >
-          <span className="flex flex-col gap-[4.5px] w-[18px]">
-            <span className="h-[1.5px] w-full bg-ink rounded-full" />
-            <span className="h-[1.5px] w-full bg-ink rounded-full" />
-            <span className="h-[1.5px] w-full bg-ink rounded-full" />
-          </span>
-        </button>
-        <Link href="/admin" className="text-[14px] font-semibold tracking-[-.02em]">Abbie Wealth</Link>
+      {/*
+        Compact top bar: the product, then where you are. The hamburger that was
+        here opened the same drawer the More tab now opens, so it was a second
+        control for one destination — and it spent the top-left corner, which is
+        the hardest place on a phone to reach, on something already reachable by
+        the thumb.
+
+        Swiping from the left edge still opens the drawer; that gesture is
+        unchanged and costs no screen.
+      */}
+      <div className="lg:hidden sticky top-0 z-30 bg-surface/90 backdrop-blur-xl border-b border-line
+                      pt-[env(safe-area-inset-top)]">
+        <div className="h-14 flex items-baseline gap-2.5 px-[1.125rem]">
+          <Link href="/admin" className="font-display text-[15px] font-bold tracking-[-.02em] shrink-0">
+            Abbie&nbsp;Wealth
+          </Link>
+          {section && (
+            <>
+              <span aria-hidden="true" className="text-ink-3">·</span>
+              <span className="text-sm text-ink-2 truncate">{section}</span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Scrim fades in proportion to the drag, so the gesture feels attached */}
@@ -178,7 +208,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           min-w-0 so wide tables scroll instead of blowing out the layout. */}
       {/* min-w-0 lets children shrink; children scroll their own wide content.
           overflow-x-hidden here would CLIP tables rather than let them scroll. */}
-      <main className="lg:pl-[210px] min-w-0">
+      <main className="lg:pl-[210px] min-w-0 pb-[calc(var(--tabbar)+env(safe-area-inset-bottom))] lg:pb-0">
         {/* Shown on the password screen itself — everywhere else the effect
             above has already redirected here, so this is the one place it can
             still appear, and the one place it is useful. */}
@@ -192,6 +222,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )}
         <div className="min-w-0">{children}</div>
       </main>
+
+      {/* Belongs to the application, so it spans the viewport and clears the
+          gesture area. Hidden from `lg`, where the rail takes over. */}
+      <nav aria-label="Main" className="lg:hidden fixed inset-x-0 bottom-0 z-40
+                                        bg-surface/90 backdrop-blur-xl border-t border-line
+                                        pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-stretch h-[var(--tabbar)] px-1.5">
+          {TABS.map(({ href, label, icon: Icon, exact }) => {
+            const on = exact ? pathname === href : pathname.startsWith(href)
+            return (
+              <Link key={href} href={href} aria-current={on ? 'page' : undefined}
+                className={cx('flex-1 flex flex-col items-center justify-center gap-1 rounded-lg',
+                              'transition-colors focus-visible:outline-none',
+                              'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink/30',
+                              on ? 'text-ink' : 'text-ink-3')}>
+                <Icon size={20} strokeWidth={on ? 2.2 : 1.8} aria-hidden="true" />
+                <span className={cx('text-2xs', on && 'font-semibold')}>{label}</span>
+              </Link>
+            )
+          })}
+          {/* More opens the drawer that already held everything else. */}
+          <button type="button" onClick={() => setOpen(true)} aria-expanded={open}
+            className={cx('flex-1 flex flex-col items-center justify-center gap-1 rounded-lg',
+                          'transition-colors focus-visible:outline-none',
+                          'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink/30',
+                          open ? 'text-ink' : 'text-ink-3')}>
+            <Menu size={20} strokeWidth={open ? 2.2 : 1.8} aria-hidden="true" />
+            <span className={cx('text-2xs', open && 'font-semibold')}>More</span>
+          </button>
+        </div>
+      </nav>
     </div>
   )
 }
