@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import { ghs, ghs2 } from '@/lib/money'
 import {
-  Page, PageHeader, ButtonLink, Status, Skeleton, EmptyState, Notice,
+  Page, PageHeader, Button, ButtonLink, Status, Skeleton, EmptyState, Notice,
   SearchBar, Metric, MetricRow, MobileRecord,
   TableWrap, THead, TH, TBody, TR, TD, cx,
 } from '@/components/ui'
@@ -55,6 +55,25 @@ export default function GroupDetailPage() {
   const [loading, setLoading]   = useState(true)
   const [err, setErr]           = useState('')
   const [q, setQ]               = useState('')
+  const [acting, setActing]     = useState('')
+
+  /*
+   * Named transitions, not a status dropdown. "Close applications" is a
+   * decision somebody can be held to; "set status to full" invites setting it
+   * to anything. Each is offered only from the state it is valid in, and the
+   * server checks that again — the button being hidden is a courtesy, not the
+   * control.
+   */
+  async function act(action: string, confirmText: string) {
+    if (!window.confirm(confirmText)) return
+    setActing(action)
+    const { error } = await callFunction(`groups-create?id=${id}`, {
+      method: 'PATCH', token: getAdminToken()!, body: { status_action: action },
+    })
+    setActing('')
+    if (error) { window.alert(error); return }
+    load()
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -126,7 +145,31 @@ export default function GroupDetailPage() {
             {when(group.end_date)   && <><span aria-hidden="true">·</span><span>ends {when(group.end_date)}</span></>}
           </span>
         }
-        actions={<ButtonLink href={`/admin/groups/${id}/edit`} variant="outline">Edit group</ButtonLink>}
+        actions={
+          <>
+            {group.status === 'open' && (
+              <Button variant="outline" disabled={!!acting}
+                onClick={() => act('close_applications',
+                  `Close applications for "${group.name}"? Existing members are unaffected; nobody new can join.`)}>
+                {acting === 'close_applications' ? 'Closing…' : 'Close applications'}
+              </Button>
+            )}
+            {group.status === 'full' && (
+              <Button variant="outline" disabled={!!acting}
+                onClick={() => act('reopen', `Reopen applications for "${group.name}"?`)}>
+                {acting === 'reopen' ? 'Reopening…' : 'Reopen applications'}
+              </Button>
+            )}
+            {(group.status === 'active' || group.status === 'full') && (
+              <Button variant="dangerLine" disabled={!!acting}
+                onClick={() => act('complete',
+                  `Close "${group.name}" for good? This marks the group completed. It cannot be reopened from here.`)}>
+                {acting === 'complete' ? 'Closing…' : 'Close group'}
+              </Button>
+            )}
+            <ButtonLink href={`/admin/groups/${id}/edit`} variant="outline">Edit group</ButtonLink>
+          </>
+        }
       />
 
       {/* Money, for this group alone. */}

@@ -7,6 +7,16 @@ import type { SusuGroup } from '@/types'
 import { ghs as n0 } from '@/lib/money'
 
 
+interface Portion {
+  id: string; label: string; fraction: number
+  contribution_amount: number; payout_amount: number; registration_fee: number
+  is_active: boolean; sort_order: number
+}
+/** The same shape with the money as strings, because inputs hold strings. */
+type PortionRow = Omit<Portion, 'contribution_amount' | 'payout_amount' | 'registration_fee'> & {
+  contribution_amount: string; payout_amount: string; registration_fee: string
+}
+
 export default function EditGroup() {
   const { id }  = useParams<{ id: string }>()
   const router  = useRouter()
@@ -21,10 +31,31 @@ export default function EditGroup() {
   const [f, setF] = useState<Record<string, string>>({})
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }))
 
+  /*
+   * ── PORTIONS ────────────────────────────────────────────────────────────
+   * Set at creation and then unchangeable was half a feature: a susu revises
+   * what a half place costs, and the only way round it was recreating the
+   * group.
+   *
+   * Editing here changes what FUTURE joins cost. Every membership already
+   * taken keeps the schedule it was given, because those contributions are
+   * written rows, not a live calculation — so correcting a portion never
+   * silently rewrites what somebody already owes.
+   */
+  const [portions, setPortions] = useState<PortionRow[]>([])
+  const editPortion = (i: number, k: string, v: string | boolean) =>
+    setPortions(rows => rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)))
+
   useEffect(() => {
-    callFunction<{ group: SusuGroup }>(`groups-create?id=${id}`, { token: getAdminToken()! })
+    callFunction<{ group: SusuGroup; portions: Portion[] }>(`groups-create?id=${id}`, { token: getAdminToken()! })
       .then(({ data }) => {
         const x = data?.group
+        setPortions((data?.portions ?? []).map(pp => ({
+          ...pp,
+          contribution_amount: String(pp.contribution_amount ?? ''),
+          payout_amount:       String(pp.payout_amount ?? ''),
+          registration_fee:    String(pp.registration_fee ?? ''),
+        })))
         if (!x) { setErr('Group not found'); setL(false); return }
         setG(x)
         setF({
@@ -71,7 +102,18 @@ export default function EditGroup() {
     e.preventDefault()
     setBusy(true); setErr(''); setNote('')
     const { error } = await callFunction(`groups-create?id=${id}`, {
-      method: 'PATCH', body: { ...f, start_date: running ? undefined : (f.start_date || null), force }, token: getAdminToken()!,
+      method: 'PATCH', token: getAdminToken()!,
+      body: {
+        ...f,
+        start_date: running ? undefined : (f.start_date || null),
+        force,
+        portions: portions.map(r => ({
+          label: r.label, fraction: r.fraction, is_active: r.is_active, sort_order: r.sort_order,
+          contribution_amount: parseFloat(r.contribution_amount) || 0,
+          payout_amount:       parseFloat(r.payout_amount) || 0,
+          registration_fee:    parseFloat(r.registration_fee) || 0,
+        })),
+      },
     })
     setBusy(false)
     if (error) { setErr(error); return }
@@ -207,6 +249,54 @@ export default function EditGroup() {
             Charged once at sign-up. Never added to the member&apos;s cashout.
           </p>
         </div>
+
+        {/*
+          Portions. Every amount is typed and stored as typed: nothing here
+          recalculates a portion from the full one, which is the whole reason
+          this exists rather than a fraction multiplied five times in code.
+        */}
+        {portions.length > 0 && (
+          <div>
+            <label className="in-lbl">Portions members can take</label>
+            <div className="border border-line rounded-[10px] overflow-hidden bg-surface mt-1.5">
+              <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_1fr] gap-3 px-3 py-2
+                              bg-surface-2 border-b border-line text-2xs font-semibold
+                              uppercase tracking-[.06em] text-ink-3">
+                <span className="w-[104px]">Portion</span>
+                <span>Contributes</span><span>Collects</span><span>Registration</span>
+              </div>
+              {portions.map((r, i) => (
+                <div key={r.label}
+                  className="grid grid-cols-2 sm:grid-cols-[auto_1fr_1fr_1fr] gap-3 px-3 py-3
+                             border-b border-line-2 last:border-b-0 items-center">
+                  <label className="flex items-center gap-2 sm:w-[104px] col-span-2 sm:col-span-1">
+                    <input type="checkbox" checked={r.is_active}
+                      onChange={e => editPortion(i, 'is_active', e.target.checked)}
+                      className="w-4 h-4 accent-ink" />
+                    <span className="text-sm font-medium text-ink">{r.label}</span>
+                  </label>
+                  {([['contribution_amount','Contributes'],
+                     ['payout_amount','Collects'],
+                     ['registration_fee','Registration']] as const).map(([k, lbl]) => (
+                    <div key={k}>
+                      <span className="sm:hidden block text-2xs text-ink-3 mb-1">{lbl}</span>
+                      <input type="number" min="0" step="0.01" inputMode="decimal"
+                        aria-label={`${r.label} — ${lbl}`} disabled={!r.is_active}
+                        value={(r as any)[k]}
+                        onChange={e => editPortion(i, k, e.target.value)}
+                        className="in tnum disabled:opacity-40" placeholder="0.00" />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-ink-2 mt-2 leading-relaxed">
+              These change what <strong>future</strong> joins cost. Members already in
+              the group keep the schedule they were given — changing a portion never
+              rewrites what somebody already owes.
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="in-lbl">Rules <span className="font-normal text-ink-3">— optional</span></label>

@@ -9,6 +9,23 @@ const EDITABLE = [
   'payment_deadline', 'penalty_per_late_day', 'rules', 'admin_notes', 'show_on_website',
 ]
 
+/*
+ * Status changes an administrator may make, and what each means.
+ *
+ * Named transitions rather than a free `status` field: "set status to
+ * completed" invites setting it to anything, whereas "close this group" is a
+ * decision with a meaning somebody can be held to. Each is written to the audit
+ * log under its own action.
+ *
+ * `completed` is deliberately absent from what can be undone here — a finished
+ * group has paid people out, and re-opening it is not a UI action.
+ */
+const STATUS_ACTIONS: Record<string, { to: string; from: string[]; verb: string }> = {
+  close_applications: { to: 'full',      from: ['open'],            verb: 'closed applications for' },
+  reopen:             { to: 'open',      from: ['full'],            verb: 'reopened applications for' },
+  complete:           { to: 'completed', from: ['active', 'full'],  verb: 'closed' },
+}
+
 /** Changing these after a schedule exists would move money or dates. */
 const STRUCTURAL = ['contribution_amount', 'contribution_frequency', 'cycle_days', 'max_members']
 
@@ -120,6 +137,67 @@ serveWithCors(async (req) => {
       const { data: existing } = await supabaseAdmin
         .from('susu_groups').select('*').eq('id', id).single()
       if (!existing) return error('Group not found', 404)
+
+      // A named status transition, checked against where the group actually is.
+      if (typeof body.status_action === 'string') {
+        const act = STATUS_ACTIONS[body.status_action]
+        if (!act) return error('Unknown action', 400)
+        if (!act.from.includes(existing.status)) {
+          return error(`A ${existing.status} group cannot be ${act.verb.replace(/ for$/, '')}.`, 409)
+        }
+        const { error: sErr } = await supabaseAdmin
+          .from('susu_groups').update({ status: act.to }).eq('id', id).eq('status', existing.status)
+        if (sErr) return error(sErr.message, 500)
+
+        await supabaseAdmin.from('audit_log').insert({
+          admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
+          action: `group.${body.status_action}`, entity_type: 'group', entity_id: id,
+          entity_label: existing.name, details: { from: existing.status, to: act.to },
+        })
+        const { data: after } = await supabaseAdmin
+          .from('susu_groups').select('*').eq('id', id).single()
+        return json({ group: after })
+      }
+
+      /*
+       * ── PORTIONS ──────────────────────────────────────────────────────
+       * Set at creation and then unchangeable was half a feature: a susu
+       * revises what a half place costs, and the only alternative was
+       * recreating the group.
+       *
+       * Rows are matched by label and updated in place, so a membership's
+       * portion_id survives the edit. Amounts here change what FUTURE joins
+       * cost — every membership already taken keeps the schedule it was given,
+       * because those contributions are written rows, not a live calculation.
+       */
+      if (Array.isArray(body.portions)) {
+        for (const raw of body.portions) {
+          if (!raw?.label) continue
+          const row = {
+            group_id: id,
+            label: String(raw.label).slice(0, 40),
+            fraction: Number(raw.fraction),
+            contribution_amount: Math.max(0, Number(raw.contribution_amount ?? 0)),
+            payout_amount:       Math.max(0, Number(raw.payout_amount ?? 0)),
+            registration_fee:    Math.max(0, Number(raw.registration_fee ?? 0)),
+            is_active: raw.is_active !== false,
+            sort_order: Number(raw.sort_order ?? 0),
+            updated_at: new Date().toISOString(),
+          }
+          if (!Number.isFinite(row.fraction) || row.fraction <= 0) continue
+
+          const { error: pErr } = await supabaseAdmin
+            .from('group_portions').upsert(row, { onConflict: 'group_id,label' })
+          if (pErr) return error(`Could not save the ${row.label} portion: ${pErr.message}`, 500)
+        }
+
+        await supabaseAdmin.from('audit_log').insert({
+          admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
+          action: 'group.portions_changed', entity_type: 'group', entity_id: id,
+          entity_label: existing.name,
+          details: { portions: body.portions.length },
+        })
+      }
 
       // Only the fields we allow, and only those actually sent
       const patch: Record<string, unknown> = {}
