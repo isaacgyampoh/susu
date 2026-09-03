@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, CreditCard, Layers, FileText, RefreshCw, Users, Wallet } from 'lucide-react'
+import { ArrowRight, CreditCard, Layers, RefreshCw, Wallet } from 'lucide-react'
 import { format } from 'date-fns'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { MembershipView, PortalState } from '@/types/portal'

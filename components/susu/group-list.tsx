@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
-import { ghs, ghs2 } from '@/lib/money'
+import { ghs } from '@/lib/money'
 import type { MembershipView } from '@/types/portal'
 import { cx } from '@/components/ui'
 

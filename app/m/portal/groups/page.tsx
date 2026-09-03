@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Check, Layers, Users } from 'lucide-react'
+import { Layers } from 'lucide-react'
 import { format } from 'date-fns'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import type { PortalState } from '@/types/portal'
