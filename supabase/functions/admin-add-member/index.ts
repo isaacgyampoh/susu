@@ -1,5 +1,6 @@
 import { refuseJoin, ADMIN_JOINABLE } from '../_shared/group-join.ts'
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
+import { resolvePortion } from '../_shared/portions.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { generatePasscode, hashPasscode, passcodeErrorResponse } from '../_shared/passcode.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
@@ -131,7 +132,7 @@ serveWithCors(async (req) => {
 
     for (const gid of groupIds) {
       const { data: group } = await supabaseAdmin
-        .from('susu_groups').select('id, name, max_members, current_members, status, registration_fee, cashout_amount')
+        .from('susu_groups').select('id, name, max_members, current_members, status, registration_fee, cashout_amount, contribution_amount')
         .eq('id', gid).single()
       if (!group) continue
 
@@ -175,13 +176,15 @@ serveWithCors(async (req) => {
         usedSlots.add(position)
 
         const payoutDate   = sIdx === 0 ? (settings.payout_date || null) : null
-        const payoutAmount = Math.round(Number(group.cashout_amount ?? 0) * fraction * 100) / 100
+        // The group's configured portion, not cashout x fraction.
+        const portion      = await resolvePortion(gid, fraction, group)
+        const payoutAmount = portion.payout_amount
 
         const gmRow: Record<string, unknown> = {
           member_id: member.id, group_id: gid,
           payout_position: position, status: 'active',
           payout_date: payoutDate, payout_amount: payoutAmount,
-          slot_fraction: fraction,
+          slot_fraction: fraction, portion_id: portion.id,
         }
         let { data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single()
         if (gmErr) return error(`Member created but assignment to "${group.name}" failed: ${gmErr.message}`, 500)
@@ -202,10 +205,11 @@ serveWithCors(async (req) => {
       }
 
       // Record registration fee as a transaction if group has one
-      if (group.registration_fee > 0 && feePaid) {
+      const regPortion = await resolvePortion(gid, fraction, group)
+      if (regPortion.registration_fee > 0 && feePaid) {
         await supabaseAdmin.from('transactions').insert({
           member_id: member.id, type: 'registration_fee',
-          amount: Math.round(group.registration_fee * slots * fraction * 100) / 100,
+          amount: Math.round(regPortion.registration_fee * slots * 100) / 100,
           reference: `REG-${member.id}-${gid.slice(0, 8)}-${ts}`,
           description: `Registration fee for "${group.name}"${slots > 1 ? ` × ${slots} slots` : ''} (recorded by admin)`,
           status: 'success',

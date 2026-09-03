@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import Link from 'next/link'
@@ -16,7 +16,7 @@ export default function NewGroupPage() {
     cashout_amount: '',           // admin manually sets this
     payment_deadline: '18:00',
     penalty_per_late_day: '',
-    s: '', admin_notes: '',
+    rules: '', admin_notes: '',
   })
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
@@ -35,6 +35,35 @@ export default function NewGroupPage() {
   const cash  = parseFloat(form.cashout_amount) || 0
   const fee   = parseFloat(form.registration_fee) || 0
 
+  /*
+   * ── PORTIONS ────────────────────────────────────────────────────────────
+   * What a half or quarter portion pays and collects is TYPED, not derived.
+   * "Half means 50% of the full amount" was an assumption about this business
+   * hard-coded in five places; a susu can run a half portion that pays GHS 500
+   * and collects GHS 950 if that is the arrangement.
+   *
+   * The rows below are SEEDED proportionally as a sensible starting point and
+   * are then free. Editing one does not recompute the others, and nothing
+   * recomputes them from the full amount afterwards.
+   */
+  const seeded = useMemo(() => [
+    { label: 'Full',    fraction: 1,    active: true },
+    { label: 'Half',    fraction: 0.5,  active: true },
+    { label: 'Quarter', fraction: 0.25, active: false },
+  ].map(p => ({
+    ...p,
+    contribution_amount: rate ? String(Math.round(rate * p.fraction * 100) / 100) : '',
+    payout_amount:       cash ? String(Math.round(cash * p.fraction * 100) / 100) : '',
+    registration_fee:    fee  ? String(Math.round(fee  * p.fraction * 100) / 100) : '',
+  })), [rate, cash, fee])
+
+  const [portions, setPortions] = useState<typeof seeded | null>(null)
+  // Until an administrator edits a row, the table follows the figures above.
+  // After the first edit it stops, because it is now their number, not a guess.
+  const rows = portions ?? seeded
+  const editPortion = (i: number, k: string, v: string | boolean) =>
+    setPortions(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)))
+
   const perTurnCollected = rate && n && days ? rate * n * days : null
   const perTurnMargin    = perTurnCollected !== null && cash ? perTurnCollected - cash : null
   const rotationMargin   = perTurnMargin !== null ? perTurnMargin * n : null
@@ -48,7 +77,16 @@ export default function NewGroupPage() {
     setError('')
     const token = getAdminToken()
     const { error: err } = await callFunction('groups-create', {
-      method: 'POST', body: form, token: token!,
+      method: 'POST', token: token!,
+      body: {
+        ...form,
+        portions: rows.filter(r => r.active).map(r => ({
+          label: r.label, fraction: r.fraction,
+          contribution_amount: parseFloat(r.contribution_amount) || 0,
+          payout_amount:       parseFloat(r.payout_amount) || 0,
+          registration_fee:    parseFloat(r.registration_fee) || 0,
+        })),
+      },
     })
     setLoading(false)
     if (err) { setError(err); return }
@@ -220,6 +258,78 @@ export default function NewGroupPage() {
           </p>
         </div>
 
+        {/*
+          ── PORTIONS ────────────────────────────────────────────────────────
+          Every amount here is TYPED. The rows start out proportional to the
+          figures above, because that is a reasonable first guess, and stop
+          following them the moment anything is edited — after that they are the
+          administrator's numbers, not a formula's.
+
+          This is the whole point: "half" used to mean exactly half, in five
+          places in the code. A half portion can now pay GHS 500 and collect
+          GHS 950 if that is the arrangement the susu actually runs.
+        */}
+        <div className="sm:col-span-2">
+          <div className="flex items-baseline justify-between gap-3 mb-1.5">
+            <label className="block text-sm text-ink-2">Portions members can take</label>
+            {portions && (
+              <button type="button" onClick={() => setPortions(null)}
+                className="text-xs font-medium text-ink-3 hover:text-ink underline underline-offset-2">
+                Reset to proportional
+              </button>
+            )}
+          </div>
+
+          <div className="border border-line rounded-[10px] overflow-hidden bg-surface">
+            <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_1fr] gap-3 px-3 py-2
+                            bg-surface-2 border-b border-line text-2xs font-semibold
+                            uppercase tracking-[.06em] text-ink-3">
+              <span className="w-[104px]">Portion</span>
+              <span>Contributes</span>
+              <span>Collects</span>
+              <span>Registration</span>
+            </div>
+
+            {rows.map((r, i) => (
+              <div key={r.label}
+                className="grid grid-cols-2 sm:grid-cols-[auto_1fr_1fr_1fr] gap-3 px-3 py-3
+                           border-b border-line-2 last:border-b-0 items-center">
+                <label className="flex items-center gap-2 sm:w-[104px] col-span-2 sm:col-span-1">
+                  <input type="checkbox" checked={r.active}
+                    onChange={e => editPortion(i, 'active', e.target.checked)}
+                    className="w-4 h-4 accent-ink" />
+                  <span className="text-sm font-medium text-ink">{r.label}</span>
+                </label>
+
+                {([
+                  ['contribution_amount', 'Contributes'],
+                  ['payout_amount',       'Collects'],
+                  ['registration_fee',    'Registration'],
+                ] as const).map(([key, label]) => (
+                  <div key={key}>
+                    <span className="sm:hidden block text-2xs text-ink-3 mb-1">{label}</span>
+                    <input
+                      type="number" min="0" step="0.01" inputMode="decimal"
+                      aria-label={`${r.label} — ${label}`}
+                      disabled={!r.active}
+                      value={(r as any)[key]}
+                      onChange={e => editPortion(i, key, e.target.value)}
+                      className="w-full px-3 py-2 bg-tint border border-line text-ink rounded-lg tnum
+                                 focus:outline-none focus:border-ink disabled:opacity-40"
+                      placeholder="0.00" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-ink-2 mt-2">
+            These amounts are stored as typed. Nothing recalculates a portion from
+            the full amount, so a half portion does not have to be exactly half.
+            Unticked portions are not offered to members.
+          </p>
+        </div>
+
         <div className="sm:col-span-2">
           <label className="block text-sm text-ink-2 mb-1.5">Description (shown to public)</label>
           <input className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink"
@@ -229,7 +339,7 @@ export default function NewGroupPage() {
         <div>
           <label className="block text-sm text-ink-2 mb-1.5">Additional Rules (optional)</label>
           <textarea className="w-full px-4 py-3 bg-tint border border-line text-ink rounded-[10px] focus:outline-none focus:ring-0 focus:border-ink resize-none"
-            rows={2} value={form.s} onChange={e => set('s', e.target.value)} placeholder="Any group-specific s…" />
+            rows={2} value={form.rules} onChange={e => set('rules', e.target.value)} placeholder="Any group-specific rules…" />
         </div>
 
         <div>

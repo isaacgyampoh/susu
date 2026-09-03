@@ -1,4 +1,5 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
+import { resolvePortion } from '../_shared/portions.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
 
@@ -44,7 +45,7 @@ serveWithCors(async (req) => {
     for (const { group_id: gid, slots, fraction } of selections) {
       const { data: group } = await supabaseAdmin
         .from('susu_groups')
-        .select('id, name, status, max_members, current_members, registration_fee, cashout_amount')
+        .select('id, name, status, max_members, current_members, registration_fee, cashout_amount, contribution_amount')
         .eq('id', gid).single()
 
       if (!group) { failed.push({ group_id: gid, reason: 'Group not found' }); continue }
@@ -61,6 +62,9 @@ serveWithCors(async (req) => {
         .eq('group_id', gid)
       const used = new Set((taken ?? []).map((r: any) => r.payout_position))
 
+      // What this portion costs and pays, as the group configured it.
+      const portion = await resolvePortion(gid, fraction, group)
+
       const positions: number[] = []
       let ok = true
       for (let i = 0; i < slots; i++) {
@@ -71,8 +75,9 @@ serveWithCors(async (req) => {
         const gmRow: Record<string, unknown> = {
           member_id: memberId, group_id: gid,
           payout_position: position, status: 'active',
-          payout_amount: Math.round(Number(group.cashout_amount ?? 0) * fraction * 100) / 100,
+          payout_amount: portion.payout_amount,
           slot_fraction: fraction,
+          portion_id: portion.id,
         }
         let { error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow)
         if (gmErr) { failed.push({ group: group.name, reason: gmErr.message }); ok = false; break }
@@ -80,10 +85,10 @@ serveWithCors(async (req) => {
       }
       if (!ok && positions.length === 0) continue
 
-      if (Number(group.registration_fee) > 0 && positions.length > 0) {
+      if (portion.registration_fee > 0 && positions.length > 0) {
         await supabaseAdmin.from('transactions').insert({
           member_id: memberId, type: 'registration_fee',
-          amount: Math.round(group.registration_fee * positions.length * fraction * 100) / 100,
+          amount: Math.round(portion.registration_fee * positions.length * 100) / 100,
           reference: `REG-${memberId.slice(0, 8)}-${gid.slice(0, 8)}-${Date.now()}`,
           description: `Registration fee for "${group.name}"${positions.length > 1 ? ` × ${positions.length} slots` : ''} (member joined from portal — awaiting payment)`,
           status: 'pending',
@@ -96,8 +101,9 @@ serveWithCors(async (req) => {
         fraction,
         payout_positions: positions,
         payout_position: positions[0],
-        registration_fee: Number(group.registration_fee || 0) * positions.length,
-        cashout_amount:   Number(group.cashout_amount || 0),
+        portion: portion.label,
+        registration_fee: Math.round(portion.registration_fee * positions.length * 100) / 100,
+        cashout_amount:   portion.payout_amount,
       })
     }
 

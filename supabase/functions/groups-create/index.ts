@@ -56,13 +56,61 @@ serveWithCors(async (req) => {
 
       if (e) return error(e.message, 500)
 
+      /*
+       * ── PORTIONS ──────────────────────────────────────────────────────
+       * What a half or quarter portion pays and collects is CONFIGURED, not
+       * derived. `half always means 50% of the full amount` was an assumption
+       * about this business written into the code; a susu can run a half
+       * portion that pays GHS 500 and collects GHS 950 if that is the deal.
+       *
+       * An administrator who sends explicit portions gets exactly those. One
+       * who sends none gets Full/Half/Quarter seeded at the proportional
+       * amounts — a sensible starting point they can then edit, rather than a
+       * rule they cannot escape.
+       */
+      const sent = Array.isArray(b.portions) ? b.portions : []
+      const rows = sent.length > 0
+        ? sent
+            .filter((p: any) => p && p.label && Number(p.fraction) > 0)
+            .map((p: any, i: number) => ({
+              group_id: group.id,
+              label: String(p.label).slice(0, 40),
+              fraction: Number(p.fraction),
+              contribution_amount: Math.max(0, Number(p.contribution_amount ?? 0)),
+              payout_amount:       Math.max(0, Number(p.payout_amount ?? 0)),
+              registration_fee:    Math.max(0, Number(p.registration_fee ?? 0)),
+              is_active: p.is_active !== false,
+              sort_order: i,
+            }))
+        : [['Full', 1], ['Half', 0.5], ['Quarter', 0.25]].map(([label, frac], i) => ({
+            group_id: group.id,
+            label: label as string,
+            fraction: frac as number,
+            contribution_amount: Math.round(group.contribution_amount * (frac as number) * 100) / 100,
+            payout_amount:       Math.round(group.cashout_amount      * (frac as number) * 100) / 100,
+            registration_fee:    Math.round(group.registration_fee    * (frac as number) * 100) / 100,
+            is_active: true,
+            sort_order: i,
+          }))
+
+      if (rows.length > 0) {
+        const { error: pErr } = await supabaseAdmin.from('group_portions').insert(rows)
+        // A group with no portions still works — the join paths fall back — so
+        // this is logged rather than failing a group that was created cleanly.
+        if (pErr) console.error('group_portions insert failed:', pErr.message)
+      }
+
       await supabaseAdmin.from('audit_log').insert({
         admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
         action: 'group.created', entity_type: 'group', entity_id: group.id,
-        entity_label: group.name, details: { cashout: group.cashout_amount },
+        entity_label: group.name,
+        details: { cashout: group.cashout_amount, portions: rows.length },
       })
 
-      return json({ group }, 201)
+      const { data: portions } = await supabaseAdmin
+        .from('group_portions').select('*').eq('group_id', group.id).order('sort_order')
+
+      return json({ group, portions }, 201)
     }
 
     // ── EDIT ──

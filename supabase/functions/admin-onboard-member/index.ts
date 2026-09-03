@@ -1,4 +1,5 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
+import { resolvePortion } from '../_shared/portions.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { generatePasscode, hashPasscode, passcodeErrorResponse } from '../_shared/passcode.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
@@ -150,7 +151,11 @@ serveWithCors(async (req) => {
         }
         usedSlots.add(position)
 
-        const payout_amount   = plan.payout_amount != null ? Number(plan.payout_amount) : Math.round(Number(group.cashout_amount ?? 0) * fraction * 100) / 100
+        // An explicit payout on the plan still wins — an administrator onboarding a
+        // historical member may be recording what was actually agreed. Otherwise
+        // the group's configured portion decides, not cashout x fraction.
+        const onbPortion      = await resolvePortion(gid, fraction, group)
+        const payout_amount   = plan.payout_amount != null ? Number(plan.payout_amount) : onbPortion.payout_amount
         // Payout date/received apply to the FIRST slot; set the others
         // per-slot afterwards from the member's page.
         const slotDates: string[] = Array.isArray(plan.payout_dates) ? plan.payout_dates : []
@@ -176,7 +181,7 @@ serveWithCors(async (req) => {
         if (gmErr || !membership) return error(`Membership failed for "${group.name}": ${gmErr?.message}`, 500)
 
         // ── Backfill PAID contributions for this slot, daily from start ──
-        const daily = Math.round(Number(group.contribution_amount) * fraction * 100) / 100
+        const daily = onbPortion.contribution_amount
         const fullDays  = daily > 0 ? Math.floor(slotAmount / daily) : 0
         const remainder = daily > 0 ? Math.round((slotAmount - fullDays * daily) * 100) / 100 : 0
 
@@ -258,7 +263,7 @@ serveWithCors(async (req) => {
         slot_details: slotResults,
         payout_position: slotResults[0]?.payout_position,
         payout_date: slotResults[0]?.payout_date ?? null,
-        payout_amount: plan.payout_amount != null ? Number(plan.payout_amount) : Math.round(Number(group.cashout_amount ?? 0) * fraction * 100) / 100,
+        payout_amount: plan.payout_amount != null ? Number(plan.payout_amount) : onbPortion.payout_amount,
         fraction,
         payout_received: !!plan.payout_received,
         contributions_backfilled: backfilledTotal,

@@ -1,4 +1,5 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
+import { resolvePortion } from '../_shared/portions.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { generatePasscode, hashPasscode, passcodeErrorResponse } from '../_shared/passcode.ts'
 import { requireAdmin }            from '../_shared/jwt.ts'
@@ -313,7 +314,11 @@ serveWithCors(async (req) => {
       const used = new Set((taken ?? []).map((r: any) => r.payout_position))
 
       const fraction = fracWanted(g.id)
-      const payoutAmount = Math.round(Number(g.cashout_amount ?? 0) * fraction * 100) / 100
+      // The fifth and last place that multiplied by fraction. Approving a KYC
+      // application creates real memberships, so it has to price them the same
+      // way every other join path now does.
+      const portion = await resolvePortion(g.id, fraction, g)
+      const payoutAmount = portion.payout_amount
       for (let i = 0; i < wanted; i++) {
         let nextPosition = 1
         while (used.has(nextPosition)) nextPosition++
@@ -325,7 +330,7 @@ serveWithCors(async (req) => {
           member_id: member.id, group_id: g.id,
           payout_position: nextPosition, status: 'active',
           payout_date: payoutDate, payout_amount: payoutAmount,
-          slot_fraction: fraction,
+          slot_fraction: fraction, portion_id: portion.id,
         }
         // A concurrent approval into the same group can pick the same position
         // between our read of `used` and this insert. UNIQUE(group_id,
