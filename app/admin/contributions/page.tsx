@@ -228,7 +228,12 @@ export default function ContributionsPage() {
         <div className="text-center py-20 text-ink-2">No contributions found</div>
       ) : (
         <div className="border border-line rounded-[10px] overflow-hidden">
-          <div className="scroll-x">
+          {/* Table on desktop. Below `lg` the same rows become records that
+              keep the ONE thing this screen is for: selecting days to mark as
+              paid. A collection desk that cannot select on a phone is not a
+              collection desk — this is the screen most likely to be used
+              standing in front of the member who is paying. */}
+          <div className="hidden lg:block scroll-x">
             <table className="w-full text-sm min-w-[660px] lg:min-w-0">
             <thead className="border-b border-line">
               <tr className="text-ink-2">
@@ -275,6 +280,65 @@ export default function ContributionsPage() {
               )})}
             </tbody>
             </table>
+          </div>
+
+          <div className="lg:hidden divide-y divide-line">
+            {contributions.map(c => {
+              const selectable = ['pending', 'overdue'].includes(c.status)
+              const on = picked.has(c.id)
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={!selectable}
+                  aria-pressed={selectable ? on : undefined}
+                  onClick={() => selectable && setPicked(p => {
+                    const n = new Set(p); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n
+                  })}
+                  className={`w-full text-left flex gap-3 px-4 py-3.5 min-h-[56px] transition-colors
+                              ${on ? 'bg-surface-2' : 'hover:bg-surface-2'}
+                              ${selectable ? '' : 'opacity-60 cursor-default'}
+                              focus-visible:outline-none focus-visible:ring-2
+                              focus-visible:ring-inset focus-visible:ring-ink/30`}
+                >
+                  <span aria-hidden="true"
+                    className={`mt-0.5 w-[18px] h-[18px] rounded-[5px] border shrink-0 grid place-items-center
+                                ${!selectable ? 'border-line bg-surface-2'
+                                  : on ? 'bg-ink border-ink' : 'border-line-2 bg-surface'}`}>
+                    {on && (
+                      <svg viewBox="0 0 12 12" className="w-3 h-3 text-inverse">
+                        <path d="M2.5 6.2 4.8 8.5 9.5 3.8" fill="none" stroke="currentColor"
+                              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-medium text-ink truncate">
+                        {(c as any).members?.full_name}
+                      </span>
+                      <span className="text-sm font-semibold text-ink tnum shrink-0">
+                        GHS {Number(c.amount).toFixed(2)}
+                      </span>
+                    </span>
+                    <span className="block text-xs text-ink-2 mt-0.5 truncate">
+                      {c.susu_groups?.name}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-ink-3 mt-1">
+                      <span className="tnum">due {format(new Date(c.due_date), 'd MMM yyyy')}</span>
+                      {c.paid_at && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="tnum">paid {format(new Date(c.paid_at), 'd MMM, HH:mm')}</span>
+                        </>
+                      )}
+                      <span>{statusBadge(c.status)}</span>
+                    </span>
+                  </span>
+                </button>
+              )
+            })}
           </div>
 
           {total > 30 && (

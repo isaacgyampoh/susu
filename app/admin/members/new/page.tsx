@@ -115,9 +115,8 @@ export default function AddMemberPage() {
         <div className="card p-5 mt-6">
           <p className="t-h2 mb-4">Their sign-in details</p>
 
-          <div className="scroll-x">
-
-            <table className="w-full min-w-[560px] lg:min-w-0">
+          <div>
+            <table className="w-full">
             <tbody className="divide-y divide-line">
               <tr>
                 <td className="py-2.5 text-[12.5px] text-ink-2">Portal link</td>

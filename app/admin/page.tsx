@@ -113,8 +113,8 @@ export default function Dashboard() {
           {!upcomingPayouts?.length ? (
             <p className="text-[12.5px] text-ink-3 py-5">Nothing due in the next 7 days.</p>
           ) : (
-            <div className="scroll-x">
-              <table className="w-full min-w-[560px] lg:min-w-0">
+            <div>
+              <table className="w-full">
               <tbody className="divide-y divide-line">
                 {upcomingPayouts.map(p => (
                   <tr key={p.id}>
@@ -144,8 +144,8 @@ export default function Dashboard() {
               <Link href="/admin/groups/new" className="btn-dark btn-sm mt-3">Create your first group</Link>
             </div>
           ) : (
-            <div className="scroll-x">
-              <table className="w-full min-w-[560px] lg:min-w-0">
+            <div>
+              <table className="w-full">
               <tbody className="divide-y divide-line">
                 {groups.map(g => (
                   <tr key={g.id} className="hover:bg-bg transition-colors">

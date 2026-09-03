@@ -111,7 +111,9 @@ export default function SmsLogPage() {
         </div>
       ) : (
         <div className="border border-line rounded-[10px] overflow-hidden">
-          <div className="scroll-x">
+          {/* A message is prose; a column is the wrong container for it on a
+              phone. Desktop keeps the table, mobile reads the message in full. */}
+          <div className="hidden lg:block scroll-x">
             <table className="w-full text-sm min-w-[680px] lg:min-w-0">
               <thead className="border-b border-line">
                 <tr className="text-ink-2 text-left">
@@ -142,6 +144,25 @@ export default function SmsLogPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="lg:hidden divide-y divide-line">
+            {rows.map(r => (
+              <div key={r.id} className="px-4 py-3.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-sm font-medium text-ink min-w-0 truncate">{r.who ?? r.recipient}</p>
+                  <span className={`text-2xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${r.ok ? 'badge-green' : 'badge-red'}`}>
+                    {r.ok ? 'Sent' : 'Failed'}
+                  </span>
+                </div>
+                {r.who && <p className="text-2xs text-ink-3 tnum mt-0.5">{r.recipient}</p>}
+                <p className="text-sm text-ink-2 mt-2 leading-relaxed">{r.message}</p>
+                <p className="text-2xs text-ink-3 mt-2 tnum">
+                  {format(new Date(r.created_at), 'd MMM yyyy · HH:mm')}
+                  {r.error && ` · ${r.error}`}
+                </p>
+              </div>
+            ))}
           </div>
           {hasMore && (
             <button onClick={() => load(false, page + 1)}

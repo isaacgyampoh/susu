@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import type { Payout } from '@/types'
 import { format } from 'date-fns'
+import { MobileRecord } from '@/components/ui'
 type Eligibility = {
   eligible: boolean; reason: string
   gross_amount: number; outstanding_contrib: number; outstanding_penalty: number
@@ -105,7 +106,9 @@ export default function PayoutsPage() {
         <div className="text-center py-20 text-ink-2">No {filter} payouts</div>
       ) : (
         <div className="border border-line rounded-[10px] overflow-hidden">
-          <div className="scroll-x">
+          {/* Table on desktop; records below `lg`, where six columns cannot
+              fit and the alternative was dragging the row sideways. */}
+          <div className="hidden lg:block scroll-x">
             <table className="w-full text-sm">
               <thead className="border-b border-line">
                 <tr className="text-ink-2">
@@ -149,6 +152,32 @@ export default function PayoutsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="lg:hidden divide-y divide-line">
+            {payouts.map(p => (
+              <MobileRecord
+                key={p.id}
+                onClick={() => { if (p.status !== 'paid') openPayout(p) }}
+                lead={<span className="text-base font-semibold text-ink tnum">{ghs(p.total_amount)}</span>}
+                status={<span className={p.status === 'paid' ? 'badge-green' : p.status === 'processing' ? 'badge-blue' : 'badge-gold'}>{p.status}</span>}
+                title={p.members?.full_name ?? '—'}
+                subtitle={p.susu_groups?.name}
+                meta={
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="font-mono">{p.members?.member_id}</span>
+                    <span aria-hidden="true">·</span>
+                    <span className="tnum">{format(new Date(p.scheduled_date), 'd MMM yyyy')}</span>
+                    {p.status !== 'paid' && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span className="font-medium text-ink">Review &amp; pay</span>
+                      </>
+                    )}
+                  </span>
+                }
+              />
+            ))}
           </div>
         </div>
       )}

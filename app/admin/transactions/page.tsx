@@ -26,6 +26,47 @@ const prettyDay = (d: string) => {
   return format(new Date(d + 'T12:00:00Z'), 'EEEE, d MMMM')
 }
 
+/*
+ * One row of the day's roll-call, as a record.
+ *
+ * All three tables on this screen — money received, days settled, still to pay
+ * — carry the same shape: who, which group, how much, and when. So there is one
+ * renderer rather than three near-copies, which is also why the three cannot
+ * drift apart on a phone the way they could as three separate blocks of markup.
+ */
+function DayRecord({ r, kind }: { r: any; kind: 'received' | 'covered' | 'unpaid' }) {
+  return (
+    <a href={`/admin/members/${r.member_id}`}
+      className="flex items-start gap-3 px-4 py-3.5 min-h-[56px] transition-colors
+                 hover:bg-surface-2 active:bg-surface-3
+                 focus-visible:outline-none focus-visible:ring-2
+                 focus-visible:ring-inset focus-visible:ring-ink/30">
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline justify-between gap-3">
+          <span className="text-sm font-medium text-ink truncate">{r.name}</span>
+          <span className={`text-sm font-semibold tnum shrink-0 ${kind === 'unpaid' ? 'text-warning' : 'text-ink'}`}>
+            GHS {n2(r.amount)}
+          </span>
+        </span>
+        <span className="block text-xs text-ink-2 mt-0.5 truncate">{r.group}</span>
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-ink-3 mt-1">
+          <span className="font-mono">{r.code}</span>
+          {r.due_date && <><span aria-hidden="true">·</span><span className="tnum">covers {format(new Date(r.due_date), 'd MMM')}</span></>}
+          {kind !== 'unpaid' && r.paid_at && (
+            <><span aria-hidden="true">·</span><span className="tnum">{format(new Date(r.paid_at), 'HH:mm')}</span></>
+          )}
+          {kind !== 'unpaid' && (
+            <><span aria-hidden="true">·</span><span>{r.how === 'app' ? 'In-app' : `Manual${r.method ? ' ' + r.method : ''}`}</span></>
+          )}
+          {kind === 'unpaid' && r.status === 'overdue' && (
+            <><span aria-hidden="true">·</span><span className="text-danger font-medium">overdue</span></>
+          )}
+        </span>
+      </span>
+    </a>
+  )
+}
+
 export default function DailyPaymentsPage() {
   const [day, setDay]         = useState(todayISO())
   const [received, setReceived] = useState<any[]>([])
@@ -231,7 +272,7 @@ export default function DailyPaymentsPage() {
           <div className="px-5 py-3 border-b border-line bg-tint">
             <p className="font-semibold text-ink text-sm">Paid {day === todayISO() ? "today" : `on ${prettyDay(day)}`} · {received.length}</p>
           </div>
-          <div className="scroll-x">
+          <div className="hidden lg:block scroll-x">
             <table className="w-full text-sm min-w-[640px] lg:min-w-0">
               <thead className="border-b border-line">
                 <tr className="text-ink-2 text-left">
@@ -270,6 +311,12 @@ export default function DailyPaymentsPage() {
               </tbody>
             </table>
           </div>
+
+          <div className="lg:hidden divide-y divide-line">
+            {received.filter(match).map(r => (
+              <DayRecord key={r.contribution_id} r={r} kind="received" />
+            ))}
+          </div>
         </div>
       )}
 
@@ -292,7 +339,8 @@ export default function DailyPaymentsPage() {
                 </span>
               </button>
               {showAdvance && (
-                <div className="scroll-x">
+                <>
+                <div className="hidden lg:block scroll-x">
                   <table className="w-full text-sm min-w-[560px] lg:min-w-0">
                     <thead className="border-y border-line">
                       <tr className="text-ink-2 text-left">
@@ -319,6 +367,13 @@ export default function DailyPaymentsPage() {
                     </tbody>
                   </table>
                 </div>
+
+                <div className="lg:hidden divide-y divide-line">
+                  {paid.filter(match).map(r => (
+                    <DayRecord key={r.contribution_id} r={r} kind="covered" />
+                  ))}
+                </div>
+                </>
               )}
             </div>
           )}
@@ -329,7 +384,7 @@ export default function DailyPaymentsPage() {
               <div className="px-5 py-3 border-b border-line bg-tint">
                 <p className="font-semibold text-ink text-sm">Still to pay · {unpaidShown.length}</p>
               </div>
-              <div className="scroll-x">
+              <div className="hidden lg:block scroll-x">
                 <table className="w-full text-sm min-w-[520px] lg:min-w-0">
                   <thead className="border-b border-line">
                     <tr className="text-ink-2 text-left">
@@ -363,6 +418,12 @@ export default function DailyPaymentsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="lg:hidden divide-y divide-line">
+                {unpaidShown.map(r => (
+                  <DayRecord key={r.contribution_id} r={r} kind="unpaid" />
+                ))}
               </div>
             </div>
           )}
