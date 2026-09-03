@@ -47,7 +47,13 @@ interface OpenGroup {
   registration_fee: number; cashout_amount: number
   status: string; start_date: string | null; end_date: string | null
   rules: string | null
+  requires_approval: boolean
   group_portions: Portion[] | null
+}
+interface Application {
+  id: string; group_id: string; status: string
+  slots: number; applied_at: string; decision_reason: string | null
+  susu_groups?: { name: string } | null
 }
 
 export default function GroupsPage() {
@@ -73,6 +79,18 @@ export default function GroupsPage() {
 
   useEffect(() => { load() }, [load])
 
+  // Groups already asked for. Without this the portal offers "Apply" on a group
+  // the member applied to yesterday, and the only feedback is an error.
+  // Memoised: a fresh [] each render would re-run every dependent hook.
+  const apps = useMemo(
+    () => ((state as any)?.applications ?? []) as Application[],
+    [state],
+  )
+  const pendingIds = useMemo(
+    () => new Set(apps.filter(a => a.status === 'pending').map(a => a.group_id)),
+    [apps],
+  )
+
   const mineIds = useMemo(
     () => new Set((state?.memberships ?? []).map(m => m.group_id).filter(Boolean)),
     [state],
@@ -91,11 +109,16 @@ export default function GroupsPage() {
       body: { selections: [{ group_id: g.id, slots: 1, fraction: portion.fraction }] },
     })
     setJoin(null)
-    if (error) { toast.error({ title: 'Could not join', body: error }); return }
-    toast.success({
-      title: `Joined ${g.name}`,
-      body: `Your ${portion.label.toLowerCase()} portion is on your home screen.`,
-    })
+    if (error) {
+      toast.error({ title: g.requires_approval ? 'Could not apply' : 'Could not join', body: error })
+      return
+    }
+    // The wording follows what actually happened, not what was clicked.
+    toast.success(
+      g.requires_approval
+        ? { title: 'Application sent', body: `Your collector will review your ${portion.label.toLowerCase()} place in ${g.name}.` }
+        : { title: `Joined ${g.name}`, body: `Your ${portion.label.toLowerCase()} portion is on your home screen.` },
+    )
     load()
   }
 
@@ -243,15 +266,30 @@ export default function GroupsPage() {
                       <p className="text-2xs text-ink-3 mt-3 leading-relaxed">{g.rules}</p>
                     )}
 
-                    <Button
-                      full className="mt-4"
-                      disabled={!picked || joining === g.id}
-                      onClick={() => picked && join(g, picked)}
-                    >
-                      {joining === g.id
-                        ? 'Joining…'
-                        : picked ? `Join — ${picked.label.toLowerCase()} portion` : 'Join'}
-                    </Button>
+                    {pendingIds.has(g.id) ? (
+                      /* Already asked. Offering the button again would only
+                         produce the duplicate-application error. */
+                      <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-line
+                                      bg-surface-2 px-4 py-3">
+                        <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
+                        <p className="text-sm text-ink-2">
+                          <span className="font-medium text-ink">Application pending.</span>{' '}
+                          Your collector is reviewing it.
+                        </p>
+                      </div>
+                    ) : (
+                      <Button
+                        full className="mt-4"
+                        disabled={!picked || joining === g.id}
+                        onClick={() => picked && join(g, picked)}
+                      >
+                        {joining === g.id
+                          ? (g.requires_approval ? 'Sending…' : 'Joining…')
+                          : picked
+                            ? `${g.requires_approval ? 'Apply to join' : 'Join'} — ${picked.label.toLowerCase()} portion`
+                            : (g.requires_approval ? 'Apply to join' : 'Join')}
+                      </Button>
+                    )}
                   </div>
                 )
               })}
@@ -259,9 +297,29 @@ export default function GroupsPage() {
           )}
         </FinancialSection>
 
+        {/* Applications the collector has turned down, with the reason they
+            gave — a member who is refused should hear why from the app rather
+            than wonder. */}
+        {apps.filter(a => a.status === 'rejected').length > 0 && (
+          <FinancialSection title="Not approved">
+            <div className="divide-y divide-line-2">
+              {apps.filter(a => a.status === 'rejected').map(a => (
+                <div key={a.id} className="py-2.5">
+                  <p className="text-sm text-ink">{a.susu_groups?.name ?? 'A group'}</p>
+                  <p className="text-xs text-ink-2 mt-0.5 leading-relaxed">
+                    {a.decision_reason || 'Your collector did not approve this request.'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </FinancialSection>
+        )}
+
         <p className="text-2xs text-ink-3 mt-6 leading-relaxed">
-          Joining takes a place immediately. The registration fee becomes payable
-          and your contribution schedule starts on the group&rsquo;s start date.
+          Some groups let you join straight away; others are reviewed by your
+          collector first — the button says which. Either way the registration
+          fee becomes payable once you are in, and contributions start on the
+          group&rsquo;s start date.
         </p>
       </div>
     </div>

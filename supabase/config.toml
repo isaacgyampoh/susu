@@ -136,3 +136,6 @@ verify_jwt = false
 
 [functions.member-payment]
 verify_jwt = false
+
+[functions.admin-applications]
+verify_jwt = false

@@ -132,6 +132,14 @@ serveWithCors(async (req) => {
       .eq('id', memberId)
       .maybeSingle()
 
+    const { data: applications } = await supabaseAdmin
+      .from('group_applications')
+      .select('id, group_id, status, slots, slot_fraction, applied_at, decided_at, decision_reason, susu_groups(name)')
+      .eq('member_id', session.sub)
+      .in('status', ['pending', 'rejected'])
+      .order('applied_at', { ascending: false })
+      .limit(20)
+
     return json({
       as_of: s.as_of,
       member: { ...(s.member as Record<string, unknown>), ...(detail ?? {}) },
@@ -144,6 +152,12 @@ serveWithCors(async (req) => {
       payouts: payouts ?? [],
       announcements: announcements ?? [],
       myMessages: myMessages ?? [],
+      /*
+       * Groups this member has asked to join and is waiting on. Without it the
+       * portal would show "Join" on a group they already applied to, and the
+       * only feedback would be an error when they pressed it again.
+       */
+      applications: applications ?? [],
     })
   } catch (e) {
     console.error(e)

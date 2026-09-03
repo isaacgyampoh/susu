@@ -72,6 +72,7 @@ export default function EditGroup() {
           penalty_per_late_day: String(x.penalty_per_late_day ?? ''),
           rules: (x as any).rules ?? '',
           admin_notes: (x as any).admin_notes ?? '',
+          requires_approval: (x as any).requires_approval ? 'yes' : 'no',
         })
         setL(false)
       })
@@ -107,6 +108,7 @@ export default function EditGroup() {
         ...f,
         start_date: running ? undefined : (f.start_date || null),
         force,
+        requires_approval: f.requires_approval === 'yes',
         portions: portions.map(r => ({
           label: r.label, fraction: r.fraction, is_active: r.is_active, sort_order: r.sort_order,
           contribution_amount: parseFloat(r.contribution_amount) || 0,
@@ -297,6 +299,32 @@ export default function EditGroup() {
             </p>
           </div>
         )}
+
+        {/*
+          Immediate or reviewed. Off by default and off for every group that
+          existed before this setting did, so nothing changed behaviour by
+          being upgraded.
+        */}
+        <div>
+          <label className="in-lbl">Joining this group</label>
+          <div className="mt-1.5 border border-line rounded-[10px] overflow-hidden bg-surface divide-y divide-line-2">
+            {([
+              ['no',  'Anyone can join immediately', 'A member picks a portion and is in straight away.'],
+              ['yes', 'I approve each member',        'Members apply. Nothing is created until you decide.'],
+            ] as const).map(([val, head, body]) => (
+              <label key={val} className="flex gap-3 p-3.5 cursor-pointer hover:bg-surface-2 transition-colors">
+                <input type="radio" name="requires_approval" value={val}
+                  checked={f.requires_approval === val}
+                  onChange={() => set('requires_approval', val)}
+                  className="mt-0.5 w-4 h-4 accent-ink shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-ink">{head}</span>
+                  <span className="block text-xs text-ink-2 mt-0.5 leading-relaxed">{body}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
 
         <div>
           <label className="in-lbl">Rules <span className="font-normal text-ink-3">— optional</span></label>

@@ -27,6 +27,8 @@ serveWithCors(async (req) => {
         'payment_deadline',        // shown on the card and the join page
         'penalty_per_late_day',    // shown in the rules
         'status', 'start_date', 'end_date', 'rules', 'image_url',
+        // Whether joining is immediate or goes to the collector for a decision.
+        'requires_approval',
         /*
          * The portions this group offers, with the amounts as CONFIGURED. A
          * member choosing a half slot has to see what a half slot actually

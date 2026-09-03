@@ -105,6 +105,9 @@ export const ENDPOINTS: Record<string, Effect[]> = {
   'groups-create':             ['ADMIN_MUTATION'],
   'groups-activate':           ['ADMIN_MUTATION', 'SMS_NOTIFICATION'],
   'kyc-review':                ['ADMIN_MUTATION', 'FINANCIAL_MUTATION', 'SMS_NOTIFICATION'],
+  // Approving creates memberships, a schedule and a fee, and texts the
+  // member. Never probe it.
+  'admin-applications':        ['ADMIN_MUTATION', 'FINANCIAL_MUTATION', 'SMS_NOTIFICATION'],
   'member-join-group':         ['ADMIN_MUTATION'],
 
   // ── Documents. ────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { resolvePortion } from '../_shared/portions.ts'
+import { createMemberships, refuseCapacity } from '../_shared/join.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
 import { requireMember }           from '../_shared/jwt.ts'
 
@@ -42,57 +43,58 @@ serveWithCors(async (req) => {
     const joined: any[] = []
     const failed: any[] = []
 
+    const applied: any[] = []
+
     for (const { group_id: gid, slots, fraction } of selections) {
       const { data: group } = await supabaseAdmin
         .from('susu_groups')
-        .select('id, name, status, max_members, current_members, registration_fee, cashout_amount, contribution_amount')
+        .select('id, name, status, max_members, current_members, registration_fee, cashout_amount, contribution_amount, requires_approval')
         .eq('id', gid).single()
 
       if (!group) { failed.push({ group_id: gid, reason: 'Group not found' }); continue }
-      if (!['open', 'full', 'active'].includes(group.status)) {
-        failed.push({ group: group.name, reason: 'No longer accepting members' }); continue
-      }
-      if (group.current_members + slots > group.max_members) {
-        failed.push({ group: group.name, reason: `Only ${group.max_members - group.current_members} slot(s) left` }); continue
-      }
 
-      // A member already in the group is simply taking MORE slots — allowed.
-      const { data: taken } = await supabaseAdmin
-        .from('group_memberships').select('payout_position')
-        .eq('group_id', gid)
-      const used = new Set((taken ?? []).map((r: any) => r.payout_position))
+      const refusal = refuseCapacity(group, slots)
+      if (refusal) { failed.push({ group: group.name, reason: refusal }); continue }
 
-      // What this portion costs and pays, as the group configured it.
-      const portion = await resolvePortion(gid, fraction, group)
+      /*
+       * ── APPLY, OR JOIN ────────────────────────────────────────────────
+       * A group whose collector vets who comes in takes an APPLICATION: no
+       * membership, no schedule, no fee, nothing owed. Everything else joins
+       * immediately, exactly as before — `requires_approval` defaults to false,
+       * so no existing group changes behaviour.
+       */
+      if (group.requires_approval) {
+        const portion = await resolvePortion(gid, fraction, group)
 
-      const positions: number[] = []
-      let ok = true
-      for (let i = 0; i < slots; i++) {
-        let position = 1
-        while (used.has(position)) position++
-        used.add(position)
-
-        const gmRow: Record<string, unknown> = {
-          member_id: memberId, group_id: gid,
-          payout_position: position, status: 'active',
-          payout_amount: portion.payout_amount,
-          slot_fraction: fraction,
-          portion_id: portion.id,
-        }
-        let { error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow)
-        if (gmErr) { failed.push({ group: group.name, reason: gmErr.message }); ok = false; break }
-        positions.push(position)
-      }
-      if (!ok && positions.length === 0) continue
-
-      if (portion.registration_fee > 0 && positions.length > 0) {
-        await supabaseAdmin.from('transactions').insert({
-          member_id: memberId, type: 'registration_fee',
-          amount: Math.round(portion.registration_fee * positions.length * 100) / 100,
-          reference: `REG-${memberId.slice(0, 8)}-${gid.slice(0, 8)}-${Date.now()}`,
-          description: `Registration fee for "${group.name}"${positions.length > 1 ? ` × ${positions.length} slots` : ''} (member joined from portal — awaiting payment)`,
-          status: 'pending',
+        const { error: aErr } = await supabaseAdmin.from('group_applications').insert({
+          group_id: gid, member_id: memberId,
+          portion_id: portion.id, slot_fraction: fraction, slots,
         })
+
+        if (aErr) {
+          // The partial unique index makes a second pending application
+          // impossible; say so plainly rather than leaking the constraint.
+          failed.push({
+            group: group.name,
+            reason: aErr.code === '23505'
+              ? 'You have already applied to this group. Your collector is reviewing it.'
+              : 'Could not send your application. Please try again.',
+          })
+          continue
+        }
+
+        applied.push({ group: group.name, slots, portion: portion.label })
+        continue
+      }
+
+      const { positions, portion, registrationFee } = await createMemberships({
+        memberId, group, slots, fraction,
+        describedAs: `Registration fee for "${group.name}"${slots > 1 ? ` × ${slots} slots` : ''} (member joined from portal — awaiting payment)`,
+      })
+
+      if (positions.length === 0) {
+        failed.push({ group: group.name, reason: 'Could not take a slot in this group' })
+        continue
       }
 
       joined.push({
@@ -102,19 +104,20 @@ serveWithCors(async (req) => {
         payout_positions: positions,
         payout_position: positions[0],
         portion: portion.label,
-        registration_fee: Math.round(portion.registration_fee * positions.length * 100) / 100,
-        cashout_amount:   portion.payout_amount,
+        registration_fee: registrationFee,
+        cashout_amount: portion.payout_amount,
       })
     }
 
-    if (joined.length === 0) {
+    if (joined.length === 0 && applied.length === 0) {
       return error(failed[0]?.reason ?? 'Could not join the selected groups', 400)
     }
 
-    return json({
-      message: `Joined ${joined.length} group${joined.length > 1 ? 's' : ''}`,
-      joined, failed,
-    }, 201)
+    const parts = []
+    if (joined.length)  parts.push(`Joined ${joined.length} group${joined.length > 1 ? 's' : ''}`)
+    if (applied.length) parts.push(`Applied to ${applied.length} group${applied.length > 1 ? 's' : ''}`)
+
+    return json({ message: parts.join(' · '), joined, applied, failed }, 201)
   } catch (e) {
     console.error(e)
     return error('Internal server error', 500)

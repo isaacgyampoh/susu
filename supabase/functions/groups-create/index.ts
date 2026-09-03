@@ -7,6 +7,8 @@ const EDITABLE = [
   'name', 'description', 'contribution_amount', 'contribution_frequency',
   'cycle_days', 'max_members', 'registration_fee', 'cashout_amount',
   'payment_deadline', 'penalty_per_late_day', 'rules', 'admin_notes', 'show_on_website',
+  // Whether joining is immediate or goes to the collector for a decision.
+  'requires_approval',
 ]
 
 /*
@@ -65,6 +67,7 @@ serveWithCors(async (req) => {
           cashout_amount:         parseFloat(b.cashout_amount),
           payment_deadline:       b.payment_deadline ?? '18:00:00',
           penalty_per_late_day:   parseFloat(b.penalty_per_late_day ?? 0),
+          requires_approval:      b.requires_approval === true,
           reg_fee_to_cashout:     false,   // commission is never folded into a payout
           rules: b.rules, admin_notes: b.admin_notes,
           status: 'open', created_by: admin.sub,

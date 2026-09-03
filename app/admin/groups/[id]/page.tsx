@@ -38,6 +38,13 @@ interface Portion {
   contribution_amount: number; payout_amount: number; registration_fee: number
   is_active: boolean; sort_order: number
 }
+interface AppRow {
+  id: string; applied_at: string; slots: number; slot_fraction: number
+  note: string | null
+  member: { id: string; name: string; code: string; phone: string; status: string }
+  portion: { label: string; contribution_amount: number; payout_amount: number; registration_fee: number } | null
+  existing_slots: number
+}
 interface Financials {
   expected: number; received: number; outstanding: number
   days_total: number; days_paid: number; days_overdue: number
@@ -56,6 +63,8 @@ export default function GroupDetailPage() {
   const [err, setErr]           = useState('')
   const [q, setQ]               = useState('')
   const [acting, setActing]     = useState('')
+  const [apps, setApps]         = useState<AppRow[]>([])
+  const [deciding, setDeciding] = useState('')
 
   /*
    * Named transitions, not a status dropdown. "Close applications" is a
@@ -86,7 +95,35 @@ export default function GroupDetailPage() {
     setRoster(data?.roster ?? [])
     setPortions(data?.portions ?? [])
     setFin(data?.financials ?? null)
+
+    const { data: q } = await callFunction<{ applications: AppRow[] }>(
+      `admin-applications?group=${id}`, { token: getAdminToken()! })
+    setApps(q?.applications ?? [])
   }, [id])
+
+  /*
+   * Approving runs the same membership-creation path a direct join uses, so a
+   * member approved here gets a schedule and a fee exactly as one who joined
+   * themselves would. Capacity is re-checked server-side at the decision — a
+   * group can fill between somebody applying and somebody approving.
+   */
+  async function decide(appId: string, action: 'approve' | 'reject', who: string) {
+    let reason = ''
+    if (action === 'reject') {
+      reason = window.prompt(`Why is ${who} not being approved? The member is told this.`) ?? ''
+      if (reason.trim().length < 5) return
+    } else if (!window.confirm(`Approve ${who}? This creates their membership, their contribution schedule and their registration fee.`)) {
+      return
+    }
+    setDeciding(appId)
+    const { error } = await callFunction('admin-applications', {
+      method: 'POST', token: getAdminToken()!,
+      body: { id: appId, action, reason },
+    })
+    setDeciding('')
+    if (error) { window.alert(error); return }
+    load()
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -230,6 +267,57 @@ export default function GroupDetailPage() {
           </div>
         )}
       </section>
+
+      {/* People waiting on a decision. Above the roster because it is the only
+          part of this screen with something to DO. */}
+      {apps.length > 0 && (
+        <section aria-labelledby="apps" className="mt-8">
+          <h2 id="apps" className="t-eyebrow mb-2">
+            Waiting for a decision <span className="font-normal text-ink-3">· {apps.length}</span>
+          </h2>
+          <div className="border border-line rounded-xl bg-surface divide-y divide-line">
+            {apps.map(a => (
+              <div key={a.id} className="p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <Link href={`/admin/members/${a.member.id}`}
+                    className="text-base font-medium text-ink hover:underline underline-offset-2">
+                    {a.member.name}
+                  </Link>
+                  <span className="text-xs text-ink-3 tnum">
+                    applied {format(new Date(a.applied_at), 'd MMM, HH:mm')}
+                  </span>
+                </div>
+
+                <p className="text-xs text-ink-2 mt-1 tnum">
+                  {a.member.code} · {a.member.phone}
+                  {a.existing_slots > 0 && ` · already holds ${a.existing_slots} slot${a.existing_slots > 1 ? 's' : ''} here`}
+                </p>
+
+                {/* What approving would actually cost and pay them. */}
+                {a.portion && (
+                  <p className="text-xs text-ink-2 mt-1.5 tnum">
+                    {a.slots} × {a.portion.label} · contributes GHS {ghs2(a.portion.contribution_amount)}
+                    {' · collects GHS '}{ghs(a.portion.payout_amount)}
+                    {a.portion.registration_fee > 0 && ` · registration GHS ${ghs2(a.portion.registration_fee)}`}
+                  </p>
+                )}
+                {a.note && <p className="text-xs text-ink-3 mt-1.5 leading-relaxed">&ldquo;{a.note}&rdquo;</p>}
+
+                <div className="flex gap-2 mt-3">
+                  <Button size="sm" disabled={!!deciding}
+                    onClick={() => decide(a.id, 'approve', a.member.name)}>
+                    {deciding === a.id ? 'Working…' : 'Approve'}
+                  </Button>
+                  <Button size="sm" variant="dangerLine" disabled={!!deciding}
+                    onClick={() => decide(a.id, 'reject', a.member.name)}>
+                    Not approved
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Roster. */}
       <section aria-labelledby="roster" className="mt-8">
