@@ -305,7 +305,9 @@ serveWithCors(async (req) => {
     }
 
     // Assign next available payout position in each open group
-    const assignments: { group: string; payout_position: number; payout_date?: string | null }[] = []
+    // `slot` is pushed below; the declaration omitted it.
+    const assignments: { group: string; payout_position: number;
+                         payout_date?: string | null; slot?: number; of_slots?: number }[] = []
     for (const g of openTargets) {
       const wanted = slotWanted(g.id)
       const { data: taken } = await supabaseAdmin

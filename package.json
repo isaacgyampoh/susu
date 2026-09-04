@@ -9,7 +9,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:domain": "vitest run src/domain"
+    "test:domain": "vitest run src/domain",
+    "check:edge": "bash scripts/check-edge.sh",
+    "check": "tsc --noEmit && npm run check:edge && next lint"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

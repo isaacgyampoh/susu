@@ -44,8 +44,15 @@ function requireSecret(): string {
 // now carries a version so it can be killed before then.
 const EXPIRY = 60 * 60 * 24 * 2
 
-function base64url(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+/*
+ * Takes either an ArrayBuffer (what crypto.subtle.sign returns) or a
+ * Uint8Array (what TextEncoder.encode returns). Both callers below pass the
+ * latter, so declaring only ArrayBuffer described a function narrower than the
+ * one that exists — harmless at runtime, and exactly the sort of drift that
+ * hides a real mistake once a checker finally runs over this directory.
+ */
+function base64url(buf: ArrayBuffer | Uint8Array): string {
+  return btoa(String.fromCharCode(...(buf instanceof Uint8Array ? buf : new Uint8Array(buf))))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 

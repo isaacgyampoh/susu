@@ -127,7 +127,10 @@ serveWithCors(async (req) => {
     if (memErr) return error(memErr.message, 500)
 
     // Assign to one or more groups if provided
-    const assignments: { group_id: string; group_name: string; payout_position: number; payout_date?: string | null }[] = []
+    // `fraction` is pushed below and was missing here, so the declaration
+    // described a narrower row than the code actually produces.
+    const assignments: { group_id: string; group_name: string; payout_position: number;
+                         payout_date?: string | null; fraction?: number }[] = []
     const feePaid = formData.get('registration_fee_paid') === 'true'
 
     for (const gid of groupIds) {

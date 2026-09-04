@@ -139,6 +139,14 @@ serveWithCors(async (req) => {
       let backfilledTotal = 0
       const slotResults: any[] = []
 
+      /*
+       * The group's configured portion for this fraction. Resolved ONCE here
+       * rather than inside the slot loop: it is the same group and the same
+       * fraction on every iteration, and declaring it in the loop put it out of
+       * scope for the summary built after the loop closes.
+       */
+      const onbPortion = await resolvePortion(group_id, fraction, group)
+
       for (let sIdx = 0; sIdx < slots; sIdx++) {
         // First slot may use the requested position; extras take next free
         let position = sIdx === 0 && plan.payout_position ? Number(plan.payout_position) : 0
@@ -151,10 +159,9 @@ serveWithCors(async (req) => {
         }
         usedSlots.add(position)
 
-        // An explicit payout on the plan still wins — an administrator onboarding a
-        // historical member may be recording what was actually agreed. Otherwise
-        // the group's configured portion decides, not cashout x fraction.
-        const onbPortion      = await resolvePortion(gid, fraction, group)
+        // An explicit payout on the plan still wins — an administrator onboarding
+        // a historical member may be recording what was actually agreed.
+        // Otherwise the group's configured portion decides.
         const payout_amount   = plan.payout_amount != null ? Number(plan.payout_amount) : onbPortion.payout_amount
         // Payout date/received apply to the FIRST slot; set the others
         // per-slot afterwards from the member's page.

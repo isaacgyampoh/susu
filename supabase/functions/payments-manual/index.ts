@@ -30,7 +30,12 @@ serveWithCors(async (req) => {
 
   try {
     const body = await req.json()
-    const ids: string[] = [...new Set((Array.isArray(body.contribution_ids) ? body.contribution_ids : []).filter(Boolean))]
+    // Ids arrive as unknown from JSON; coerce and filter, rather than assert a
+    // type the value has not been checked to have.
+    const rawIds: unknown[] = Array.isArray(body.contribution_ids) ? body.contribution_ids : []
+    const ids: string[] = [...new Set(
+      rawIds.filter((v): v is string => typeof v === 'string' && v.length > 0),
+    )]
     const method = String(body.method ?? 'cash')
     const note   = body.note ? String(body.note).slice(0, 300) : null
 
