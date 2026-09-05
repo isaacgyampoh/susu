@@ -53,8 +53,11 @@ export default function Dashboard() {
   const attention = ([
     {
       key: 'pending', n: an.pending_over_48h ?? 0, tone: 'bad' as const,
-      head: `${n0(an.pending_over_48h)} payments pending over 48 hours`,
-      why: `GHS ${n0(an.pending_over_48h_value)} the provider has never confirmed. Until it does, none of it counts as collected.`,
+      head: `${n0(an.pending_over_48h)} payments need a decision`,
+      // The old wording said "pending over 48 hours", which reads as "wait".
+      // The sweeper stops asking at 48 hours, so nothing further will happen to
+      // these on their own — they are waiting on a person, not on NaloPay.
+      why: `GHS ${n0(an.pending_over_48h_value)} NaloPay never confirmed. The system stopped asking after 48 hours, so these will not resolve on their own.`,
       cta: 'Reconcile', href: '/admin/reconciliation',
     },
     {
