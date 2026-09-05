@@ -79,20 +79,52 @@ export async function createMemberships(opts: {
     while (used.has(position)) position++
     used.add(position)
 
-    const { data: gm, error: gmErr } = await supabaseAdmin
-      .from('group_memberships')
-      .insert({
-        member_id: memberId, group_id: group.id,
-        payout_position: position, status: 'active',
-        payout_amount: portion.payout_amount,
-        slot_fraction: fraction,
-        portion_id: portion.id,
-      })
-      .select('id').single()
+    /*
+     * ── A CONCURRENT JOIN CAN TAKE THIS POSITION FIRST ──────────────────
+     * `used` was read before the loop. Between that read and this insert,
+     * somebody else joining the same group can take the position we picked, and
+     * UNIQUE(group_id, payout_position) rejects ours.
+     *
+     * The first version of this shared function simply gave up on that error,
+     * which made it LESS robust than the kyc-review path it was extracted to
+     * unify — two members joining a popular group at the same moment, and one
+     * is told "could not take a slot" when the next position was free.
+     *
+     * So it re-reads the live positions and tries again. Five attempts, then a
+     * clean stop: a partial join is recoverable and reported, an unreported one
+     * is not.
+     */
+    let gm: { id: string } | null = null
+    let placed = position
 
-    // Stop rather than press on: a partial join is recoverable, an unreported
-    // one is not.
-    if (gmErr || !gm) break
+    for (let attempt = 0; attempt < 5 && !gm; attempt++) {
+      const { data, error: gmErr } = await supabaseAdmin
+        .from('group_memberships')
+        .insert({
+          member_id: memberId, group_id: group.id,
+          payout_position: placed, status: 'active',
+          payout_amount: portion.payout_amount,
+          slot_fraction: fraction,
+          portion_id: portion.id,
+        })
+        .select('id').single()
+
+      if (data) { gm = data; break }
+
+      const clash = gmErr?.code === '23505' || /payout_position/.test(gmErr?.message ?? '')
+      if (!clash) break                       // a real failure, not a race
+
+      const { data: retaken } = await supabaseAdmin
+        .from('group_memberships').select('payout_position').eq('group_id', group.id)
+      const takenNow = new Set((retaken ?? []).map((r: { payout_position: number }) => r.payout_position))
+      let p = 1
+      while (takenNow.has(p)) p++
+      placed = p
+      used.add(p)
+    }
+
+    if (!gm) break
+    position = placed
 
     positions.push(position)
     membershipIds.push(gm.id)

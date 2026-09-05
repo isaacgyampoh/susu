@@ -1,6 +1,7 @@
 import { refuseJoin, PUBLIC_JOINABLE } from '../_shared/group-join.ts'
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }           from '../_shared/supabase-admin.ts'
+import { rateLimit, tooManyMessage } from '../_shared/rate-limit.ts'
 import { devPaymentsAllowed } from '../_shared/mode.ts'
 import { issueRegistrationToken, TOKEN_TTL_DAYS } from '../_shared/registration-token.ts'
 import { sendSMS } from '../_shared/africas-talking.ts'
@@ -19,6 +20,23 @@ serveWithCors(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   if (req.method !== 'POST') return error('Method not allowed', 405)
+
+  /*
+   * ── RATE LIMIT ────────────────────────────────────────────────────────
+   * This endpoint is public and needs no session, and each call writes an
+   * application, performs nine storage operations and sends two SMS. Unlimited,
+   * one caller in a loop fills the registration queue, fills the bucket and
+   * runs up a real SMS bill.
+   *
+   * Six an hour per source: a genuine applicant submits once, and a household
+   * or a shared connection sharing one address still has room to retry a failed
+   * upload several times. Checked before the body is read, so a flood costs
+   * nothing but the check.
+   */
+  const limit = await rateLimit(req, 'kyc-submit', 6, 60)
+  if (!limit.allowed) {
+    return error(tooManyMessage(limit.retryAfterSeconds, 'applications from this device'), 429)
+  }
 
   try {
     const formData = await req.formData()

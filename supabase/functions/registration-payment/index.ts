@@ -1,5 +1,6 @@
 import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin }        from '../_shared/supabase-admin.ts'
+import { rateLimit, tooManyMessage } from '../_shared/rate-limit.ts'
 import { requestPayment as naloRequest, paymentStatus } from '../_shared/nalo.ts'
 import { provider, paymentsUnavailable, withServiceCharge, serviceChargePct } from '../_shared/mode.ts'
 import { hashToken, looksLikeToken } from '../_shared/registration-token.ts'
@@ -61,7 +62,30 @@ serveWithCors(async (req) => {
     if (req.method === 'GET')  return json(view(reg))
     if (req.method !== 'POST') return error('Method not allowed', 405)
 
-    if (body.action === 'initiate') return await initiate(req, reg, body)
+  /*
+   * ── RATE LIMIT ────────────────────────────────────────────────────────
+   * Every call here can raise a live NaloPay prompt, so an unlimited caller
+   * makes somebody's phone ring with payment requests indefinitely.
+   *
+   * Keyed on the capability token rather than the request source, because the
+   * token identifies one applicant: two people paying from the same office
+   * connection must not block each other, and one applicant retrying is exactly
+   * what needs bounding. Ten an hour leaves plenty of room for a failed prompt
+   * and a genuine retry.
+   *
+   * Only 'initiate' is limited: 'verify' just reads a status and a member
+   * refreshing to see whether their payment landed should never be blocked.
+   */
+    if (body.action === 'initiate') {
+      // Keyed on the token's HASH, never the token: this table is not a place to
+        // keep a live capability, and the hash is just as unique.
+        const limit = await rateLimit(
+          req, 'registration-payment', 10, 60, `tok:${await hashToken(raw)}`)
+      if (!limit.allowed) {
+        return error(tooManyMessage(limit.retryAfterSeconds, 'payment attempts'), 429, req)
+      }
+      return await initiate(req, reg, body)
+    }
     if (body.action === 'verify')   return await verify(reg)
     return error('action must be initiate or verify', 400, req)
   } catch (e) {
