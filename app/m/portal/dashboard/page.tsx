@@ -14,6 +14,7 @@ import {
   useToast, cx,
 } from '@/components/ui'
 import { AppBar, AccountHero } from '@/components/susu/app-bar'
+import { PayoutHeadlines, ContributionStatus, type Rotation } from '@/components/susu/rotation'
 
 /**
  * The member dashboard.
@@ -52,6 +53,14 @@ export default function Dashboard() {
   const [failed, setFailed] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [pending, setPending] = useState<any>(null)
+  /*
+   * The rotation is a second, small read rather than being folded into
+   * member-profile: it answers a different question (the group's order of
+   * turns) and must come from the function that cannot see other members'
+   * identities. Keeping them separate means member-profile is never tempted to
+   * start returning the roster.
+   */
+  const [rotation, setRotation] = useState<Rotation | null>(null)
   const [paySheet, setPaySheet] = useState<MembershipView | null>(null)
 
   const load = useCallback(async (quiet = false) => {
@@ -64,6 +73,10 @@ export default function Dashboard() {
       setState(data); setFailed('')
     }
     setLoading(false); setRefreshing(false)
+
+    const { data: rot } = await callFunction<{ rotation: Rotation | null }>(
+      'member-rotation', { token: getMemberToken()! })
+    setRotation(rot?.rotation ?? null)
   }, [toast])
 
   useEffect(() => { load() }, [load])
@@ -226,6 +239,36 @@ export default function Dashboard() {
 
       <div className="portal-w pt-5 space-y-4">
 
+        {/*
+          ── WHAT A MEMBER OPENS THIS FOR ──────────────────────────────────
+          When somebody collects, and when they do. Position on its own — which
+          is all this screen used to show — tells a member nothing they can act
+          on; "somebody collects on 12 September" is what makes today's
+          contribution feel like it matters.
+
+          Above the groups and the activity, because it is the reason the app is
+          opened between payments.
+        */}
+        {rotation && (
+          <section aria-labelledby="rot" className="space-y-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 id="rot" className="t-eyebrow">Payouts</h2>
+              <Link href="/m/portal/rotation"
+                className="text-xs font-medium text-ink-2 hover:text-ink transition-colors">
+                See the rotation
+              </Link>
+            </div>
+            <PayoutHeadlines r={rotation} />
+          </section>
+        )}
+
+        <ContributionStatus
+          outstanding={totals.outstanding}
+          overdue={totals.overdue}
+          deadline={rotation?.group?.payment_deadline?.slice(0, 5) ?? null}
+        />
+
+
       {/*
         One "Attention" section, not three tinted boxes stacked down the screen.
         Three full-width coloured blocks were most of the colour on this page and
@@ -286,9 +329,13 @@ export default function Dashboard() {
           */}
           <div className="flex items-baseline justify-between gap-3 mb-2">
             <h2 id="grps" className="t-eyebrow">Your groups</h2>
-            <span className="text-xs text-ink-3 tnum">
-              {memberships.length} slot{memberships.length === 1 ? '' : 's'}
-            </span>
+            {/* Groups lost its tab when the bar went to four. It keeps a real
+                route from here, where somebody looking at their groups already
+                is. An unreachable screen is worse than a fifth tab. */}
+            <Link href="/m/portal/groups"
+              className="text-xs font-medium text-ink-2 hover:text-ink transition-colors">
+              {memberships.length} slot{memberships.length === 1 ? '' : 's'} · all groups
+            </Link>
           </div>
           <div className="border border-line rounded-xl bg-surface px-[1.125rem] md:px-7">
             <GroupList memberships={memberships} />

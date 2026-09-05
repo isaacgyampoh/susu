@@ -56,6 +56,7 @@ export const ENDPOINTS: Record<string, Effect[]> = {
   'member-profile':            ['READ_ONLY'],
   'member-statement':          ['READ_ONLY'],
   'member-payment':            ['READ_ONLY'],
+  'member-rotation':           ['READ_ONLY'],
   'payments-preview':          ['READ_ONLY'],
   // Retired in Phase 04; answers 410 and touches nothing.
   'admin-reconcile-payments':  ['READ_ONLY'],

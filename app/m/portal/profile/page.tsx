@@ -1,7 +1,8 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, KeyRound, LogOut, MessageSquare, type LucideIcon } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronDown, ChevronRight, KeyRound, LogOut, MessageSquare, type LucideIcon } from 'lucide-react'
 import { callFunction, clearMemberAuth, getMemberToken } from '@/lib/supabase'
 import type { PortalState } from '@/types/portal'
 import { format } from 'date-fns'
@@ -285,6 +286,22 @@ export default function Profile() {
           To change anything here, message your collector below.
         </p>
       </Card>
+
+      {/* Statement moved off the tab bar when it went to four. This is where
+          somebody looking for a record of their account will look for it. */}
+      <Link href="/m/portal/statement"
+        className="flex items-center justify-between gap-3 rounded-xl border border-line
+                   bg-surface px-4 py-3.5 min-h-[56px] transition-colors
+                   hover:bg-surface-2 active:bg-surface-3
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30">
+        <span className="min-w-0">
+          <span className="block text-base font-medium text-ink">Your statement</span>
+          <span className="block text-xs text-ink-2 mt-0.5">
+            Every contribution and payment, month by month
+          </span>
+        </span>
+        <ChevronRight size={16} strokeWidth={2} aria-hidden="true" className="text-ink-3 shrink-0" />
+      </Link>
 
       <h2 className="t-eyebrow pt-4">Security</h2>
       {/* ---- Change passcode ---- */}

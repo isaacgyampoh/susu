@@ -2,17 +2,25 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Wallet, Users, FileText, User, type LucideIcon } from 'lucide-react'
+import { Home, Wallet, Repeat, User, type LucideIcon } from 'lucide-react'
 import InstallApp from '@/components/install-app'
 import { cx } from '@/components/ui'
 
+/*
+ * FOUR DESTINATIONS.
+ *
+ * Five tabs gave 69px targets at 360px — usable, but crowded, and two of them
+ * answered questions a member asks rarely. Rotation earns a tab because "when
+ * do I collect, and who is next" is the question this product exists to answer
+ * and it had no home at all. Statement moves under Profile, where somebody
+ * looking for a record of their account will look for it.
+ *
+ * Four gives 87px targets on the smallest phone this has to work on.
+ */
 const TABS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/m/portal/dashboard', label: 'Home',     icon: Home },
+  { href: '/m/portal/rotation',  label: 'Rotation', icon: Repeat },
   { href: '/m/portal/payments',  label: 'Payments', icon: Wallet },
-  // Groups was reachable only by a link from the home screen, which made
-  // "what else could I join" something a member had to already know about.
-  { href: '/m/portal/groups',    label: 'Groups',   icon: Users },
-  { href: '/m/portal/statement', label: 'Statement',icon: FileText },
   { href: '/m/portal/profile',   label: 'Profile',  icon: User },
 ]
 
