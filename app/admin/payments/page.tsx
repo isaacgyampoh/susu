@@ -48,6 +48,8 @@ type Row = {
   member: { id: string; name: string; code: string; phone: string } | null
   allocated: number; days: number; groups: string[]
   reversed_days: number
+  /** For a failed payment: 'provider', 'written_off', or 'unknown'. */
+  failure_kind: string | null
   first_due: string | null; last_due: string | null; confirmed_at: string | null
 }
 
@@ -181,8 +183,15 @@ export default function PaymentsWorkspace() {
           sub={summary ? `${summary.n_success} successful` : undefined} />
         <Metric label="Pending" value={summary?.pending}
           sub={summary ? `${summary.n_pending} awaiting confirmation` : undefined} />
+        {/* A written-off payment is a person's decision, not NaloPay's verdict.
+            Counting them together would have an operator chasing the provider
+            about payments the provider never saw. */}
         <Metric label="Failed" value={summary?.failed}
-          sub={summary ? `${summary.n_failed} payments` : undefined} />
+          sub={summary
+            ? summary.n_written_off > 0
+              ? `${summary.n_failed} payments · ${summary.n_written_off} written off`
+              : `${summary.n_failed} payments`
+            : undefined} />
         <div className="min-w-0">
           <p className="t-eyebrow mb-1.5">Matching</p>
           <p className="text-xl font-semibold tnum text-ink">{total.toLocaleString()}</p>
@@ -255,8 +264,13 @@ export default function PaymentsWorkspace() {
                           : <span className="text-ink-2">{r.groups[0]} <span className="text-ink-3">+{r.groups.length - 1}</span></span>}
                     </TD>
                     <TD align="right"><span className="tnum font-medium text-ink">{ghs2(r.amount)}</span></TD>
-                    <TD>{r.status === 'success' && r.reversed_days > 0 && r.days === 0
-      ? <Status value="reversed" /> : <Status value={r.status} />}</TD>
+                    <TD>
+                      {r.status === 'success' && r.reversed_days > 0 && r.days === 0
+                        ? <Status value="reversed" />
+                        : r.failure_kind === 'written_off'
+                          ? <Status value="written_off" />
+                          : <Status value={r.status} />}
+                    </TD>
                     <TD><Coverage r={r} /></TD>
                     <TD><span className="text-xs text-ink-3 whitespace-nowrap">{fmtWhen(r.created_at)}</span></TD>
                   </TR>
@@ -274,7 +288,10 @@ export default function PaymentsWorkspace() {
                 onClick={() => openPayment(r.id)}
                 lead={<Money value={r.amount} exact size="md" />}
                 status={r.status === 'success' && r.reversed_days > 0 && r.days === 0
-          ? <Status value="reversed" /> : <Status value={r.status} />}
+          ? <Status value="reversed" />
+          : r.failure_kind === 'written_off'
+            ? <Status value="written_off" />
+            : <Status value={r.status} />}
                 title={r.member?.name ?? 'Unknown member'}
                 subtitle={r.groups[0] ?? (r.status === 'pending' ? 'Awaiting confirmation' : 'No group allocated')}
                 meta={

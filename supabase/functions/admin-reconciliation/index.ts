@@ -29,10 +29,22 @@ import { settleRegistrationFee } from '../_shared/registration-fee.ts'
  * webhook would use. An operator can therefore clear a genuinely-completed
  * payment, and cannot clear one that never completed.
  *
- * The other actions — abandoned, reviewed, note, escalate, suspend — assert
- * nothing about the provider. They move no money at all; they record what a
- * named human decided, and when.
+ * `reviewed`, `note`, `escalate` and `suspend` assert nothing about the
+ * provider and change no transaction row at all — they record what a named
+ * human decided, and when.
+ *
+ * `abandoned` is the exception and is documented where it is implemented: it
+ * writes status='failed', because the enum has no third value, and is therefore
+ * distinguished from a provider-confirmed failure by a stable description
+ * prefix that the reporting layer reads.
  */
+
+/**
+ * Marks a payment written off by a person rather than failed by the provider.
+ * A stable prefix, not prose, because reporting keys on it — reconciliation
+ * against a NaloPay statement depends on telling the two apart.
+ */
+export const ABANDONED_PREFIX = 'Written off by admin:'
 
 serveWithCors(async (req) => {
   const cors = handleCors(req)
@@ -365,11 +377,30 @@ serveWithCors(async (req) => {
         }
       }
 
-      // ── abandoned: asserts nothing about the provider ─────────────────
+      /*
+       * ── abandoned: a HUMAN decision, not the provider's ────────────────
+       *
+       * This writes status='failed', because a payment that never arrived did
+       * not succeed and the enum has no third value. But `failed` elsewhere in
+       * this system means NaloPay said so — `payment.provider_failed` sets
+       * exactly the same status — and the two must not become the same fact.
+       *
+       * They differ in a way that matters: reconciling against a NaloPay
+       * statement, a provider-failed payment should appear there as failed,
+       * while an abandoned one may not appear at all. An operator who cannot
+       * tell them apart cannot reconcile.
+       *
+       * So the description carries a STABLE PREFIX rather than prose, and the
+       * reporting layer keys on it to show these as "written off" rather than
+       * "failed". The audit log records payment.marked_abandoned separately
+       * either way. The comment at the top of this file used to claim these
+       * actions assert nothing about the provider; that was true of `reviewed`
+       * and `note`, and never true of this one.
+       */
       if (action === 'abandoned') {
         if (tx.status !== 'pending') return error(`This payment is already ${tx.status}`, 400)
         await supabaseAdmin.from('transactions')
-          .update({ status: 'failed', description: `Marked abandoned by admin. ${why}` })
+          .update({ status: 'failed', description: `${ABANDONED_PREFIX} ${why}` })
           .eq('id', id).eq('status', 'pending')
         await audit({
           action: 'payment.marked_abandoned', entity_type: 'transaction', entity_id: id,

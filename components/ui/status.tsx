@@ -80,6 +80,9 @@ const MAP: Record<string, { tone: Tone; label: string }> = {
   // A settled payment whose allocations were later reversed. Distinct from
   // 'failed': the money arrived, and was then given back its days.
   reversed:    { tone: 'warn',    label: 'Reversed' },
+  // A person decided this money is not coming. Distinct from 'failed', which
+  // in this system means the provider said the payment did not complete.
+  written_off: { tone: 'neutral', label: 'Written off' },
   // memberships
   defaulted:   { tone: 'bad',     label: 'Defaulted' },
 }
