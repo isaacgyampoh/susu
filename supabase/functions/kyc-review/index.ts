@@ -310,57 +310,47 @@ serveWithCors(async (req) => {
                          payout_date?: string | null; slot?: number; of_slots?: number }[] = []
     for (const g of openTargets) {
       const wanted = slotWanted(g.id)
-      const { data: taken } = await supabaseAdmin
-        .from('group_memberships').select('payout_position')
-        .eq('group_id', g.id)
-      const used = new Set((taken ?? []).map((r: any) => r.payout_position))
-
       const fraction = fracWanted(g.id)
       // The fifth and last place that multiplied by fraction. Approving a KYC
       // application creates real memberships, so it has to price them the same
       // way every other join path now does.
       const portion = await resolvePortion(g.id, fraction, g)
       const payoutAmount = portion.payout_amount
-      for (let i = 0; i < wanted; i++) {
-        let nextPosition = 1
-        while (used.has(nextPosition)) nextPosition++
-        used.add(nextPosition)
+      /*
+       * ── THE TURN IS CHOSEN AND TAKEN IN ONE STATEMENT ───────────────────
+       * This was the third copy of "find the lowest free payout_position",
+       * which is why approving two half-slot applications into one group
+       * produced two turns a cycle apart. `join_payout_unit` applies the one
+       * placement rule: a half joins a waiting half.
+       *
+       * The five-attempt retry loop is gone with it. It existed because a
+       * concurrent approval could take the chosen position between the read
+       * and the insert, and UNIQUE(group_id, payout_position) then rejected
+       * ours — a failure that was once swallowed silently, leaving an
+       * applicant told they were approved with no membership. There is no
+       * longer a gap between choosing a turn and taking it.
+       */
+      const quarters = fraction === 1 ? 4 : fraction === 0.5 ? 2 : 1
 
+      for (let i = 0; i < wanted; i++) {
         const payoutDate = dateForSlot(g.id, i)
 
-        const gmRow: Record<string, unknown> = {
-          member_id: member.id, group_id: g.id,
-          payout_position: nextPosition, status: 'active',
-          payout_date: payoutDate, payout_amount: payoutAmount,
-          slot_fraction: fraction, portion_id: portion.id,
+        const { data: placed, error: gmE } = await supabaseAdmin.rpc('join_payout_unit', {
+          p_member_id: member.id, p_group_id: g.id,
+          p_quarters: quarters, p_fraction: fraction,
+          p_portion_id: portion.id, p_payout_amount: payoutAmount,
+        })
+        if (gmE || !placed) {
+          return error(`Approved, but assigning a slot in "${g.name}" failed: ${gmE?.message ?? 'no turn available'}`, 500)
         }
-        // A concurrent approval into the same group can pick the same position
-        // between our read of `used` and this insert. UNIQUE(group_id,
-        // payout_position) then rejects it — and the failure used to be
-        // swallowed, so the membership silently vanished while the applicant
-        // was told they had been approved. Retry on the collision, then fail
-        // loudly rather than continue with a membership that does not exist.
-        let gm: { id: string } | null = null
-        for (let attempt = 0; attempt < 5 && !gm; attempt++) {
-          const { data, error: gmE } = await supabaseAdmin
-            .from('group_memberships').insert(gmRow).select('id').single()
-          if (data) { gm = data; break }
-          const isPositionClash = gmE?.code === '23505' || /payout_position/.test(gmE?.message ?? '')
-          if (!isPositionClash) {
-            return error(`Approved, but assigning a slot in "${g.name}" failed: ${gmE?.message}`, 500)
-          }
-          // Someone took it first. Re-read the group's live positions and try again.
-          const { data: retaken } = await supabaseAdmin
-            .from('group_memberships').select('payout_position').eq('group_id', g.id)
-          const takenNow = new Set((retaken ?? []).map((r: any) => r.payout_position))
-          let p = 1
-          while (takenNow.has(p)) p++
-          gmRow.payout_position = p
-          nextPosition = p
-          used.add(p)
-        }
-        if (!gm) {
-          return error(`Could not find a free payout position in "${g.name}" after 5 attempts. Try again.`, 409)
+
+        const gm: { id: string } = { id: (placed as any).membership_id }
+        const nextPosition = Number((placed as any).position)
+
+        // The date belongs to the turn, so everyone sharing it moves together.
+        if (payoutDate) {
+          await supabaseAdmin.from('group_memberships')
+            .update({ payout_date: payoutDate }).eq('id', gm.id)
         }
 
         if (payoutDate && gm) {

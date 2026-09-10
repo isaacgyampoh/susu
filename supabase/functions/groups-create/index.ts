@@ -369,7 +369,23 @@ serveWithCors(async (req) => {
           .select('id, label, fraction, contribution_amount, payout_amount, registration_fee, is_active, sort_order')
           .eq('group_id', id).order('sort_order')
 
-        return json({ group, roster: enriched, portions: portions ?? [], financials: fin ?? null })
+        /*
+         * ── THE ROTATION AS TURNS, NOT AS PEOPLE ──────────────────────────
+         * The roster above is one row per slot, which is right for "who is in
+         * this group" and wrong for "when does this group pay out". Two halves
+         * sharing a turn appear there as two rows on the same date, and nothing
+         * in that view explains why.
+         *
+         * `get_group_rotation` returns turns, each with the shares in it and
+         * how full it is — one query, not one per turn.
+         */
+        const { data: rotation } = await supabaseAdmin
+          .rpc('get_group_rotation', { p_group_id: id })
+
+        return json({
+          group, roster: enriched, portions: portions ?? [],
+          financials: fin ?? null, rotation: rotation ?? null,
+        })
       }
 
       const { data, error: e } = await supabaseAdmin

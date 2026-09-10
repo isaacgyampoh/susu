@@ -14,7 +14,9 @@ import {
   useToast, cx,
 } from '@/components/ui'
 import { AppBar, AccountHero } from '@/components/susu/app-bar'
-import { PayoutHeadlines, ContributionStatus, type Rotation } from '@/components/susu/rotation'
+import {
+  PayoutHeadlines, ContributionStatus, RotationList, type Rotation,
+} from '@/components/susu/rotation'
 
 /**
  * The member dashboard.
@@ -249,24 +251,48 @@ export default function Dashboard() {
           Above the groups and the activity, because it is the reason the app is
           opened between payments.
         */}
-        {rotation && (
-          <section aria-labelledby="rot" className="space-y-3">
-            <div className="flex items-baseline justify-between gap-3">
+        {rotation ? (
+          /*
+            Next payout, my payout, contribution status, then the next few
+            turns — one continuous block separated by hairlines rather than
+            four stacked cards. On a 360px screen four bordered boxes spend
+            most of the height on their own edges, and the member is here to
+            read four facts.
+          */
+          <section aria-labelledby="rot">
+            <div className="flex items-baseline justify-between gap-3 mb-1">
               <h2 id="rot" className="t-eyebrow">Payouts</h2>
               <Link href="/m/portal/rotation"
                 className="text-xs font-medium text-ink-2 hover:text-ink transition-colors">
-                See the rotation
+                Full rotation
               </Link>
             </div>
-            <PayoutHeadlines r={rotation} />
-          </section>
-        )}
 
-        <ContributionStatus
-          outstanding={totals.outstanding}
-          overdue={totals.overdue}
-          deadline={rotation?.group?.payment_deadline?.slice(0, 5) ?? null}
-        />
+            <PayoutHeadlines r={rotation} />
+
+            <div className="border-b border-line">
+              <ContributionStatus
+                outstanding={totals.outstanding}
+                overdue={totals.overdue}
+                deadline={rotation.group?.payment_deadline?.slice(0, 5) ?? null}
+              />
+            </div>
+
+            {rotation.upcoming.length > 0 && (
+              <div className="pt-3">
+                <p className="t-eyebrow mb-0.5">Upcoming rotation</p>
+                <RotationList seats={rotation.upcoming} limit={4} />
+              </div>
+            )}
+          </section>
+        ) : (
+          <div className="border-y border-line">
+            <ContributionStatus
+              outstanding={totals.outstanding}
+              overdue={totals.overdue}
+            />
+          </div>
+        )}
 
 
       {/*

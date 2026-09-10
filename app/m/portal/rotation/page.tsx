@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Layers } from 'lucide-react'
 import { callFunction, getMemberToken } from '@/lib/supabase'
 import { AppBar } from '@/components/susu/app-bar'
-import { FinancialSection } from '@/components/susu/financial'
 import { PayoutHeadlines, RotationList, type Rotation } from '@/components/susu/rotation'
 import { Button, EmptyState, Skeleton } from '@/components/ui'
 
@@ -77,18 +76,24 @@ export default function RotationPage() {
 
         <PayoutHeadlines r={r} />
 
-        <FinancialSection
-          title="Upcoming rotation"
-          note={r.total_slots > 0 ? `${r.collected} of ${r.total_slots} collected` : undefined}
-        >
+        <div className="pt-4">
+          <div className="flex items-baseline justify-between gap-3 mb-0.5">
+            <p className="t-eyebrow">Upcoming rotation</p>
+            {r.total_slots > 0 && (
+              <p className="text-2xs text-ink-3 tnum">
+                {r.collected} of {r.total_slots} collected
+              </p>
+            )}
+          </div>
           <RotationList seats={r.upcoming} />
-        </FinancialSection>
+        </div>
 
         {/* The reason any of this is on screen. */}
         <p className="text-2xs text-ink-3 mt-6 leading-relaxed">
-          Everyone collects once, in this order. Keeping your contributions up to
-          date{deadline ? ` before ${deadline} each day` : ''} is what keeps the
-          turns on schedule for everyone — including yours.
+          Everyone collects once, in this order. A turn can be shared — two half
+          slots, or four quarters — and everyone in it collects on the same day.
+          Keeping your contributions up to date{deadline ? ` before ${deadline} each day` : ''} is
+          what keeps the turns on schedule for everyone, including yours.
         </p>
       </div>
     </div>

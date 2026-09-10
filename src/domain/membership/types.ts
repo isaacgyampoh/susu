@@ -41,9 +41,17 @@ export type MembershipStatus = 'active' | 'defaulted' | 'completed'
 export type ContributionFrequency = 'daily' | 'weekly' | 'monthly'
 
 /**
- * A slot may be a quarter, a half, or whole. A fractional slot pays that
- * fraction of the daily contribution and collects that fraction of the
- * cashout, while still owning a full turn in the rotation.
+ * A slot may be a quarter, a half, or whole.
+ *
+ * ── A FRACTIONAL SLOT DOES NOT OWN A TURN. IT OWNS A SHARE OF ONE. ─────────
+ *
+ * This comment used to end "while still owning a full turn in the rotation",
+ * and that sentence was the bug. Two halves are ONE turn: they collect on the
+ * same day, under the same number, because that is what half a slot means. The
+ * old model gave them a turn each, one cycle apart.
+ *
+ * A turn holds four quarter-shares — see `SlotQuarters`. The turn is the unit
+ * of rotation (`payout_units`); the slot is an allocation within it.
  *
  * Constrained in the database by CHECK (slot_fraction IN (0.25, 0.5, 1)).
  */
@@ -51,6 +59,21 @@ export type SlotFraction = 0.25 | 0.5 | 1
 export const SLOT_FRACTIONS: readonly SlotFraction[] = [0.25, 0.5, 1]
 export const isSlotFraction = (v: unknown): v is SlotFraction =>
   SLOT_FRACTIONS.includes(v as SlotFraction)
+
+/**
+ * The same slot size as an exact integer count of quarter-shares.
+ *
+ * Capacity is counted in these and never in fractions: four 0.25s sum to
+ * whatever binary floating point decides that day, and "is this turn full?" is
+ * not a question that may be answered approximately. Mirrors the generated
+ * `group_memberships.slot_quarters` column.
+ */
+export type SlotQuarters = 1 | 2 | 4
+export const QUARTERS_PER_TURN = 4
+export const quartersOf = (f: SlotFraction): SlotQuarters =>
+  f === 1 ? 4 : f === 0.5 ? 2 : 1
+export const fractionOf = (q: SlotQuarters): SlotFraction =>
+  q === 4 ? 1 : q === 2 ? 0.5 : 0.25
 
 /** The group's terms. Read-only from the domain's point of view. */
 export interface GroupTerms {

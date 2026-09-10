@@ -4,6 +4,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import { format } from 'date-fns'
+import { cx } from '@/components/ui'
+
 export default function MemberDetailPage() {
   const { id }            = useParams<{ id: string }>()
   const router            = useRouter()
@@ -464,7 +466,11 @@ export default function MemberDetailPage() {
                       <p className="text-[11px] text-gold mt-1.5">No payout date set yet</p>
                     )}
                     {(gm.shared_with?.length ?? 0) > 0 && (
-                      <p className="text-[11px] text-ink mt-1">🤝 Shared turn with {gm.shared_with.join(', ')} — dates move together</p>
+                      <p className="text-[11px] text-ink mt-1">
+                        Payout #{gm.payout_position} is shared with {gm.shared_with.join(', ')}
+                        {gm.unit_quarters != null && ` · ${gm.unit_quarters}/4 shares`}
+                        {' — they all collect on the same date'}
+                      </p>
                     )}
                     {Number(gm.slot_fraction ?? 1) < 1 && (
                       <p className="text-[11px] text-ink-2 mt-1">{Number(gm.slot_fraction) === 0.25 ? 'Quarter' : 'Half'} slot — pays and collects {Number(gm.slot_fraction) === 0.25 ? '¼' : '½'} of the group amounts</p>
@@ -814,14 +820,16 @@ export default function MemberDetailPage() {
               {/* Shared payout turn */}
               <div className="border-t border-line pt-3">
                 <p className="text-sm font-semibold text-ink">Share this payout turn</p>
-                {editTarget.shared_slot_key ? (
+                {(editTarget.shared_with?.length ?? 0) > 0 ? (
                   <div className="mt-1.5">
                     <p className="text-xs text-ink-2">
-                      Shared with {editTarget.shared_with?.join(', ') || 'other slot(s)'} — dates move together.
+                      Payout #{editTarget.payout_position} is shared with{' '}
+                      {editTarget.shared_with.join(', ')} — one number, one date,
+                      each collecting their own share.
                     </p>
                     <button type="button" onClick={unpair} disabled={pairing}
                       className="mt-2 text-xs text-red hover:underline underline-offset-2 disabled:opacity-50">
-                      {pairing ? '…' : 'Unpair this slot'}
+                      {pairing ? '…' : 'Move this slot to a turn of its own'}
                     </button>
                   </div>
                 ) : pairCands === null ? (
@@ -830,15 +838,33 @@ export default function MemberDetailPage() {
                   <p className="text-xs text-ink-3 mt-1.5">No other members hold slots in this group yet.</p>
                 ) : (
                   <>
-                    <p className="text-xs text-ink-3 mt-1">Tick who shares this turn — everyone gets the same payout date, each collecting their own fraction.</p>
+                    {/*
+                      A turn is four quarter-shares. Whoever is ticked here MOVES
+                      onto this slot's turn — taking its number as well as its
+                      date — so the ones that cannot fit are disabled rather than
+                      offered and then refused by the database.
+                    */}
+                    <p className="text-xs text-ink-3 mt-1">
+                      Tick who shares this turn. They move onto payout #{editTarget.payout_position} and
+                      collect on the same date, each taking their own share.
+                      {editTarget.room_quarters != null && ` ${editTarget.room_quarters} of 4 shares free.`}
+                    </p>
                     <div className="mt-2 max-h-36 overflow-y-auto border border-line rounded-[10px] divide-y divide-line">
                       {pairCands.map((c: any) => (
-                        <label key={c.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-tint">
-                          <input type="checkbox" className="w-4 h-4 accent-green" checked={pairPicked.has(c.id)}
+                        <label key={c.id}
+                          className={cx('flex items-center gap-2.5 px-3 py-2',
+                            c.fits === false
+                              ? 'opacity-45 cursor-not-allowed'
+                              : 'cursor-pointer hover:bg-tint')}>
+                          <input type="checkbox" className="w-4 h-4 accent-green"
+                            disabled={c.fits === false}
+                            checked={pairPicked.has(c.id)}
                             onChange={() => setPairPicked(p => { const n = new Set(p); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n })} />
                           <span className="flex-1 text-sm text-ink">{c.full_name}</span>
                           <span className="text-[11px] text-ink-3">
-                            #{c.payout_position}{Number(c.slot_fraction) < 1 ? ` · ${Number(c.slot_fraction) === 0.25 ? '¼' : '½'}` : ''}{c.payout_date ? ` · ${c.payout_date}` : ''}
+                            #{c.payout_position}
+                            {Number(c.slot_fraction) < 1 ? ` · ${Number(c.slot_fraction) === 0.25 ? '¼' : '½'}` : ' · full'}
+                            {c.fits === false ? ' · no room' : c.payout_date ? ` · ${c.payout_date}` : ''}
                           </span>
                         </label>
                       ))}

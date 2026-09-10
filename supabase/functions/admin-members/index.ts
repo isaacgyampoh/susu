@@ -22,18 +22,31 @@ serveWithCors(async (req) => {
     if (method === 'GET' && membershipId) {
       const { data: gm } = await supabaseAdmin
         .from('group_memberships')
-        .select('id, member_id, group_id, payout_position, payout_date, slot_fraction, shared_slot_key')
+        .select('id, member_id, group_id, payout_position, payout_date, slot_fraction, slot_quarters, payout_unit_id')
         .eq('id', membershipId).single()
       if (!gm) return error('Membership not found', 404)
 
       const { data: others } = await supabaseAdmin
         .from('group_memberships')
-        .select('id, payout_position, payout_date, slot_fraction, shared_slot_key, payout_received, members!member_id(full_name, member_id)')
+        .select('id, payout_position, payout_date, slot_fraction, slot_quarters, payout_unit_id, payout_received, members!member_id(full_name, member_id)')
         .eq('group_id', gm.group_id).eq('status', 'active')
         .neq('member_id', gm.member_id)
 
+      /*
+       * How much room this slot's turn has left, so the screen can say why a
+       * candidate cannot join it instead of letting the administrator pick one
+       * and be refused. A turn is four quarter-shares; this slot already
+       * occupies some of them.
+       */
+      const { data: onMyUnit } = await supabaseAdmin
+        .from('group_memberships').select('slot_quarters')
+        .eq('payout_unit_id', (gm as any).payout_unit_id).eq('status', 'active')
+      const takenQuarters = (onMyUnit ?? [])
+        .reduce((n: number, r: any) => n + Number(r.slot_quarters ?? 4), 0)
+      const roomQuarters = 4 - takenQuarters
+
       return json({
-        membership: gm,
+        membership: { ...gm, unit_quarters: takenQuarters, room_quarters: roomQuarters },
         candidates: (others ?? [])
           .filter((o: any) => !o.payout_received)
           .map((o: any) => ({
@@ -43,7 +56,10 @@ serveWithCors(async (req) => {
             payout_position: o.payout_position,
             payout_date: o.payout_date,
             slot_fraction: Number(o.slot_fraction ?? 1),
-            already_paired: !!o.shared_slot_key && o.shared_slot_key === gm.shared_slot_key,
+            slot_quarters: Number(o.slot_quarters ?? 4),
+            already_shared: !!o.payout_unit_id && o.payout_unit_id === (gm as any).payout_unit_id,
+            // A full slot never shares, and a half cannot go where one quarter fits.
+            fits: Number(o.slot_quarters ?? 4) <= roomQuarters,
           })),
       })
     }
@@ -54,7 +70,7 @@ serveWithCors(async (req) => {
 
       const { data: gm } = await supabaseAdmin
         .from('group_memberships')
-        .select('id, member_id, group_id, payout_position, payout_received, payout_date, shared_slot_key, susu_groups(name)')
+        .select('id, member_id, group_id, payout_position, payout_received, payout_date, payout_unit_id, slot_quarters, susu_groups(name)')
         .eq('id', membershipId).single()
       if (!gm) return error('Membership not found', 404)
 
@@ -126,33 +142,78 @@ serveWithCors(async (req) => {
       }
       if (typeof body.payout_received === 'boolean') updates.payout_received = body.payout_received
 
-      // Pairing: link this slot's payout turn with partner memberships
+      /*
+       * ── SHARING A TURN ──────────────────────────────────────────────────
+       * Partners are moved onto THIS slot's payout unit, so they take its
+       * number as well as its date. That is the whole fix: before v55 this
+       * could only copy the date, because UNIQUE(group_id, payout_position)
+       * made two memberships on one number impossible — so a paired half still
+       * showed its own slot number and its own turn in every list.
+       *
+       * The database now refuses a combination that is not a turn. Production
+       * carries a half paired with a FULL slot, adding up to one and a half
+       * turns, accepted silently by the old code; `assign_membership_to_unit`
+       * raises on that rather than storing it.
+       */
       if (Array.isArray(body.pair_with)) {
         const partnerIds: string[] = body.pair_with.filter(Boolean)
-        const key = crypto.randomUUID()
-        const pairDate = (typeof updates.payout_date === 'string' ? updates.payout_date : null)
-          ?? (gm as any).payout_date ?? null
+
+        // The date is the turn's, so set it before the partners arrive.
+        if (typeof updates.payout_date === 'string' && updates.payout_date) {
+          await supabaseAdmin.from('group_memberships')
+            .update({ payout_date: updates.payout_date }).eq('id', membershipId)
+        }
+
+        const { data: mine } = await supabaseAdmin
+          .from('group_memberships').select('payout_position, payout_date')
+          .eq('id', membershipId).single()
+        const unitNumber = (mine as any)?.payout_position
+        const pairDate   = (mine as any)?.payout_date ?? null
+
+        for (const pid of partnerIds) {
+          const { error: mErr } = await supabaseAdmin
+            .rpc('assign_membership_to_unit', { p_membership_id: pid, p_unit_number: unitNumber })
+          // The message is the database's own and says what is wrong with the
+          // combination — how full the turn is, and what this slot needed.
+          if (mErr) return error(mErr.message, 400)
+        }
 
         const allIds = [membershipId, ...partnerIds]
-        const patch: Record<string, unknown> = { shared_slot_key: key }
-        if (pairDate) patch.payout_date = pairDate
-
-        const { error: pairErr } = await supabaseAdmin
-          .from('group_memberships').update(patch)
-          .in('id', allIds).eq('group_id', gm.group_id)
-        if (pairErr) return error(pairErr.message, 500)
-
         if (pairDate) {
           await supabaseAdmin.from('payouts').update({ scheduled_date: pairDate })
             .in('membership_id', allIds).eq('status', 'upcoming')
         }
-        return json({ message: `Payout turn shared across ${allIds.length} slots${pairDate ? ` on ${pairDate}` : ''}` })
+
+        await supabaseAdmin.from('audit_log').insert({
+          admin_id: admin.sub, admin_name: admin.full_name ?? admin.email,
+          action: 'membership.turn_shared', entity_type: 'membership', entity_id: membershipId,
+          entity_label: `turn #${unitNumber} · ${allIds.length} slots`,
+          details: { unit_number: unitNumber, membership_ids: allIds, payout_date: pairDate },
+        })
+
+        return json({
+          message: `Turn #${unitNumber} is now shared by ${allIds.length} slots` +
+                   `${pairDate ? `, all collecting on ${pairDate}` : ''}`,
+        })
       }
 
+      /*
+       * Unpairing moves this slot to a turn of its own rather than only
+       * dropping a marker: sharing IS the unit now, so leaving it on the same
+       * unit while calling it unpaired would be a lie the next screen exposes.
+       */
       if (body.unpair === true) {
-        await supabaseAdmin.from('group_memberships')
-          .update({ shared_slot_key: null }).eq('id', membershipId)
-        return json({ message: 'Slot unpaired — its payout date now moves independently' })
+        const { data: freeNo, error: fErr } = await supabaseAdmin
+          .rpc('next_free_unit_number', { p_group_id: gm.group_id })
+        if (fErr) return error(fErr.message, 500)
+
+        const { error: mErr } = await supabaseAdmin
+          .rpc('assign_membership_to_unit', { p_membership_id: membershipId, p_unit_number: freeNo })
+        if (mErr) return error(mErr.message, 400)
+
+        return json({
+          message: `Slot moved to turn #${freeNo}, with its own payout date`,
+        })
       }
 
       if (Object.keys(updates).length === 0 && !body.regenerate) return error('Nothing to update')
@@ -168,18 +229,21 @@ serveWithCors(async (req) => {
         .from('group_memberships').update(updates).eq('id', membershipId)
       if (upErr) return error(upErr.message, 500)
 
-      // Partners share the turn: a date change moves everyone together
-      if ((gm as any).shared_slot_key && typeof updates.payout_date === 'string') {
-        const { data: partners } = await supabaseAdmin
-          .from('group_memberships').select('id')
-          .eq('shared_slot_key', (gm as any).shared_slot_key).neq('id', membershipId)
-        const pids = (partners ?? []).map((r: any) => r.id)
-        if (pids.length) {
-          await supabaseAdmin.from('group_memberships')
-            .update({ payout_date: updates.payout_date }).in('id', pids)
+      /*
+       * Everyone sharing this turn moved with it — the date belongs to the unit
+       * and v55's mirror carried it down, so the loop that used to copy dates
+       * across `shared_slot_key` partners is gone. Their `payouts` rows still
+       * need the new date, and that is not something the database mirror owns.
+       */
+      if (typeof updates.payout_date === 'string' || updates.payout_position !== undefined) {
+        const { data: sharers } = await supabaseAdmin
+          .from('group_memberships').select('id, payout_date')
+          .eq('payout_unit_id', (gm as any).payout_unit_id)
+          .neq('id', membershipId)
+        for (const s of (sharers ?? []) as any[]) {
           await supabaseAdmin.from('payouts')
-            .update({ scheduled_date: updates.payout_date })
-            .in('membership_id', pids).eq('status', 'upcoming')
+            .update({ scheduled_date: s.payout_date })
+            .eq('membership_id', s.id).eq('status', 'upcoming')
         }
       }
 
@@ -462,7 +526,7 @@ serveWithCors(async (req) => {
         .select(`
           *,
           group_memberships!member_id(
-            id, group_id, slot_fraction, shared_slot_key, payout_position, payout_date, payout_amount, payout_received, status, joined_at,
+            id, group_id, slot_fraction, slot_quarters, payout_unit_id, payout_position, payout_date, payout_amount, payout_received, status, joined_at,
             susu_groups(id, name, contribution_amount, status)
           ),
           contributions(id, amount, due_date, paid_at, status, paystack_ref, susu_groups(name)),
@@ -474,22 +538,33 @@ serveWithCors(async (req) => {
 
       if (dbErr) return error('Member not found', 404)
 
-      // Name the partners on any shared payout turns
-      const keys = [...new Set(((member as any).group_memberships ?? [])
-        .map((gm: any) => gm.shared_slot_key).filter(Boolean))]
-      if (keys.length > 0) {
-        const { data: partners } = await supabaseAdmin
+      /*
+       * Name whoever else holds a share of the same turn. One query for all of
+       * this member's turns rather than one per membership — a member with
+       * eight slots would otherwise be eight round trips.
+       */
+      const unitIds = [...new Set(((member as any).group_memberships ?? [])
+        .map((gm: any) => gm.payout_unit_id).filter(Boolean))]
+      if (unitIds.length > 0) {
+        const { data: sharers } = await supabaseAdmin
           .from('group_memberships')
-          .select('shared_slot_key, slot_fraction, member_id, members!member_id(full_name)')
-          .in('shared_slot_key', keys).neq('member_id', id)
-        const byKey: Record<string, string[]> = {}
-        for (const p of partners ?? []) {
-          const f = Number((p as any).slot_fraction ?? 1)
-          const lbl = `${(p as any).members?.full_name}${f < 1 ? ` (${f === 0.25 ? '¼' : '½'})` : ''}`
-          ;(byKey[(p as any).shared_slot_key] ??= []).push(lbl)
+          .select('payout_unit_id, slot_quarters, member_id, members!member_id(full_name)')
+          .in('payout_unit_id', unitIds).eq('status', 'active').neq('member_id', id)
+
+        const byUnit: Record<string, string[]> = {}
+        const fillByUnit: Record<string, number> = {}
+        for (const p of sharers ?? []) {
+          const q = Number((p as any).slot_quarters ?? 4)
+          const share = q === 4 ? '' : q === 2 ? ' (½)' : ' (¼)'
+          ;(byUnit[(p as any).payout_unit_id] ??= []).push(`${(p as any).members?.full_name}${share}`)
+          fillByUnit[(p as any).payout_unit_id] =
+            (fillByUnit[(p as any).payout_unit_id] ?? 0) + q
         }
         for (const gm of (member as any).group_memberships ?? []) {
-          if (gm.shared_slot_key) gm.shared_with = byKey[gm.shared_slot_key] ?? []
+          if (!gm.payout_unit_id) continue
+          gm.shared_with = byUnit[gm.payout_unit_id] ?? []
+          // Out of four quarter-shares, including this member's own.
+          gm.unit_quarters = (fillByUnit[gm.payout_unit_id] ?? 0) + Number(gm.slot_quarters ?? 4)
         }
       }
 

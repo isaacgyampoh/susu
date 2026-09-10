@@ -10,6 +10,7 @@ import {
   SearchBar, Metric, MetricRow, MobileRecord,
   TableWrap, THead, TH, TBody, TR, TD, cx,
 } from '@/components/ui'
+import { RotationTurns, type Turn } from '@/components/admin/rotation-turns'
 
 /**
  * ONE GROUP, AS THE OPERATION SEES IT.
@@ -59,6 +60,7 @@ export default function GroupDetailPage() {
   const [roster, setRoster]     = useState<any[]>([])
   const [portions, setPortions] = useState<Portion[]>([])
   const [fin, setFin]           = useState<Financials | null>(null)
+  const [turns, setTurns]       = useState<Turn[]>([])
   const [loading, setLoading]   = useState(true)
   const [err, setErr]           = useState('')
   const [q, setQ]               = useState('')
@@ -88,6 +90,7 @@ export default function GroupDetailPage() {
     setLoading(true)
     const { data, error } = await callFunction<{
       group: any; roster: any[]; portions: Portion[]; financials: Financials
+      rotation: { units: Turn[] } | null
     }>(`groups-create?id=${id}`, { token: getAdminToken()! })
     setLoading(false)
     setErr(error ?? '')
@@ -95,6 +98,7 @@ export default function GroupDetailPage() {
     setRoster(data?.roster ?? [])
     setPortions(data?.portions ?? [])
     setFin(data?.financials ?? null)
+    setTurns(data?.rotation?.units ?? [])
 
     const { data: q } = await callFunction<{ applications: AppRow[] }>(
       `admin-applications?group=${id}`, { token: getAdminToken()! })
@@ -318,6 +322,23 @@ export default function GroupDetailPage() {
           </div>
         </section>
       )}
+
+      {/*
+        The rotation, before the roster. "When does this group pay out, and who
+        collects" is the question this screen is opened to answer; "who is a
+        member" is the reference material underneath it.
+      */}
+      <section aria-labelledby="rotation" className="mt-8">
+        <div className="flex flex-wrap items-baseline justify-between gap-3 mb-3">
+          <h2 id="rotation" className="t-eyebrow">
+            Rotation <span className="font-normal text-ink-3">· {turns.length} turns</span>
+          </h2>
+          {group?.cycle_days && (
+            <p className="text-2xs text-ink-3">One turn every {group.cycle_days} days</p>
+          )}
+        </div>
+        <RotationTurns turns={turns} />
+      </section>
 
       {/* Roster. */}
       <section aria-labelledby="roster" className="mt-8">

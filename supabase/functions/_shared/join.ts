@@ -66,72 +66,50 @@ export async function createMemberships(opts: {
   const { memberId, group, slots, fraction } = opts
   const portion = await resolvePortion(group.id, fraction, group)
 
-  // Positions already taken, so two slots in one call do not collide.
-  const { data: taken } = await supabaseAdmin
-    .from('group_memberships').select('payout_position').eq('group_id', group.id)
-  const used = new Set((taken ?? []).map((r: { payout_position: number }) => r.payout_position))
+  /*
+   * ── WHICH TURN DOES THIS SLOT JOIN? ─────────────────────────────────────
+   * The database decides, in `join_payout_unit`. A half joins a waiting half
+   * and the two collect together — one date, one number — because they are two
+   * shares of one turn. A full slot takes a turn of its own.
+   *
+   * This used to take the lowest free `payout_position`, without ever looking
+   * at the fraction. That is what put two halves one cycle apart: a turn and a
+   * membership were treated as the same thing, so half a slot consumed a whole
+   * turn and got its own date.
+   *
+   * The five-attempt retry loop that used to live here is gone with it. It
+   * existed to survive UNIQUE(group_id, payout_position) collisions between
+   * concurrent joins. v55 moved that uniqueness onto the turn, and v56 does the
+   * placement and the insert in one statement under one lock, so there is no
+   * longer a window between choosing a turn and taking it.
+   */
+  const quarters = fraction === 1 ? 4 : fraction === 0.5 ? 2 : 1
 
   const positions: number[] = []
   const membershipIds: string[] = []
 
   for (let i = 0; i < slots; i++) {
-    let position = 1
-    while (used.has(position)) position++
-    used.add(position)
+    const { data, error: joinErr } = await supabaseAdmin.rpc('join_payout_unit', {
+      p_member_id:     memberId,
+      p_group_id:      group.id,
+      p_quarters:      quarters,
+      p_fraction:      fraction,
+      p_portion_id:    portion.id,
+      p_payout_amount: portion.payout_amount,
+    })
 
-    /*
-     * ── A CONCURRENT JOIN CAN TAKE THIS POSITION FIRST ──────────────────
-     * `used` was read before the loop. Between that read and this insert,
-     * somebody else joining the same group can take the position we picked, and
-     * UNIQUE(group_id, payout_position) rejects ours.
-     *
-     * The first version of this shared function simply gave up on that error,
-     * which made it LESS robust than the kyc-review path it was extracted to
-     * unify — two members joining a popular group at the same moment, and one
-     * is told "could not take a slot" when the next position was free.
-     *
-     * So it re-reads the live positions and tries again. Five attempts, then a
-     * clean stop: a partial join is recoverable and reported, an unreported one
-     * is not.
-     */
-    let gm: { id: string } | null = null
-    let placed = position
+    const placed = data as { membership_id: string; position: number } | null
+    // A partial join is recoverable and reported; an unreported one is not.
+    if (joinErr || !placed) break
 
-    for (let attempt = 0; attempt < 5 && !gm; attempt++) {
-      const { data, error: gmErr } = await supabaseAdmin
-        .from('group_memberships')
-        .insert({
-          member_id: memberId, group_id: group.id,
-          payout_position: placed, status: 'active',
-          payout_amount: portion.payout_amount,
-          slot_fraction: fraction,
-          portion_id: portion.id,
-        })
-        .select('id').single()
-
-      if (data) { gm = data; break }
-
-      const clash = gmErr?.code === '23505' || /payout_position/.test(gmErr?.message ?? '')
-      if (!clash) break                       // a real failure, not a race
-
-      const { data: retaken } = await supabaseAdmin
-        .from('group_memberships').select('payout_position').eq('group_id', group.id)
-      const takenNow = new Set((retaken ?? []).map((r: { payout_position: number }) => r.payout_position))
-      let p = 1
-      while (takenNow.has(p)) p++
-      placed = p
-      used.add(p)
-    }
-
-    if (!gm) break
-    position = placed
-
-    positions.push(position)
-    membershipIds.push(gm.id)
+    positions.push(placed.position)
+    membershipIds.push(placed.membership_id)
 
     // The schedule is what makes a membership real. Without it the member owes
     // nothing and the group is short a payer, silently.
-    await supabaseAdmin.rpc('generate_membership_schedule', { p_membership_id: gm.id })
+    await supabaseAdmin.rpc('generate_membership_schedule', {
+      p_membership_id: placed.membership_id,
+    })
   }
 
   const registrationFee = Math.round(portion.registration_fee * positions.length * 100) / 100

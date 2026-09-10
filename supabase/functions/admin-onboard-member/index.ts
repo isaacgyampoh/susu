@@ -127,12 +127,6 @@ serveWithCors(async (req) => {
         return error(`Group "${group.name}" only has ${group.max_members - group.current_members} slot(s) left — cannot take ${slots}`, 400)
       }
 
-      // Positions currently taken in this group
-      const { data: taken } = await supabaseAdmin
-        .from('group_memberships').select('payout_position')
-        .eq('group_id', group_id)
-      const usedSlots = new Set((taken ?? []).map((r: any) => r.payout_position))
-
       // The recorded amount is the member's TOTAL across all their slots;
       // split it evenly, giving any rounding remainder to the last slot.
       const perSlot = slots > 1 ? Math.floor((amount_paid / slots) * 100) / 100 : amount_paid
@@ -147,17 +141,32 @@ serveWithCors(async (req) => {
        */
       const onbPortion = await resolvePortion(group_id, fraction, group)
 
+      /*
+       * ── WHICH TURN THIS HISTORICAL SLOT BELONGS TO ──────────────────────
+       * `place_in_payout_unit` rather than the old lowest-free-position scan:
+       * a half joins a waiting half instead of opening a turn of its own a
+       * cycle later. This path inserts columns a plain join does not
+       * (`joined_at` backdated, `onboarded_existing`), so it asks for the turn
+       * and inserts itself rather than calling `join_payout_unit` — but the
+       * rule that decides the turn is still the one shared rule.
+       */
+      const onbQuarters = fraction === 1 ? 4 : fraction === 0.5 ? 2 : 1
+
       for (let sIdx = 0; sIdx < slots; sIdx++) {
-        // First slot may use the requested position; extras take next free
-        let position = sIdx === 0 && plan.payout_position ? Number(plan.payout_position) : 0
-        if (position && usedSlots.has(position)) {
-          return error(`Payout position #${position} in "${group.name}" is already taken`, 409)
+        // An administrator onboarding a historical member may know exactly which
+        // turn this person held. That still wins.
+        const wantedUnit = sIdx === 0 && plan.payout_position
+          ? Number(plan.payout_position) : null
+
+        const { data: unitId, error: placeErr } = await supabaseAdmin
+          .rpc('place_in_payout_unit', { p_group_id: group_id, p_quarters: onbQuarters })
+        if (placeErr || !unitId) {
+          return error(`Could not place a slot in "${group.name}": ${placeErr?.message ?? 'no turn available'}`, 500)
         }
-        if (!position) {
-          position = 1
-          while (usedSlots.has(position)) position++
-        }
-        usedSlots.add(position)
+
+        const { data: unitRow } = await supabaseAdmin
+          .from('payout_units').select('unit_number').eq('id', unitId).single()
+        let position = Number((unitRow as any)?.unit_number ?? 1)
 
         // An explicit payout on the plan still wins — an administrator onboarding
         // a historical member may be recording what was actually agreed.
@@ -182,10 +191,20 @@ serveWithCors(async (req) => {
           joined_at: `${start_date}T00:00:00Z`,
           onboarded_existing: true,
           slot_fraction: fraction,
+          payout_unit_id: unitId,
         }
         const { data: membership, error: gmErr } = await supabaseAdmin
           .from('group_memberships').insert(gmRow).select('id').single()
         if (gmErr || !membership) return error(`Membership failed for "${group.name}": ${gmErr?.message}`, 500)
+
+        // A named turn moves the slot there, and is refused if it is full.
+        if (wantedUnit) {
+          const { error: mErr } = await supabaseAdmin.rpc('assign_membership_to_unit', {
+            p_membership_id: membership.id, p_unit_number: wantedUnit,
+          })
+          if (mErr) return error(mErr.message, 409)
+          position = wantedUnit
+        }
 
         // ── Backfill PAID contributions for this slot, daily from start ──
         const daily = onbPortion.contribution_amount

@@ -160,37 +160,54 @@ serveWithCors(async (req) => {
       )
       if (refusal) return error(refusal, 400)
 
-      const { data: taken } = await supabaseAdmin
-        .from('group_memberships').select('payout_position')
-        .eq('group_id', gid)
-      const usedSlots = new Set((taken ?? []).map((r: any) => r.payout_position))
+      /*
+       * ── WHICH TURN, NOT WHICH POSITION ──────────────────────────────────
+       * This used to take the lowest free `payout_position` without looking at
+       * the fraction, so an administrator adding two halves to a group created
+       * two turns a cycle apart — the same bug as the member join path, in its
+       * own copy.
+       *
+       * `join_payout_unit` decides: a half joins a waiting half and the two
+       * collect together. An administrator may still name a turn explicitly,
+       * and `assign_membership_to_unit` moves the slot there — refusing it if
+       * that turn is already full rather than storing an impossible rotation.
+       */
+      const quarters = fraction === 1 ? 4 : fraction === 0.5 ? 2 : 1
 
-      // First slot may use the requested position/date; extra slots take the
-      // next free positions with no payout date (set later per slot).
       for (let sIdx = 0; sIdx < slots; sIdx++) {
-        let position = sIdx === 0 && settings.payout_position ? Number(settings.payout_position) : 0
-        if (position && usedSlots.has(position)) {
-          return error(`Payout position #${position} in "${group.name}" is already taken`, 409)
-        }
-        if (!position) {
-          position = 1
-          while (usedSlots.has(position)) position++
-        }
-        usedSlots.add(position)
-
-        const payoutDate   = sIdx === 0 ? (settings.payout_date || null) : null
         // The group's configured portion, not cashout x fraction.
         const portion      = await resolvePortion(gid, fraction, group)
         const payoutAmount = portion.payout_amount
 
-        const gmRow: Record<string, unknown> = {
-          member_id: member.id, group_id: gid,
-          payout_position: position, status: 'active',
-          payout_date: payoutDate, payout_amount: payoutAmount,
-          slot_fraction: fraction, portion_id: portion.id,
+        const { data: placed, error: gmErr } = await supabaseAdmin.rpc('join_payout_unit', {
+          p_member_id: member.id, p_group_id: gid,
+          p_quarters: quarters, p_fraction: fraction,
+          p_portion_id: portion.id, p_payout_amount: payoutAmount,
+        })
+        if (gmErr || !placed) {
+          return error(`Member created but assignment to "${group.name}" failed: ${gmErr?.message ?? 'no slot available'}`, 500)
         }
-        let { data: gm, error: gmErr } = await supabaseAdmin.from('group_memberships').insert(gmRow).select('id').single()
-        if (gmErr) return error(`Member created but assignment to "${group.name}" failed: ${gmErr.message}`, 500)
+
+        const gm = { id: (placed as any).membership_id }
+        let position = Number((placed as any).position)
+
+        // An explicitly requested turn applies to the first slot only.
+        if (sIdx === 0 && settings.payout_position) {
+          const wanted = Number(settings.payout_position)
+          const { error: mErr } = await supabaseAdmin.rpc('assign_membership_to_unit', {
+            p_membership_id: gm.id, p_unit_number: wanted,
+          })
+          // The database's own message names how full that turn is.
+          if (mErr) return error(mErr.message, 409)
+          position = wanted
+        }
+
+        const payoutDate = sIdx === 0 ? (settings.payout_date || null) : null
+        if (payoutDate) {
+          // The date belongs to the turn; everyone sharing it moves with it.
+          await supabaseAdmin.from('group_memberships')
+            .update({ payout_date: payoutDate }).eq('id', gm.id)
+        }
 
         if (payoutDate && gm) {
           await supabaseAdmin.from('payouts').insert({
