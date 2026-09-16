@@ -169,7 +169,7 @@ export default function Payments() {
           <div className="border border-line rounded-xl bg-surface divide-y divide-line-2
                           px-[1.125rem] md:px-7">
             {payments.map(p => {
-              const groups = [...new Set(p.items.map(i => i.group))]
+              const groups = [...new Set((p.items ?? []).map(i => i.group))]
               return (
                 <Link
                   key={p.reference}
@@ -182,11 +182,19 @@ export default function Payments() {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-semibold text-ink tnum">GHS {ghs2(p.total)}</p>
+                    {/* "0 days" reads as a failed payment. It is not one — the
+                        money is recorded and the days it covers are worked out
+                        when it settles, which is a normal state for minutes
+                        after paying. */}
                     <p className="text-xs text-ink-2 mt-0.5 truncate">
-                      {p.items.length} day{p.items.length === 1 ? '' : 's'}
-                      {groups.length === 1
-                        ? ` · ${groups[0]}`
-                        : groups.length > 1 ? ` · ${groups.length} groups` : ''}
+                      {(p.items ?? []).length === 0
+                        ? 'Not yet applied to any day'
+                        : <>
+                            {(p.items ?? []).length} day{(p.items ?? []).length === 1 ? '' : 's'}
+                            {groups.length === 1
+                              ? ` · ${groups[0]}`
+                              : groups.length > 1 ? ` · ${groups.length} groups` : ''}
+                          </>}
                     </p>
                     <p className="text-xs text-ink-3 mt-0.5 tnum">
                       {format(new Date(p.at), 'd MMM yyyy · HH:mm')}

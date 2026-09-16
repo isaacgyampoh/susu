@@ -12,6 +12,7 @@ import {
   Money, Notice, Status, Textarea, useConfirm, useToast, cx,
 } from '@/components/ui'
 import { AppBar } from '@/components/susu/app-bar'
+import { payoutLabel, collectionLine, shareLabel, NO_DATE } from '@/lib/rotation-words'
 
 export default function Profile() {
   const toast  = useToast()
@@ -142,15 +143,22 @@ export default function Profile() {
 
         {/* Who this account belongs to, and whether it is in good standing.
             An account screen opens on identity, not on a menu. */}
-        <div className="flex items-center gap-3 pb-1">
+        {/*
+          The name wraps rather than truncating. `truncate` clipped it to
+          "Adwoa Serwaa Boat…" at 360px — a member's own name, cut off on their
+          own account screen, to protect space for a four-letter status chip.
+          Ghanaian names are routinely three or four parts; this is the common
+          case, not the edge one.
+        */}
+        <div className="flex items-start gap-3 pb-1">
           <Avatar name={member.full_name} size="lg" tone="ink" />
-          <div className="min-w-0">
-            <h1 className="font-display text-xl font-semibold text-ink tracking-[-.02em] truncate">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-xl font-semibold text-ink tracking-[-.02em] leading-tight text-balance">
               {member.full_name}
             </h1>
             <p className="text-xs text-ink-3 font-mono mt-0.5">{member.member_code}</p>
           </div>
-          <Status value={member.status} className="ml-auto shrink-0" />
+          <Status value={member.status} className="shrink-0 mt-0.5" />
         </div>
 
       {memberships.length > 0 && (
@@ -201,7 +209,7 @@ export default function Profile() {
                       <p className="text-xs text-ink-3 mt-0.5">
                         {dated.length > 0
                           ? `Next collection ${format(new Date(dated[0].payout_date as string), 'd MMM yyyy')}`
-                          : 'No collection date assigned yet'}
+                          : NO_DATE}
                         {undated > 0 && dated.length > 0 && ` · ${undated} not yet set`}
                       </p>
                     </div>
@@ -215,11 +223,11 @@ export default function Profile() {
                     {slots.map(m => (
                       <li key={m.membership_id} className="py-2.5 flex items-baseline justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="text-sm text-ink tnum">Slot {m.payout_position}</p>
+                          <p className="text-sm text-ink tnum">{payoutLabel(m.payout_position)}</p>
                           <p className="text-xs text-ink-3 mt-0.5">
                             {m.payout_date
                               ? `Collects ${format(new Date(m.payout_date), 'd MMM yyyy')}`
-                              : 'Collection date not yet assigned'}
+                              : NO_DATE}
                           </p>
                         </div>
                         {/* Labelled. A bare "GHS 4,700" beside a group name does

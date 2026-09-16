@@ -12,15 +12,29 @@
    green for money and a full semantic set for status. Status colour is not
    decoration in a payments console: an operator scanning two hundred rows
    reads "paid / due / overdue" by hue before they read the word.
+
+   ── THE 2026 PASS: WARM GROUND, LIME AS A FILL ────────────────────────────
+
+   The ground moved off cool blue-grey (#F7F8FA) onto a warm neutral, and a
+   lime and a coral joined the set. Both are FILLS with dark ink on top, never
+   text colours: lime on white is about 1.4:1 and would be illegible as type,
+   which is exactly how a bright accent usually arrives and then quietly fails
+   everyone reading in sunlight — the common case for this product.
+
+   So the rule that keeps the look and the legibility together:
+     · --c-accent        text, icons, links      (dark green, 6.5:1 on bg)
+     · --c-pop / --c-hot large fills only        (ink sits ON them, 12:1+)
+   Every ratio below is measured against the surface the token is used on.
    ========================================================================= */
 :root {
-  /* Ground and surfaces */
-  --c-bg:         247 248 250;   /* #F7F8FA page */
+  /* Ground and surfaces — warm, so the greens read as deliberate rather
+     than as the default blue-grey dashboard. */
+  --c-bg:         244 243 240;   /* #F4F3F0 page */
   --c-surface:    255 255 255;   /* #FFFFFF cards */
-  --c-surface-2:  242 244 247;   /* #F2F4F7 wells, inset rows */
-  --c-surface-3:  233 236 241;   /* #E9ECF1 pressed / track */
-  --c-line:       226 229 236;   /* #E2E5EC borders */
-  --c-line-2:     239 241 245;   /* #EFF1F5 hairline dividers */
+  --c-surface-2:  238 237 233;   /* #EEEDE9 wells, inset rows */
+  --c-surface-3:  228 227 222;   /* #E4E3DE pressed / track */
+  --c-line:       223 221 215;   /* #DFDDD7 borders */
+  --c-line-2:     235 233 228;   /* #EBE9E4 hairline dividers */
 
   /* Text — each step verified ≥4.5:1 on --c-surface */
   --c-ink:      15  17  21;      /* #0F1115  17.7:1 */
@@ -29,10 +43,21 @@
   --c-inverse: 255 255 255;      /* text on ink / accent fills */
 
   /* Brand accent */
-  --c-accent:        11 122  85; /* #0B7A55  5.9:1 */
-  --c-accent-strong:  8  92  64; /* #085C40 */
-  --c-accent-soft:  231 244 239; /* #E7F4EF */
-  --c-accent-line:  185 224 208; /* #B9E0D0 */
+  /* Text/icon accent. Darkened a shade against the warmer ground so it keeps
+     its ratio there, and pulled toward the forest green of the hero fills. */
+  --c-accent:        14 102  72; /* #0E6648  6.5:1 on --c-bg */
+  --c-accent-strong: 10  74  52; /* #0A4A34  9.4:1 */
+  --c-accent-soft:  228 241 233; /* #E4F1E9 */
+  --c-accent-line:  183 217 200; /* #B7D9C8 */
+
+  /* ── FILLS ───────────────────────────────────────────────────────────────
+     Large blocks that carry ink on top. Never use these for text.           */
+  --c-deep:         26  61  46;  /* #1A3D2E hero band, dark cards        */
+  --c-deep-2:       19  46  35;  /* #132E23 pressed / deeper panel       */
+  --c-pop:         198 233 107;  /* #C6E96B lime. ink on it = 12.6:1     */
+  --c-pop-soft:    236 246 213;  /* #ECF6D5 quiet tint of the same       */
+  --c-hot:         255 122  69;  /* #FF7A45 coral. ink on it =  8.1:1    */
+  --c-hot-soft:    255 232 222;  /* #FFE8DE                              */
 
   /* Semantic status */
   --c-success:       11 122  85; /* #0B7A55 */
@@ -243,21 +268,24 @@
   /* ---- Buttons --------------------------------------------------------- */
   /* 44px on touch is the minimum comfortable target; desktop tightens to 36. */
   .btn {
-    @apply relative inline-flex items-center justify-center gap-1.5 h-11 lg:h-9 px-4 lg:px-3.5
-           rounded-md text-base lg:text-sm font-medium whitespace-nowrap select-none
+    @apply relative inline-flex items-center justify-center gap-1.5 h-11 lg:h-9 px-5 lg:px-4
+           rounded-full text-base lg:text-sm font-medium whitespace-nowrap select-none
            transition-[background-color,border-color,color,box-shadow,transform] duration-150
            active:scale-[.985] disabled:opacity-40 disabled:pointer-events-none;
   }
   .btn-dark   { @apply btn bg-ink text-inverse hover:bg-ink/90 shadow-xs; }
   .btn-accent { @apply btn bg-accent text-inverse hover:bg-accent-strong shadow-xs; }
+  /* The affirmative action. Ink on lime is 12.6:1 — the text colour is not a
+     choice here, white on this lime is 1.4:1 and vanishes. */
+  .btn-pop    { @apply btn bg-pop text-ink hover:brightness-95 shadow-xs; }
   .btn-line   { @apply btn bg-surface border border-line text-ink hover:bg-surface-2 hover:border-ink/20; }
   .btn-soft   { @apply btn bg-surface-2 text-ink hover:bg-surface-3; }
   .btn-ghost  { @apply btn text-ink-2 hover:text-ink hover:bg-surface-2; }
   .btn-red,
   .btn-danger { @apply btn bg-danger text-inverse hover:bg-danger-strong shadow-xs; }
   .btn-danger-line { @apply btn bg-surface border border-danger-line text-danger hover:bg-danger-soft; }
-  .btn-lg { @apply h-12 lg:h-11 px-5 text-md lg:text-base rounded-lg; }
-  .btn-sm { @apply h-9 lg:h-8 px-3 text-sm lg:text-xs rounded-sm; }
+  .btn-lg { @apply h-12 lg:h-11 px-6 text-md lg:text-base rounded-full; }
+  .btn-sm { @apply h-9 lg:h-8 px-3.5 text-sm lg:text-xs rounded-full; }
   .btn-icon { @apply w-11 lg:w-9 px-0 shrink-0; }
 
   /* ---- Fields ---------------------------------------------------------- */

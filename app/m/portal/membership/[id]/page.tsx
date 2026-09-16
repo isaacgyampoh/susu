@@ -14,6 +14,7 @@ import {
   FinancialAmount, FinancialSection, DetailRow, DetailRows,
 } from '@/components/susu/financial'
 import { Button, EmptyState, Progress, Skeleton, cx } from '@/components/ui'
+import { payoutLabel, collectionLine, shareLabel, NO_DATE } from '@/lib/rotation-words'
 
 /**
  * ONE GROUP, AS THE MEMBER WHO IS IN IT.
@@ -81,8 +82,8 @@ export default function MembershipDetail() {
 
   // Payments that touched THIS membership, showing what they covered here.
   const payments = state.payments
-    .map(p => ({ ...p, items: p.items.filter(i => i.membership_id === id) }))
-    .filter(p => p.items.length > 0)
+    .map(p => ({ ...p, items: (p.items ?? []).filter(i => i.membership_id === id) }))
+    .filter(p => (p.items ?? []).length > 0)
 
   const pct    = m.total_expected > 0 ? (m.total_paid / m.total_expected) * 100 : 0
   const owes   = m.due_today > 0.005
@@ -122,7 +123,7 @@ export default function MembershipDetail() {
             {m.group_name}
           </h1>
           <p className="text-sm text-ink-2 mt-1 tnum">
-            GHS {ghs2(m.contribution_amount)} {m.frequency} · Slot {m.payout_position}
+            GHS {ghs2(m.contribution_amount)} {m.frequency} · {payoutLabel(m.payout_position)}
             {m.slot_fraction !== 1 && ` · ${m.slot_fraction === 0.5 ? 'half' : 'quarter'} slot`}
           </p>
 
@@ -177,8 +178,8 @@ export default function MembershipDetail() {
             <DetailRow label="You collect"
               value={m.payout_amount != null ? `GHS ${ghs2(m.payout_amount)}` : 'Not set yet'} />
             <DetailRow label="Collection date"
-              value={m.payout_date ? format(new Date(m.payout_date), 'd MMMM yyyy') : 'Not set yet'} />
-            <DetailRow label="Position in rotation" value={`Slot ${m.payout_position}`} />
+              value={m.payout_date ? format(new Date(m.payout_date), 'd MMMM yyyy') : NO_DATE} />
+            <DetailRow label="Position in rotation" value={payoutLabel(m.payout_position)} />
             <DetailRow label="Received" value={m.payout_received ? 'Yes' : 'Not yet'} />
           </DetailRows>
           {/* Never guessed. An unset date says so. */}
@@ -201,7 +202,7 @@ export default function MembershipDetail() {
               {payments.map(p => {
                 // What this payment put into THIS group. A payment spanning
                 // several groups shows only its share here, and says so.
-                const here = p.items.reduce((s, i) => s + i.amount, 0)
+                const here = (p.items ?? []).reduce((s, i) => s + i.amount, 0)
                 return (
                   <Link
                     key={p.reference}
@@ -215,7 +216,7 @@ export default function MembershipDetail() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-ink tnum">GHS {ghs2(here)}</p>
                       <p className="text-xs text-ink-2 mt-0.5">
-                        {p.items.length} day{p.items.length === 1 ? '' : 's'}
+                        {(p.items ?? []).length} day{(p.items ?? []).length === 1 ? '' : 's'}
                         {here !== p.total && ' · part of a larger payment'}
                       </p>
                       <p className="text-xs text-ink-3 mt-0.5 tnum">

@@ -13,6 +13,8 @@
  * from it don't need to change.
  */
 
+import { redactSecrets } from './redact.ts'
+
 const BMS_API_KEY   = Deno.env.get('BMS_API_KEY')
 const BMS_SENDER_ID = Deno.env.get('BMS_SENDER_ID') ?? 'AbbieWealth'
 
@@ -75,8 +77,9 @@ async function sendViaAT(recipients: string[], message: string): Promise<boolean
 async function logSMS(recipients: string[], message: string, ok: boolean, provider: string, err?: string) {
   try {
     const { supabaseAdmin } = await import('./supabase-admin.ts')
+    const safe = redactSecrets(message)
     await supabaseAdmin.from('sms_log').insert(
-      recipients.map(r => ({ recipient: r, message, ok, provider, error: err ?? null })))
+      recipients.map(r => ({ recipient: r, message: safe, ok, provider, error: err ?? null })))
   } catch { /* logging must never break delivery */ }
 }
 
@@ -96,7 +99,10 @@ export async function sendSMS(to: string | string[], message: string): Promise<b
   }
   await logSMS(recipients, message, false, 'none', 'No SMS provider configured')
 
-  console.log('[SMS SKIPPED — no BMS_API_KEY or AT_API_KEY] To:', recipients.join(','), '| Msg:', message)
+  // Redacted here too: function logs are a second place a passcode would
+  // otherwise outlive the message it was sent in.
+  console.log('[SMS SKIPPED — no BMS_API_KEY or AT_API_KEY] To:', recipients.join(','),
+              '| Msg:', redactSecrets(message))
   return true // gracefully skip, don't break the flow
 }
 
@@ -161,7 +167,23 @@ export async function notifyAdmins(message: string): Promise<void> {
   if (nums.length === 0) {
     console.warn(
       'notifyAdmins: ADMIN_SMS_NUMBERS is not set — no administrator was told. ' +
-      `Dropped message: ${message}`)
+      `Dropped message: ${redactSecrets(message)}`)
+
+    /*
+     * ── A DROP THAT LEAVES NO TRACE IS THE REASON THIS WENT UNNOTICED ────
+     * This used to return here without writing anything. `sms_log` exists so
+     * a missing notification can be investigated rather than argued about,
+     * and the one category of message that was never arriving was the one
+     * category the log had no row for. 406 member messages in the last 30
+     * days, 0 admin alerts, and nothing anywhere said so.
+     *
+     * Recorded as a failed send against a recipient of '(unconfigured)', so
+     * the SMS log screen shows the gap and counts it. Still not sent —
+     * texting nobody remains correct when nobody is configured — but no
+     * longer silent.
+     */
+    await logSMS(['(unconfigured)'], message, false, 'none',
+                 'ADMIN_SMS_NUMBERS is not set — no administrator was notified')
     return
   }
   await sendSMS(nums, message)

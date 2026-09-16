@@ -35,6 +35,13 @@ const config: Config = {
           strong:  c('accent-strong'),
         },
 
+        /* Fills only — large blocks with ink on top. Deliberately given no
+           `text-*` friendly shade: lime as type is ~1.4:1 and unreadable, and
+           naming it like a text colour is how it ends up used as one. */
+        deep:   { DEFAULT: c('deep'), 2: c('deep-2') },
+        pop:    { DEFAULT: c('pop'),  soft: c('pop-soft') },
+        hot:    { DEFAULT: c('hot'),  soft: c('hot-soft') },
+
         // Semantic status. A ledger is unreadable without these.
         success: { DEFAULT: c('success'), soft: c('success-soft'), line: c('success-line') },
         warning: { DEFAULT: c('warning'), soft: c('warning-soft'), line: c('warning-line') },
@@ -67,14 +74,19 @@ const config: Config = {
         '4xl': ['2.375rem',  { lineHeight: '2.5rem',   letterSpacing: '-0.03em' }], // 38
       },
 
+      /* Softened across the board. The old scale topped out at 24px on the
+         largest card and sat at 10px by default, which reads as a web form;
+         the app it needs to read as rounds its panels hard and its controls to
+         a pill. Every step moved together so existing `rounded-*` classes land
+         on the new scale without touching a single component. */
       borderRadius: {
-        xs:   '0.375rem',  // 6
-        sm:   '0.5rem',    // 8
-        DEFAULT: '0.625rem', // 10
-        md:   '0.625rem',
-        lg:   '0.875rem',  // 14
-        xl:   '1.125rem',  // 18
-        '2xl':'1.5rem',    // 24
+        xs:   '0.5rem',    // 8
+        sm:   '0.75rem',   // 12
+        DEFAULT: '0.875rem', // 14
+        md:   '0.875rem',
+        lg:   '1.25rem',   // 20
+        xl:   '1.5rem',    // 24
+        '2xl':'1.875rem',  // 30
       },
 
       boxShadow: {

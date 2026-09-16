@@ -8,6 +8,7 @@ import { Spinner } from './spinner'
 export type ButtonVariant =
   | 'primary'    // ink — the one obvious action on a screen
   | 'accent'     // brand green — money moving in the member's favour
+  | 'pop'        // lime, ink on it — the affirmative action, one per screen
   | 'outline'    // the common secondary
   | 'soft'       // tertiary, sits on a card
   | 'ghost'      // toolbar / row-level
@@ -18,6 +19,7 @@ export type ButtonSize = 'sm' | 'md' | 'lg'
 const VARIANT: Record<ButtonVariant, string> = {
   primary:    'btn-dark',
   accent:     'btn-accent',
+  pop:        'btn-pop',
   outline:    'btn-line',
   soft:       'btn-soft',
   ghost:      'btn-ghost',

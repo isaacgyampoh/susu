@@ -216,10 +216,16 @@ export default function GroupDetailPage() {
       {/* Money, for this group alone. */}
       {fin && (
         <MetricRow>
+          {/* `Number(x ?? 0)` rather than the bare `.toLocaleString()` that was
+              here. A single absent count threw and took the whole group screen
+              down to "Application error" — the money, the roster, the rotation
+              and the applications queue, all of which were fine. The type says
+              these are always present; the type describes the intent of the
+              RPC, not what every deployment of it returns. */}
           <Metric label="Expected" value={fin.expected} primary
-            sub={`${fin.days_total.toLocaleString()} contribution days`} />
+            sub={`${Number(fin.days_total ?? 0).toLocaleString()} contribution days`} />
           <Metric label="Received" value={fin.received} tone="good"
-            sub={`${fin.days_paid.toLocaleString()} days settled`} />
+            sub={`${Number(fin.days_paid ?? 0).toLocaleString()} days settled`} />
           <Metric label="Outstanding" value={fin.outstanding}
             tone={fin.outstanding > 0.005 ? 'warn' : undefined}
             sub={fin.days_overdue > 0 ? `${fin.days_overdue} overdue` : 'nothing overdue'} />

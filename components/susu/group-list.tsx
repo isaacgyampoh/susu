@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { ghs } from '@/lib/money'
 import type { MembershipView } from '@/types/portal'
 import { cx } from '@/components/ui'
+import { payoutLabel, collectionLine, shareLabel, NO_DATE } from '@/lib/rotation-words'
 
 /**
  * A MEMBER'S SLOTS, AS A LIST YOU CAN SCAN.
@@ -61,11 +62,11 @@ function SlotRow({ m }: { m: MembershipView }) {
     >
       <div className="min-w-0 flex-1">
         <p className="text-sm text-ink tnum">
-          Slot {m.payout_position}
+          {payoutLabel(m.payout_position)}
           {owes && <span className="ml-2 text-xs font-medium text-warning">Due today</span>}
         </p>
         <p className="text-xs text-ink-3 mt-0.5">
-          {when(m.payout_date) ? `Collects ${when(m.payout_date)}` : 'Collection date not yet assigned'}
+          {collectionLine(m.payout_date)}
         </p>
       </div>
       <div className="text-right shrink-0">
@@ -122,10 +123,10 @@ export default function GroupList({ memberships }: { memberships: MembershipView
               <div className="min-w-0 flex-1">
                 <p className="text-base font-medium text-ink truncate">{name}</p>
                 <p className="text-xs text-ink-2 mt-0.5 tnum">
-                  Slot {first.payout_position} · GHS {ghs(first.contribution_amount)} {first.frequency}
+                  {payoutLabel(first.payout_position)} · GHS {ghs(first.contribution_amount)} {first.frequency}
                 </p>
                 <p className="text-xs text-ink-3 mt-0.5">
-                  {when(first.payout_date) ? `Collects ${when(first.payout_date)}` : 'Collection date not yet assigned'}
+                  {collectionLine(first.payout_date)}
                 </p>
               </div>
               <div className="text-right shrink-0">
@@ -156,7 +157,7 @@ export default function GroupList({ memberships }: { memberships: MembershipView
                 <p className="text-xs text-ink-3 mt-0.5">
                   {dated.length > 0
                     ? `Next collection ${when(dated[0].payout_date)}`
-                    : 'No collection date assigned yet'}
+                    : NO_DATE}
                 </p>
               </div>
               <StatusText {...status} />

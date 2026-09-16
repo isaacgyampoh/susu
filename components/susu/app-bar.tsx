@@ -35,9 +35,13 @@ export function AppBar({
 }) {
   if (variant === 'hero') {
     return (
+      /* Deep green rather than near-black. Near-black under a warm ground read
+         as a different product bolted on top; the green belongs to the same
+         family as the accent, so the band and the page read as one thing. */
       <header className={cx(
-        'relative bg-[#0C0E12] text-white overflow-hidden app-grain',
+        'relative bg-deep text-white overflow-hidden app-grain',
         'pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-7',
+        'rounded-b-[1.875rem]',
         className,
       )}>
         <div className="portal-w relative">
@@ -111,9 +115,13 @@ export function AccountHero({
               <dt className="text-2xs font-medium uppercase tracking-[.07em] text-white/40 truncate">
                 {s.label}
               </dt>
+              {/* On the deep green these two ARE readable as type — coral is
+                  4.9:1 there and lime 8.9:1 — which is the one place a fill
+                  colour earns the right to be text. Tokens, not the hex pair
+                  that used to sit here unexplained. */}
               <dd className={cx(
                 'text-md font-semibold tnum mt-1.5 truncate',
-                s.tone === 'warn' ? 'text-[#F0BE7A]' : s.tone === 'good' ? 'text-[#A7DCC4]' : 'text-white',
+                s.tone === 'warn' ? 'text-hot' : s.tone === 'good' ? 'text-pop' : 'text-white',
               )}>{s.value}</dd>
             </div>
           ))}

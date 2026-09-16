@@ -18,7 +18,10 @@ export function Card({
     <div
       className={cx(
         'rounded-lg border',
-        tone === 'ink'    && 'bg-ink border-ink text-inverse',
+        /* The dark panel is the deep green, matching the home band. It was
+           near-black, so the Payments screen's summary and the dashboard's
+           hero — the same figure, one tap apart — were two different colours. */
+        tone === 'ink'    && 'bg-deep border-deep text-inverse',
         tone === 'accent' && 'bg-accent border-accent text-inverse',
         tone === 'muted'  && 'bg-surface-2 border-line',
         tone === 'default'&& 'bg-surface border-line',

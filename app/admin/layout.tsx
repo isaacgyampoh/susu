@@ -113,10 +113,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div key={group}>
             <p className="px-2.5 mb-1.5 text-[11px] font-medium text-ink-3">{group}</p>
             <div className="space-y-0.5">
+              {/* Full pill on the active row. A 10px-radius rectangle reads as
+                  a highlighted table row; the pill reads as a selected
+                  destination, which is what it is. */}
               {items.map(({ href, label, exact, hint }) => (
                 <Link key={href} href={href}
-                  className={`block px-2.5 py-2 rounded-lg text-[13px] transition-colors ${
-                    on(href, exact) ? 'bg-ink text-white font-medium' : 'text-ink-2 hover:text-ink hover:bg-bg'
+                  className={`block px-3.5 py-2 rounded-full text-[13px] transition-colors ${
+                    on(href, exact) ? 'bg-ink text-white font-medium' : 'text-ink-2 hover:text-ink hover:bg-surface-2'
                   }`}>
                   {label}
                   {hint && (

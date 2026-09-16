@@ -71,41 +71,50 @@ function daysAway(d: string): number {
 }
 
 /* ── One headline ────────────────────────────────────────────────────────────
-   Not a card. Two bordered boxes stacked on a phone is most of the screen
-   spent on chrome, and the brief is explicit about giant cards and excessive
-   borders. A label, a number, a date — separated by one hairline. The hierarchy
-   comes from type size and weight, which is what carries it on a small screen. */
+   Two treatments, and the difference between them carries the meaning.
+
+   `fill` — the member's OWN payout. A lime panel with ink on it: the one thing
+   they came to look at, and the only block on the screen that is a colour. Ink
+   on this lime is 12.6:1, better than the body text it sits beside, so the
+   brightest thing on the page is also the most legible.
+
+   `quiet` — everything else. A label, a number, a date, one hairline. Stacking
+   two filled cards would spend the whole screen shouting and leave the member
+   to work out which one is theirs. */
 function Payout({
-  label, position, date, status, emphasis, note,
+  label, position, date, status, tone, note,
 }: {
   label: string
   position: number | null
   date: string | null
   status?: string
-  emphasis?: boolean
+  tone: 'fill' | 'quiet'
   note?: string
 }) {
+  const filled = tone === 'fill'
   return (
-    <div className="py-3.5">
-      <p className="t-eyebrow">{label}</p>
+    <div className={cx(filled ? 'rounded-xl bg-pop p-4' : 'py-3.5')}>
+      <p className={cx('t-eyebrow', filled && '!text-ink/60')}>{label}</p>
 
       {position === null ? (
-        <p className="text-sm text-ink-2 mt-1.5 leading-relaxed">{note}</p>
+        <p className={cx('text-sm mt-1.5 leading-relaxed', filled ? 'text-ink/75' : 'text-ink-2')}>
+          {note}
+        </p>
       ) : (
         <>
           <p className="flex items-baseline gap-2 mt-1">
             <span className={cx(
-              'font-display font-semibold tracking-[-.02em] tnum',
-              emphasis ? 'text-2xl text-ink' : 'text-xl text-ink',
+              'font-display font-semibold tracking-[-.025em] tnum text-ink',
+              filled ? 'text-3xl' : 'text-xl',
             )}>
               #{position}
             </span>
-            <span className="text-base text-ink-2 tnum truncate">
+            <span className={cx('text-base tnum truncate', filled ? 'text-ink/70' : 'text-ink-2')}>
               {when(date) ?? 'Date not set'}
             </span>
           </p>
           {(status || note) && (
-            <p className="text-xs text-ink-3 mt-1 leading-relaxed">
+            <p className={cx('text-xs mt-1 leading-relaxed', filled ? 'text-ink/65' : 'text-ink-3')}>
               {status}{status && note ? ' · ' : ''}{note}
             </p>
           )}
@@ -134,39 +143,30 @@ export function PayoutHeadlines({ r }: { r: Rotation }) {
   if (mine?.is_next && mine.date) {
     const away = daysAway(mine.date)
     return (
-      <div className="border-y border-line divide-y divide-line-2">
-        <Payout
-          label="Your payout — you are next"
-          position={mine.position}
-          date={mine.date}
-          emphasis
-          status={
-            away > 1 ? `In ${away} days`
-            : away === 1 ? 'Tomorrow'
-            : away === 0 ? 'Today'
-            : undefined
-          }
-          note={[share, mine.amount != null ? `GHS ${ghs(mine.amount)}` : null]
-            .filter(Boolean).join(' · ') || undefined}
-        />
-      </div>
+      <Payout
+        label="Your payout — you are next"
+        position={mine.position}
+        date={mine.date}
+        tone="fill"
+        status={
+          away > 1 ? `In ${away} days`
+          : away === 1 ? 'Tomorrow'
+          : away === 0 ? 'Today'
+          : undefined
+        }
+        note={[share, mine.amount != null ? `GHS ${ghs(mine.amount)}` : null]
+          .filter(Boolean).join(' · ') || undefined}
+      />
     )
   }
 
   return (
-    <div className="border-y border-line divide-y divide-line-2">
-      <Payout
-        label="Next payout"
-        position={next?.position ?? null}
-        date={next?.date ?? null}
-        status={next ? 'Next in the rotation' : undefined}
-        note={next ? undefined : 'No collection date has been set for this group yet.'}
-      />
+    <div className="space-y-2">
       <Payout
         label="My payout"
         position={mine?.position ?? null}
         date={mine?.date ?? null}
-        emphasis
+        tone="fill"
         status={mine?.received ? 'Already collected' : 'Your turn'}
         note={mine
           ? (mine.date
@@ -175,6 +175,19 @@ export function PayoutHeadlines({ r }: { r: Rotation }) {
               : 'Your collector has not set your date yet.')
           : 'You are not in a rotation yet.'}
       />
+      {/* Second, and quiet. Whose turn is next matters, but not more than the
+          member's own — the previous order put someone else's turn first and
+          in the same weight. */}
+      <div className="border-t border-line">
+        <Payout
+          label="Next payout"
+          position={next?.position ?? null}
+          date={next?.date ?? null}
+          tone="quiet"
+          status={next ? 'Next in the rotation' : undefined}
+          note={next ? undefined : 'No collection date has been set for this group yet.'}
+        />
+      </div>
     </div>
   )
 }
@@ -205,9 +218,12 @@ export function RotationList({ seats, limit }: { seats: Seat[]; limit?: number }
         return (
           <li
             key={`${s.position}-${s.date ?? 'none'}`}
+            /* The same lime family as the member's own payout tile above.
+               It was a mint green — a second colour meaning "this is you",
+               which makes the reader check whether it means something else. */
             className={cx(
               'flex items-baseline gap-3 py-3 min-h-[44px]',
-              s.is_you && 'bg-accent-soft -mx-3 px-3 rounded-lg',
+              s.is_you && 'bg-pop-soft -mx-3 px-3 rounded-lg',
             )}
           >
             <span className="text-sm font-medium text-ink tnum shrink-0 w-[46px]">
@@ -243,22 +259,34 @@ export function ContributionStatus({
   outstanding, overdue, deadline,
 }: { outstanding: number; overdue: number; deadline?: string | null }) {
   const owes = outstanding > 0.005
+  const late = overdue > 0.005
+
+  /* Coral ONLY when something is actually late. A colour that appears every
+     day stops being a signal — and in a daily susu most members are mid-cycle
+     and owe something, which is normal, not a problem. Ink on this coral is
+     8.1:1, so the one time it does appear it is still comfortable to read. */
   return (
-    <div className="py-3.5">
-      <p className="t-eyebrow">Contribution status</p>
+    <div className={cx(late ? 'rounded-xl bg-hot-soft border border-hot/35 p-4' : 'py-3.5')}>
+      <p className={cx('t-eyebrow', late && '!text-ink/60')}>Contribution status</p>
       <p className="flex items-center gap-2 mt-1">
         <span aria-hidden="true" className={cx(
           'w-1.5 h-1.5 rounded-full shrink-0',
-          overdue > 0.005 ? 'bg-warning' : owes ? 'bg-ink-3' : 'bg-success',
+          late ? 'bg-hot' : owes ? 'bg-ink-3' : 'bg-success',
         )} />
+        {/* The word carries it; the colour only reinforces. */}
         <span className="text-base font-medium text-ink">
-          {overdue > 0.005 ? 'Overdue' : owes ? 'Payment due' : 'Up to date'}
+          {late ? 'Overdue' : owes ? 'Payment due' : 'Up to date'}
         </span>
       </p>
       {(owes || deadline) && (
-        <p className="text-xs text-ink-3 mt-1 leading-relaxed tnum">
-          {owes && `GHS ${ghs(outstanding)} outstanding.`}
-          {owes && deadline ? ' ' : ''}
+        <p className={cx('text-xs mt-1 leading-relaxed tnum',
+                         late ? 'text-ink/70' : 'text-ink-3')}>
+          {owes && `GHS ${ghs(outstanding)} outstanding`}
+          {owes && late && `, of which GHS ${ghs(overdue)} is overdue`}
+          {owes && '. '}
+          {/* The consequence, said once, where the status is — not again in a
+              second block four lines further down. */}
+          {late && 'Anything still owing on your collection date is deducted from what you receive. '}
           {deadline && `Pay before ${deadline} each day.`}
         </p>
       )}

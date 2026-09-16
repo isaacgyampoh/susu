@@ -54,13 +54,19 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
 
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 bg-surface/85 backdrop-blur-xl border-t border-line
+        className="fixed inset-x-0 bottom-0 z-40 bg-surface/90 backdrop-blur-xl border-t border-line
                    pb-[env(safe-area-inset-bottom)]"
       >
         {/* Spans the viewport. A tab bar centred in a 448px box reads as a
             navigation strip inside a web page; the application's navigation
             should reach both edges of the device. It constrains only at the
-            width where the content column itself does. */}
+            width where the content column itself does.
+
+            Deliberately still edge-to-edge and opaque rather than the floating
+            pill the reference uses: a detached pill sits ON the content, and
+            this list scrolls to a last row that people tap. Anchoring it keeps
+            `main`'s bottom padding honest — that padding is the only reason
+            nothing hides behind it at 320px. */}
         <div className="w-full md:max-w-[46rem] md:mx-auto
                         flex items-stretch h-[var(--tabbar)] px-1.5 md:px-2">
           {TABS.map(({ href, label, icon: Icon }) => {

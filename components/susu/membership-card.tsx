@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { ghs, ghs2 } from '@/lib/money'
 import type { Coverage, MembershipView } from '@/types/portal'
 import { Badge, Button, Card, Money, Progress, cx, type Tone } from '@/components/ui'
+import { payoutLabel, shareLabel, NO_DATE, NO_DATE_HELP } from '@/lib/rotation-words'
 
 /**
  * One membership, rendered in full.
@@ -51,8 +52,10 @@ export default function MembershipCard({
             <p className="text-md font-semibold text-ink truncate">{m.group_name}</p>
             <p className="text-xs text-ink-3 mt-0.5 tnum">
               GHS {ghs(m.contribution_amount)} {m.frequency}
-              {m.slot_fraction < 1 && ` · ${m.slot_fraction === 0.25 ? '¼' : '½'} slot`}
-              {' · '}Slot {m.payout_position}
+              {/* "Half slot", not "½ slot" — a fraction glyph beside a payout
+                  number reads as arithmetic on that number. */}
+              {m.slot_fraction < 1 && ` · ${shareLabel(m.slot_fraction)}`}
+              {' · '}{payoutLabel(m.payout_position)}
             </p>
           </div>
           <Badge tone={cov.tone} className="shrink-0">
@@ -137,7 +140,7 @@ export default function MembershipCard({
           {m.payout_amount != null ? (
             <Money value={m.payout_amount} size="sm" className="mt-0.5" />
           ) : (
-            <p className="text-sm text-ink-3 mt-0.5">Not set</p>
+            <p className="text-sm text-ink-3 mt-0.5">{NO_DATE}</p>
           )}
         </div>
         <div className="text-right min-w-0">
@@ -148,7 +151,7 @@ export default function MembershipCard({
             </p>
           ) : (
             <p className="text-xs text-warning mt-0.5">
-              Not set — ask your collector
+              {NO_DATE_HELP}
             </p>
           )}
         </div>

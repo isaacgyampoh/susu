@@ -17,6 +17,7 @@ import { AppBar, AccountHero } from '@/components/susu/app-bar'
 import {
   PayoutHeadlines, ContributionStatus, RotationList, type Rotation,
 } from '@/components/susu/rotation'
+import { payoutLabel } from '@/lib/rotation-words'
 
 /**
  * The member dashboard.
@@ -196,7 +197,7 @@ export default function Dashboard() {
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium text-ink truncate">{m.group_name}</p>
                     <p className="text-xs text-ink-2 mt-0.5 tnum">
-                      Slot {m.payout_position}
+                      {payoutLabel(m.payout_position)}
                       {m.paid_today > 0.005 &&
                         ` · GHS ${ghs2(m.paid_today)} of GHS ${ghs2(m.due_today + m.paid_today)} paid`}
                     </p>
@@ -268,9 +269,11 @@ export default function Dashboard() {
               </Link>
             </div>
 
-            <PayoutHeadlines r={rotation} />
-
-            <div className="border-b border-line">
+            <div className="space-y-2">
+              <PayoutHeadlines r={rotation} />
+              {/* No wrapper border: ContributionStatus draws its own frame when
+                  something is overdue and stays a plain hairline row when it is
+                  not. A fixed border here double-framed the coral state. */}
               <ContributionStatus
                 outstanding={totals.outstanding}
                 overdue={totals.overdue}
@@ -279,19 +282,17 @@ export default function Dashboard() {
             </div>
 
             {rotation.upcoming.length > 0 && (
-              <div className="pt-3">
+              <div className="pt-4 border-t border-line mt-3">
                 <p className="t-eyebrow mb-0.5">Upcoming rotation</p>
                 <RotationList seats={rotation.upcoming} limit={4} />
               </div>
             )}
           </section>
         ) : (
-          <div className="border-y border-line">
-            <ContributionStatus
-              outstanding={totals.outstanding}
-              overdue={totals.overdue}
-            />
-          </div>
+          <ContributionStatus
+            outstanding={totals.outstanding}
+            overdue={totals.overdue}
+          />
         )}
 
 
@@ -302,19 +303,18 @@ export default function Dashboard() {
         fold. Each line is a fact with its figure; tone is carried by the number
         and a marker, which is enough to separate owed from in-credit.
       */}
-      {(totals.overdue > 0.005 || penalties.length > 0 || totals.advance_credit > 0.005) && (
+      {/*
+        Overdue is NOT repeated here. "Contribution status" above already says
+        it, and the two said it differently — "Overdue · GHS 280 outstanding"
+        followed four lines later by "GHS 168.00 overdue". Two figures for
+        overlapping facts, adjacent on a phone screen, is not emphasis; it reads
+        as a contradiction the member has to resolve. The consequence that made
+        that line worth keeping now travels with the status itself.
+      */}
+      {(penalties.length > 0 || totals.advance_credit > 0.005) && (
         <section aria-labelledby="attn">
           <h2 id="attn" className="t-eyebrow mb-2">Attention</h2>
           <div className="border border-line rounded-xl bg-surface divide-y divide-line-2">
-            {totals.overdue > 0.005 && (
-              <StatusLine
-                tone="bad"
-                amount={`GHS ${ghs2(totals.overdue)}`}
-                label="overdue"
-                detail={`Across ${memberships.filter(m => m.overdue > 0.005).length} group${
-                  memberships.filter(m => m.overdue > 0.005).length === 1 ? '' : 's'}. Anything still owing on a collection date is deducted from what you receive.`}
-              />
-            )}
             {penalties.length > 0 && (
               <StatusLine
                 tone="warn"
@@ -372,45 +372,72 @@ export default function Dashboard() {
       {/* Recent payments, each showing what it actually covered — a single
           MoMo debit can settle several days across several groups. */}
       {payments.length > 0 && (
-        <Card pad="lg">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <p className="t-h2">Recent payments</p>
+        /*
+          A section, not a card of cards. This was a padded white Card whose
+          every row was itself a bordered box — two frames around each payment,
+          which at 360px is a lot of chrome around three short lines. The rest
+          of this screen separates blocks with a hairline; this one now does
+          too, and the page finally reads as one surface.
+        */
+        <section aria-labelledby="recent">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <h2 id="recent" className="t-eyebrow">Recent payments</h2>
             <Link href="/m/portal/payments"
               className="inline-flex items-center gap-0.5 text-xs font-medium text-ink-2 hover:text-ink transition-colors">
               See all <ArrowRight size={13} strokeWidth={2.4} aria-hidden="true" />
             </Link>
           </div>
-          <div className="space-y-2.5">
+          <div className="divide-y divide-line-2 border-t border-line">
             {payments.slice(0, 4).map(p => {
               const byGroup = new Map<string, { amount: number; days: number }>()
-              for (const it of p.items) {
+              // A payment with no breakdown must not take down the home screen.
+              // `items` is non-optional in the type, so this looked safe; it is
+              // not, because the type describes what the endpoint intends to
+              // send, not what arrives. One payment row that settled nothing
+              // yet — or any shape drift — threw here and the member got
+              // "Application error: a client-side exception has occurred"
+              // instead of their balance, their payouts and their groups.
+              for (const it of p.items ?? []) {
                 const g = byGroup.get(it.group) ?? { amount: 0, days: 0 }
                 g.amount += it.amount; g.days += 1
                 byGroup.set(it.group, g)
               }
               return (
-                <div key={p.reference} className="rounded-md border border-line p-3">
-                  <div className="flex items-center justify-between gap-3 mb-2">
+                <div key={p.reference} className="py-3">
+                  <div className="flex items-center justify-between gap-3 mb-1.5">
                     <Money value={p.total} exact size="sm" />
                     <p className="text-xs text-ink-3">
                       {p.at ? format(new Date(p.at), 'd MMM, HH:mm') : ''}
                     </p>
                   </div>
-                  <div className="space-y-1">
-                    {Array.from(byGroup.entries()).map(([g, v]) => (
-                      <div key={g} className="flex items-center justify-between gap-3 text-xs">
-                        <span className="text-ink-2 truncate">{g}</span>
-                        <span className="text-ink font-medium tnum shrink-0">
-                          GHS {ghs2(v.amount)} · {v.days} day{v.days === 1 ? '' : 's'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {byGroup.size === 0 ? (
+                    /*
+                      A payment that has not settled anything yet. It used to
+                      render as an empty framed box — an amount, a date and a
+                      void — which reads as something having gone wrong. It has
+                      not: the money is recorded and the days it covers are
+                      worked out when it settles.
+                    */
+                    <p className="text-xs text-ink-3">
+                      Recorded. The days it covers appear once it settles.
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      {Array.from(byGroup.entries()).map(([g, v]) => (
+                        <div key={g} className="flex items-center justify-between gap-3 text-xs">
+                          <span className="text-ink-2 truncate">{g}</span>
+                          <span className="text-ink font-medium tnum shrink-0">
+                            GHS {ghs2(v.amount)} · {v.days} day{v.days === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
-        </Card>
+        </section>
       )}
 
       </div>
@@ -471,7 +498,7 @@ function DashboardSkeleton() {
   return (
     <div role="status" aria-label="Loading your account">
       {/* Mirrors the real composition, so nothing jumps when data lands. */}
-      <div className="bg-[#0C0E12] pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-7">
+      <div className="bg-deep rounded-b-[1.875rem] pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-7">
         <div className="portal-w space-y-3">
           <Skeleton className="h-5 w-36 bg-white/10" />
           <Skeleton className="h-3 w-24 bg-white/10 !mt-7" />
