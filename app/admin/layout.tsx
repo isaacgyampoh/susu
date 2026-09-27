@@ -18,6 +18,13 @@ const NAV: { group: string; items: NavItem[] }[] = [
     { href: '/admin/kyc',           label: 'Registrations',  hint: 'who has paid, who is waiting' },
     { href: '/admin/payouts',       label: 'Payouts',        hint: 'who collects' },
   ]},
+  /* The shop sits above the susu groups now, because it is where new business
+     comes from. The rotations keep their own section: they are still running,
+     still collecting, and still the larger balance on the books. */
+  { group: 'Shop', items: [
+    { href: '/admin/products',      label: 'Products',  hint: 'what you sell & the plans' },
+    { href: '/admin/purchases',     label: 'Purchases', hint: 'who is paying off what' },
+  ]},
   { group: 'People & groups', items: [
     { href: '/admin/members',       label: 'Members' },
     { href: '/admin/groups',        label: 'Groups' },
