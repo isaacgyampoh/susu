@@ -7,6 +7,13 @@ import { callFunction, getMemberToken } from '@/lib/supabase'
 import { AppBar } from '@/components/susu/app-bar'
 import { ScheduleTable, mediaUrl } from '@/components/susu/purchases'
 import { Button, EmptyState, Skeleton, useToast, cx } from '@/components/ui'
+
+/** Same rule as the schedule: an unreadable date is omitted, never thrown. */
+const safeDate = (v: string | null | undefined, fmt: string) => {
+  if (!v) return ''
+  const t = new Date(v)
+  return Number.isNaN(t.getTime()) ? '' : format(t, fmt)
+}
 import { ghs } from '@/lib/money'
 
 /**
@@ -132,7 +139,7 @@ export default function PurchaseDetailPage() {
               </p>
               <p className={cx('text-xs mt-1 tnum', done ? 'text-ink/65' : 'text-ink-3')}>
                 {done
-                  ? `${p.plan} · finished ${p.completed_at ? format(new Date(p.completed_at), 'd MMM yyyy') : ''}`
+                  ? `${p.plan} · finished ${safeDate(p.completed_at, 'd MMM yyyy')}`
                   : `GHS ${ghs(p.paid)} of GHS ${ghs(p.total)} paid · ${pct}%`}
               </p>
             </div>
@@ -179,7 +186,7 @@ export default function PurchaseDetailPage() {
                     GHS {ghs(x.amount)}
                   </span>
                   <span className="text-xs text-ink-2 flex-1 min-w-0 truncate">
-                    {format(new Date(x.at), 'd MMM yyyy, HH:mm')}
+                    {safeDate(x.at, 'd MMM yyyy, HH:mm')}
                     {x.installment && ` · payment ${x.installment}`}
                   </span>
                   {/* A reversal stays on the record rather than disappearing —
@@ -196,7 +203,7 @@ export default function PurchaseDetailPage() {
         )}
 
         <p className="text-2xs text-ink-3 mt-6 leading-relaxed">
-          Reference {p.reference} · {p.plan} · started {format(new Date(p.started_on + 'T12:00:00Z'), 'd MMM yyyy')}.
+          Reference {p.reference} · {p.plan} · started {safeDate(p.started_on + 'T12:00:00Z', 'd MMM yyyy')}.
           The price and terms are the ones you agreed to and do not change.
         </p>
       </div>

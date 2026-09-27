@@ -39,8 +39,14 @@ export interface PurchaseRow {
 const MEDIA = `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}/storage/v1/object/public/product-media/`
 export const mediaUrl = (p: string | null) => (p ? MEDIA + p : null)
 
-const when = (d?: string | null) =>
-  d ? format(new Date(d + 'T12:00:00Z'), 'd MMM yyyy') : null
+/* date-fns `format` throws RangeError on an unparseable value, and one bad
+   date in a schedule of twelve took the whole page down to a blank. A date we
+   cannot read is a date we do not show. */
+const when = (d?: string | null) => {
+  if (!d) return null
+  const t = new Date(d + 'T12:00:00Z')
+  return Number.isNaN(t.getTime()) ? null : format(t, 'd MMM yyyy')
+}
 
 /**
  * What this purchase is doing, in words.
