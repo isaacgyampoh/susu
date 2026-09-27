@@ -142,3 +142,24 @@ verify_jwt = false
 
 [functions.member-rotation]
 verify_jwt = false
+
+[functions.shop-catalogue]
+verify_jwt = false
+
+[functions.shop-signup]
+verify_jwt = false
+
+[functions.shop-purchase]
+verify_jwt = false
+
+[functions.shop-pay]
+verify_jwt = false
+
+[functions.member-purchases]
+verify_jwt = false
+
+[functions.admin-products]
+verify_jwt = false
+
+[functions.admin-purchases]
+verify_jwt = false

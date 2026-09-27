@@ -94,6 +94,31 @@ async function handleCallback(orderId: string) {
   // lesser of it and the recorded amount, so a short payment cannot
   // over-credit. The old code settled `existing.amount` regardless of what
   // actually arrived.
+  /*
+   * An instalment pays down a purchase. Routed here as well as in
+   * payments-verify, because these are two doors into the same room: the phone
+   * asks "did it land?" and NaloPay independently says "it landed", and
+   * whichever arrives first must settle it. Both call the same idempotent
+   * function, so the second one to arrive applies nothing — which is exactly
+   * the duplicate-callback case §28 asks about, tested in phase-e.
+   */
+  if (tx.type === 'installment') {
+    if (!tx.related_id) {
+      console.error(`nalo: instalment ${tx.reference} has no purchase attached`)
+      return
+    }
+    try {
+      const { error: pe } = await supabaseAdmin.rpc('settle_purchase_payment', {
+        p_reference: tx.reference, p_purchase_id: tx.related_id,
+      })
+      if (pe) throw new Error(pe.message)
+      console.log(`nalo: instalment ${tx.reference} settled`)
+    } catch (e) {
+      console.error(`nalo: instalment settlement failed for ${tx.reference}:`, (e as Error).message)
+    }
+    return
+  }
+
   // A registration fee is not a contribution and has no obligation to settle
   // against — routing it through the allocation engine would raise.
   if (tx.type === 'registration_fee') {

@@ -57,6 +57,17 @@ export const ENDPOINTS: Record<string, Effect[]> = {
   'member-statement':          ['READ_ONLY'],
   'member-payment':            ['READ_ONLY'],
   'member-rotation':           ['READ_ONLY'],
+  // ── The shop ────────────────────────────────────────────────────────────
+  'shop-catalogue':            ['READ_ONLY'],
+  'member-purchases':          ['READ_ONLY'],
+  // Creates a member row, so not read-only even though nobody has paid yet.
+  'shop-signup':               ['ADMIN_MUTATION'],
+  // Writes a purchase and its schedule, and decrements stock.
+  'shop-purchase':             ['FINANCIAL_MUTATION'],
+  // Asks NaloPay for money. Settles nothing itself.
+  'shop-pay':                  ['EXTERNAL_PAYMENT'],
+  'admin-products':            ['ADMIN_MUTATION'],
+  'admin-purchases':           ['ADMIN_MUTATION'],
   'payments-preview':          ['READ_ONLY'],
   // Retired in Phase 04; answers 410 and touches nothing.
   'admin-reconcile-payments':  ['READ_ONLY'],

@@ -76,6 +76,43 @@ serveWithCors(async (req) => {
       })
     }
 
+    /*
+     * An instalment pays down a purchase, not a rotation. It settles through
+     * `settle_purchase_payment`, which is the same shape as the susu engine —
+     * locks the transaction, allocates oldest instalment first, writes to
+     * payment_allocations, refuses a transaction that is not already success.
+     *
+     * The purchase it belongs to travels on `related_id`, set when the payment
+     * was initiated. Taking it from the request instead would let a customer
+     * point somebody else's confirmed payment at their own purchase.
+     */
+    if (tx.type === 'installment') {
+      if (!tx.related_id) {
+        console.error('installment payment with no purchase:', reference)
+        return json({ status: 'pending',
+                      message: 'Your payment arrived but is still being recorded.' })
+      }
+      try {
+        const { data: r, error: pe } = await supabaseAdmin
+          .rpc('settle_purchase_payment', {
+            p_reference: reference, p_purchase_id: tx.related_id,
+          })
+        if (pe) throw new Error(pe.message)
+        const res = r as { fully_paid?: boolean; balance?: number } | null
+        return json({
+          status: 'paid',
+          message: res?.fully_paid
+            ? 'Payment complete. Your purchase is ready — the shop will be in touch about collection.'
+            : `Payment received. GHS ${Number(res?.balance ?? 0).toFixed(2)} left to pay.`,
+          purchase: res,
+        })
+      } catch (e) {
+        console.error('instalment settlement failed:', (e as Error).message)
+        return json({ status: 'pending',
+                      message: 'Your payment arrived but is still being recorded. It will appear shortly.' })
+      }
+    }
+
     // A registration fee buys a place in a group; it settles no obligation.
     if (tx.type === 'registration_fee') {
       try {
