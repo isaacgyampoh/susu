@@ -20,3 +20,4 @@ supabase/.temp/
 # values belong nowhere in this repository.
 supabase/.env
 supabase/functions/.env
+.env*
