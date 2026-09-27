@@ -6,6 +6,7 @@ import { provider, paymentsUnavailable } from '../_shared/mode.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 import { settlePayment } from '../_shared/settle.ts'
 import { settleRegistrationFee } from '../_shared/registration-fee.ts'
+import { notifyPurchasePayment } from '../_shared/purchase-notify.ts'
 
 /**
  * The member's app polls this after approving a prompt.
@@ -98,7 +99,10 @@ serveWithCors(async (req) => {
             p_reference: reference, p_purchase_id: tx.related_id,
           })
         if (pe) throw new Error(pe.message)
-        const res = r as { fully_paid?: boolean; balance?: number } | null
+        const res = r as {
+          duplicate?: boolean; applied?: number; fully_paid?: boolean; balance?: number
+        } | null
+        await notifyPurchasePayment(tx.related_id, res)
         return json({
           status: 'paid',
           message: res?.fully_paid

@@ -4,6 +4,7 @@ import { paymentStatus, parseCallback } from '../_shared/nalo.ts'
 import { sendSMS, smsTemplates, notifyAdmins } from '../_shared/africas-talking.ts'
 import { settlePayment } from '../_shared/settle.ts'
 import { settleRegistrationFee } from '../_shared/registration-fee.ts'
+import { notifyPurchasePayment } from '../_shared/purchase-notify.ts'
 
 /**
  * NaloPay payment callback.
@@ -108,10 +109,11 @@ async function handleCallback(orderId: string) {
       return
     }
     try {
-      const { error: pe } = await supabaseAdmin.rpc('settle_purchase_payment', {
+      const { data: r, error: pe } = await supabaseAdmin.rpc('settle_purchase_payment', {
         p_reference: tx.reference, p_purchase_id: tx.related_id,
       })
       if (pe) throw new Error(pe.message)
+      await notifyPurchasePayment(tx.related_id, r as never)
       console.log(`nalo: instalment ${tx.reference} settled`)
     } catch (e) {
       console.error(`nalo: instalment settlement failed for ${tx.reference}:`, (e as Error).message)

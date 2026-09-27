@@ -63,7 +63,7 @@ export const ENDPOINTS: Record<string, Effect[]> = {
   // Creates a member row, so not read-only even though nobody has paid yet.
   'shop-signup':               ['ADMIN_MUTATION'],
   // Writes a purchase and its schedule, and decrements stock.
-  'shop-purchase':             ['FINANCIAL_MUTATION'],
+  'shop-purchase':             ['FINANCIAL_MUTATION', 'SMS_NOTIFICATION'],
   // Asks NaloPay for money. Settles nothing itself.
   'shop-pay':                  ['EXTERNAL_PAYMENT'],
   'admin-products':            ['ADMIN_MUTATION'],

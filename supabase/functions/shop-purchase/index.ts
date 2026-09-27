@@ -2,6 +2,7 @@ import { handleCors, json, error, serveWithCors } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabase-admin.ts'
 import { requireMember } from '../_shared/jwt.ts'
 import { rateLimit, tooManyMessage } from '../_shared/rate-limit.ts'
+import { sendSMS, smsTemplates } from '../_shared/africas-talking.ts'
 
 /**
  * STARTING A PURCHASE.
@@ -51,6 +52,28 @@ serveWithCors(async (req) => {
       // "That plan is no longer offered", "out of stock" — the database raises
       // the sentence the customer should read, so it says one thing only.
       return error(e.message, 400, req)
+    }
+
+    /*
+     * Tell them what they have taken on, with the first date. Failure to text
+     * must not fail the purchase — the row is written and correct either way,
+     * and a customer who got no SMS still sees it in their portal.
+     */
+    try {
+      const { data: m } = await supabaseAdmin
+        .from('members').select('full_name, phone').eq('id', session.sub).single()
+      const who = m as { full_name: string; phone: string } | null
+      if (who?.phone) {
+        await sendSMS(who.phone, smsTemplates.purchaseStarted(
+          who.full_name.split(' ')[0],
+          String(data.product),
+          Number(data.total).toFixed(2),
+          Number(data.first_amount).toFixed(2),
+          String(data.first_due),
+        ))
+      }
+    } catch (e) {
+      console.error('purchase SMS failed (non-fatal):', (e as Error).message)
     }
 
     return json({ purchase: data }, 201, req)

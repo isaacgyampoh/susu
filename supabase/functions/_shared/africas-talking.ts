@@ -135,6 +135,24 @@ export const smsTemplates = {
     `Congratulations ${name}! Your Susu payout of GHS ${amount} is scheduled for ${date}.`,
   applicationApproved: (name: string, memberId: string, passcode: string, portalUrl: string) =>
     `Hello ${name}, your Abbie Wealth Susu application is approved. ID: ${memberId} | Passcode: ${passcode} | Sign in: ${portalUrl} | Keep your passcode private.`,
+  /* ── The shop ──────────────────────────────────────────────────────────
+     Three messages, tied to the three moments a customer's money changes
+     state. Deliberately not four: there is no "thank you for browsing", and
+     no message on every status tick. An SMS costs the business money and
+     costs the customer attention, and the ones that arrive for nothing are
+     why the ones that matter get ignored. */
+  purchaseStarted: (name: string, product: string, total: string, each: string, firstDue: string) =>
+    `Hi ${name}, your purchase of ${product} is set up. Total GHS ${total}. ` +
+    `First payment of GHS ${each} is due ${firstDue}. Pay from your Abbie Wealth portal.`,
+  installmentReceived: (name: string, amount: string, product: string, balance: string) =>
+    `Hi ${name}, we received GHS ${amount} towards your ${product}. ` +
+    `GHS ${balance} left to pay. Thank you!`,
+  purchaseComplete: (name: string, product: string) =>
+    `Congratulations ${name}! Your ${product} is fully paid. ` +
+    `We will contact you about collecting it. Thank you for your custom.`,
+  installmentDue: (name: string, amount: string, product: string, due: string) =>
+    `Hi ${name}, your GHS ${amount} payment for ${product} is due ${due}. ` +
+    `Pay from your Abbie Wealth portal.`,
   applicationRejected: (name: string, reason: string) =>
     `Hi ${name}, your Abbie Wealth Susu application was not approved. Reason: ${reason}. Contact us on 0550302322.`,
 }
