@@ -22,8 +22,9 @@ const NAV: { group: string; items: NavItem[] }[] = [
      comes from. The rotations keep their own section: they are still running,
      still collecting, and still the larger balance on the books. */
   { group: 'Shop', items: [
-    { href: '/admin/products',      label: 'Products',  hint: 'what you sell & the plans' },
-    { href: '/admin/purchases',     label: 'Purchases', hint: 'who is paying off what' },
+    { href: '/admin/products',      label: 'Products',     hint: 'what you sell & the plans' },
+    { href: '/admin/installments',  label: 'Instalments',  hint: 'requests & new agreements' },
+    { href: '/admin/purchases',     label: 'Agreements',   hint: 'balances & recording payments' },
   ]},
   { group: 'People & groups', items: [
     { href: '/admin/members',       label: 'Members' },

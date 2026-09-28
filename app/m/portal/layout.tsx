@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Wallet, User, type LucideIcon, ShoppingBag } from 'lucide-react'
+import { Home, Wallet, Repeat, User, type LucideIcon } from 'lucide-react'
 import InstallApp from '@/components/install-app'
 import { cx } from '@/components/ui'
 
@@ -18,26 +18,21 @@ import { cx } from '@/components/ui'
  * Four gives 87px targets on the smallest phone this has to work on.
  */
 /*
- * ── WHY PURCHASES TOOK ROTATION'S TAB ───────────────────────────────────────
- * The business now sells goods on instalment as well as running rotations, and
- * a growing share of the people here have never joined a group at all — they
- * are paying off a fridge. For them a Rotation tab leads to an empty screen,
- * every time.
+ * ── THIS PORTAL IS FOR SUSU MEMBERS, AND ONLY THEM ──────────────────────────
+ * A Purchases tab lived here briefly, while instalments were something a
+ * customer drove themselves. They are not: somebody buying a fridge on credit
+ * agrees terms with the collector, pays her in cash or MoMo, and she records
+ * it. They never sign in, and giving them a login to a screen they cannot act
+ * on would be an account to forget the password to and nothing more.
  *
- * A fifth tab was the obvious answer and the wrong one: it takes targets from
- * 87px back to 69px at 360px, which is the measurement that put this bar at
- * four in the first place.
- *
- * So Rotation moves one tap away, onto Home — where the member's own payout
- * block already sits and already links to it. A susu member loses nothing they
- * were not already reaching from there; a shop customer stops being offered a
- * screen that has nothing on it.
+ * So the tabs are the rotation again. Instalment customers hear from the shop
+ * by text, which is the channel they actually read.
  */
 const TABS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/m/portal/dashboard', label: 'Home',      icon: Home },
-  { href: '/m/portal/purchases', label: 'Purchases', icon: ShoppingBag },
-  { href: '/m/portal/payments',  label: 'Payments',  icon: Wallet },
-  { href: '/m/portal/profile',   label: 'Profile',   icon: User },
+  { href: '/m/portal/dashboard', label: 'Home',     icon: Home },
+  { href: '/m/portal/rotation',  label: 'Rotation', icon: Repeat },
+  { href: '/m/portal/payments',  label: 'Payments', icon: Wallet },
+  { href: '/m/portal/profile',   label: 'Profile',  icon: User },
 ]
 
 export default function MemberLayout({ children }: { children: React.ReactNode }) {

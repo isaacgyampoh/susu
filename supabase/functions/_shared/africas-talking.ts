@@ -147,6 +147,9 @@ export const smsTemplates = {
   installmentReceived: (name: string, amount: string, product: string, balance: string) =>
     `Hi ${name}, we received GHS ${amount} towards your ${product}. ` +
     `GHS ${balance} left to pay. Thank you!`,
+  requestReceived: (name: string, product: string, ref: string) =>
+    `Hi ${name}, we have your request for ${product} (ref ${ref}). ` +
+    `We will call you shortly to arrange the payment plan. Abbie Wealth.`,
   purchaseComplete: (name: string, product: string) =>
     `Congratulations ${name}! Your ${product} is fully paid. ` +
     `We will contact you about collecting it. Thank you for your custom.`,

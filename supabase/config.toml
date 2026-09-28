@@ -149,17 +149,14 @@ verify_jwt = false
 [functions.shop-signup]
 verify_jwt = false
 
-[functions.shop-purchase]
-verify_jwt = false
-
-[functions.shop-pay]
-verify_jwt = false
-
-[functions.member-purchases]
-verify_jwt = false
-
 [functions.admin-products]
 verify_jwt = false
 
 [functions.admin-purchases]
+verify_jwt = false
+
+[functions.shop-request]
+verify_jwt = false
+
+[functions.admin-installments]
 verify_jwt = false

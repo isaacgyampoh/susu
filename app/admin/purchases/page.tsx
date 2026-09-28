@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { callFunction, getAdminToken } from '@/lib/supabase'
 import { ghs } from '@/lib/money'
 import {
-  Page, PageHeader, Button, EmptyState, Skeleton, SearchBar,
+  Page, PageHeader, Button, EmptyState, Skeleton, SearchBar, Modal, Field,
   Metric, MetricRow, TableWrap, THead, TH, TBody, TR, TD, cx, useToast,
 } from '@/components/ui'
 
@@ -64,6 +64,8 @@ export default function AdminPurchasesPage() {
   const [q, setQ]       = useState('')
   const [status, setStatus] = useState('')
   const [acting, setActing] = useState('')
+  const [payFor, setPayFor] = useState<Row | null>(null)
+  const [paying, setPaying] = useState(false)
 
   const load = useCallback(async () => {
     setL(true)
@@ -88,6 +90,33 @@ export default function AdminPurchasesPage() {
     if (error) { toast.error({ title: 'Could not update', body: error }); return }
     toast.success({ title: `Marked ${label}` })
     load()
+  }
+
+  /*
+   * Recording money that arrived at the shop. This is the collector's most
+   * frequent action and the only way a balance ever moves — there is no field
+   * anywhere that lets an outstanding figure be retyped.
+   */
+  async function recordPayment(form: FormData, r: Row) {
+    setPaying(true)
+    const { error } = await callFunction('admin-installments?payment=1', {
+      method: 'POST', token: getAdminToken()!,
+      body: {
+        purchase_id: r.id,
+        amount: Number(form.get('amount')),
+        method: form.get('method'),
+        reference: form.get('reference') || null,
+        paid_on: form.get('paid_on') || undefined,
+        note: form.get('note') || null,
+      },
+    })
+    setPaying(false)
+    if (error) { toast.error({ title: 'Could not record that payment', body: error }); return }
+    toast.success({
+      title: 'Payment recorded',
+      body: `${r.customer} has been texted the new balance.`,
+    })
+    setPayFor(null); load()
   }
 
   const t = data?.totals
@@ -189,6 +218,10 @@ export default function AdminPurchasesPage() {
                             onClick={() => mark(r.id, 'collected', 'collected')}>
                       {acting === r.id ? '…' : 'Mark collected'}
                     </Button>
+                  ) : r.balance > 0.005 && r.status !== 'cancelled' && r.status !== 'refunded' ? (
+                    <Button size="sm" variant="outline" onClick={() => setPayFor(r)}>
+                      Record payment
+                    </Button>
                   ) : (
                     <span className="text-xs text-ink-3">
                       {r.fulfilment_status === 'not_ready' ? '—'
@@ -201,6 +234,48 @@ export default function AdminPurchasesPage() {
           </TBody>
         </TableWrap>
       )}
+      <Modal open={!!payFor} onClose={() => setPayFor(null)}
+             title={payFor ? `Payment from ${payFor.customer}` : 'Record payment'}>
+        {payFor && (
+          <form onSubmit={e => { e.preventDefault(); recordPayment(new FormData(e.currentTarget), payFor) }}
+                className="space-y-3">
+            <p className="text-sm text-ink-2 leading-relaxed">
+              {payFor.product} · GHS {ghs(payFor.balance)} still owing.
+            </p>
+            <Field label="Amount received (GHS)" required
+                   hint="More than the balance is refused rather than absorbed.">
+              {({ id }) => <input id={id} name="amount" type="number" step="0.01" required
+                className="in" max={payFor.balance} autoFocus />}
+            </Field>
+            <Field label="How they paid" required>
+              {({ id }) => (
+                <select id={id} name="method" className="in" defaultValue="cash">
+                  <option value="cash">Cash</option>
+                  <option value="momo">Mobile money</option>
+                  <option value="bank">Bank transfer</option>
+                  <option value="other">Other</option>
+                </select>
+              )}
+            </Field>
+            <Field label="Reference" hint="The MoMo or bank reference, if there is one.">
+              {({ id }) => <input id={id} name="reference" className="in" />}
+            </Field>
+            <Field label="Date received">
+              {({ id }) => <input id={id} name="paid_on" type="date" className="in"
+                defaultValue={new Date().toISOString().slice(0, 10)} />}
+            </Field>
+            <Field label="Note">
+              {({ id }) => <input id={id} name="note" className="in" />}
+            </Field>
+            <div className="flex gap-2 pt-1">
+              <Button type="submit" disabled={paying}>
+                {paying ? 'Recording…' : 'Record payment'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setPayFor(null)}>Cancel</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </Page>
   )
 }
