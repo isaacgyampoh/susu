@@ -64,6 +64,9 @@ export const ENDPOINTS: Record<string, Effect[]> = {
   // Writes a purchase and its schedule, and decrements stock.
   // Writes a request and texts the collector. Creates no obligation.
   'shop-request':              ['ADMIN_MUTATION', 'SMS_NOTIFICATION'],
+  // Writes an order and asks NaloPay for money. Settles nothing itself.
+  'shop-order':                ['EXTERNAL_PAYMENT'],
+  'admin-orders':              ['ADMIN_MUTATION'],
   // Agreements and money taken at the shop.
   'admin-installments':        ['FINANCIAL_MUTATION', 'SMS_NOTIFICATION'],
   // Asks NaloPay for money. Settles nothing itself.

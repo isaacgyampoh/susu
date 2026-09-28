@@ -23,6 +23,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
      still collecting, and still the larger balance on the books. */
   { group: 'Shop', items: [
     { href: '/admin/products',      label: 'Products',     hint: 'what you sell & the plans' },
+    { href: '/admin/orders',        label: 'Orders',       hint: 'bought and paid outright' },
     { href: '/admin/installments',  label: 'Instalments',  hint: 'requests & new agreements' },
     { href: '/admin/purchases',     label: 'Agreements',   hint: 'balances & recording payments' },
   ]},

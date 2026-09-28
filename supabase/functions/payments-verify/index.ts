@@ -117,6 +117,31 @@ serveWithCors(async (req) => {
       }
     }
 
+    /*
+     * An order is paid in full and settled in one step: no schedule, no
+     * balance, nothing to chase. Same idempotency as everywhere else — the
+     * reference is the identity of the money.
+     */
+    if (tx.type === 'order') {
+      if (!tx.related_id) {
+        console.error('order payment with no order:', reference)
+        return json({ status: 'pending',
+                      message: 'Your payment arrived but is still being recorded.' })
+      }
+      try {
+        const { data: r, error: oe } = await supabaseAdmin
+          .rpc('settle_order_payment', { p_reference: reference, p_order_id: tx.related_id })
+        if (oe) throw new Error(oe.message)
+        return json({ status: 'paid',
+          message: 'Payment received. We will contact you about collection or delivery.',
+          order: r })
+      } catch (e) {
+        console.error('order settlement failed:', (e as Error).message)
+        return json({ status: 'pending',
+                      message: 'Your payment arrived but is still being recorded.' })
+      }
+    }
+
     // A registration fee buys a place in a group; it settles no obligation.
     if (tx.type === 'registration_fee') {
       try {

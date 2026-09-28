@@ -121,6 +121,21 @@ async function handleCallback(orderId: string) {
     return
   }
 
+  // An order is settled outright, in one step.
+  if (tx.type === 'order') {
+    if (!tx.related_id) {
+      console.error(`nalo: order payment ${tx.reference} has no order attached`); return }
+    try {
+      const { error: oe } = await supabaseAdmin.rpc('settle_order_payment', {
+        p_reference: tx.reference, p_order_id: tx.related_id })
+      if (oe) throw new Error(oe.message)
+      console.log(`nalo: order ${tx.reference} settled`)
+    } catch (e) {
+      console.error(`nalo: order settlement failed for ${tx.reference}:`, (e as Error).message)
+    }
+    return
+  }
+
   // A registration fee is not a contribution and has no obligation to settle
   // against — routing it through the allocation engine would raise.
   if (tx.type === 'registration_fee') {

@@ -160,3 +160,9 @@ verify_jwt = false
 
 [functions.admin-installments]
 verify_jwt = false
+
+[functions.shop-order]
+verify_jwt = false
+
+[functions.admin-orders]
+verify_jwt = false
