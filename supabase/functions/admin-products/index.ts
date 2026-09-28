@@ -158,10 +158,42 @@ serveWithCors(async (req) => {
       }, 200, req)
     }
 
+    /* ── ASK FOR SOMEWHERE TO PUT A FILE ────────────────────────────────
+       The console cannot write to the bucket directly: RLS is on for
+       storage.objects with no policies, so anon and authenticated can write
+       nothing — only the service role passes, and the service role must never
+       reach a browser.
+
+       The first version uploaded straight from the console with the anon key
+       and could not have worked; the button was there and every upload would
+       have failed.
+
+       So this mints a short-lived signed URL scoped to ONE path, and the
+       browser PUTs to that. The bytes still skip the edge worker — a 50MB
+       video through a function would time out — and no write permission is
+       handed to the public key to get it. */
+    if (req.method === 'POST' && id && url.searchParams.get('upload') === '1') {
+      const b = await req.json().catch(() => null)
+      const name = String(b?.filename ?? 'file')
+      const kind = String(b?.kind ?? 'image')
+      if (!['image', 'video'].includes(kind)) {
+        return error('Media must be an image or a video', 400, req)
+      }
+      // The path is built here, not accepted from the caller: a client-chosen
+      // path is a client-chosen place to write.
+      const safe = name.replace(/[^\w.-]/g, '').slice(-60) || 'file'
+      const path = `${id}/${crypto.randomUUID()}-${safe}`
+
+      const { data, error: e } = await supabaseAdmin
+        .storage.from('product-media').createSignedUploadUrl(path)
+      if (e) return error(e.message, 502, req)
+
+      return json({ path, signedUrl: data?.signedUrl, token: data?.token }, 200, req)
+    }
+
     // ── MEDIA ──
-    // The file itself is uploaded straight to the `product-media` bucket by
-    // the console; this records where it landed. Keeping the upload out of the
-    // function avoids passing a 50MB video through an edge worker.
+    // Records where a file landed after the browser uploaded it to the signed
+    // URL above. The upload itself does not pass through this worker.
     if (req.method === 'POST' && id && isMedia) {
       const b = await req.json().catch(() => null)
       if (!b?.storage_path) return error('No file path given', 400, req)

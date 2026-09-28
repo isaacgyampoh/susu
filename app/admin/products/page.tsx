@@ -40,7 +40,6 @@ interface Product {
 }
 
 const SB    = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-const ANON  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 const MEDIA = `${SB}/storage/v1/object/public/product-media/`
 
 /* `Field` is a label/hint/error wrapper that hands its child the ids it needs.
@@ -138,34 +137,56 @@ export default function AdminProductsPage() {
   }
 
   /*
-   * The file goes straight from the browser to the bucket, and only the path
-   * comes back through the function. Pushing a 50MB product video through an
-   * edge worker would time out, and there is no reason for the bytes to make
-   * the detour.
+   * Three steps, and the middle one is the only place the bytes travel.
+   *
+   *   1. ask the function for a signed URL  (service role, one path, expires)
+   *   2. PUT the file to it                 (browser → bucket, no worker)
+   *   3. tell the function where it landed
+   *
+   * It used to POST straight to the bucket with the anon key, which could
+   * never have worked: RLS is on for storage.objects with no policies, so the
+   * public key can write nothing. The button was there and every upload failed.
+   * Granting anon write access would have "fixed" it by letting anybody on the
+   * internet fill the bucket.
    */
   async function upload(product: Product, file: File) {
+    const kind = file.type.startsWith('video') ? 'video' : 'image'
+
+    // Worth saying before the upload rather than after a long wait on a phone.
+    const LIMIT = 50 * 1024 * 1024
+    if (file.size > LIMIT) {
+      toast.error({
+        title: 'That file is too big',
+        body: `${(file.size / 1024 / 1024).toFixed(0)}MB — the limit is 50MB. `
+            + 'Shorten the video or save the photo at a smaller size.',
+      })
+      return
+    }
+
     setUploading(product.id)
     try {
-      const kind = file.type.startsWith('video') ? 'video' : 'image'
-      const path = `${product.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, '')}`
+      const { data: slot, error: sErr } = await callFunction<
+        { path: string; signedUrl: string; token: string }
+      >(`admin-products?id=${product.id}&upload=1`, {
+        method: 'POST', token: getAdminToken()!,
+        body: { filename: file.name, kind },
+      })
+      if (sErr || !slot?.signedUrl) throw new Error(sErr ?? 'Could not prepare the upload')
 
-      const res = await fetch(`${SB}/storage/v1/object/product-media/${path}`, {
-        method: 'POST',
-        headers: {
-          apikey: ANON,
-          Authorization: `Bearer ${ANON}`,
-          'Content-Type': file.type,
-        },
+      const put = await fetch(`${SB}/storage/v1${slot.signedUrl}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
         body: file,
       })
-      if (!res.ok) throw new Error(`Upload failed (${res.status})`)
+      if (!put.ok) throw new Error(`Upload failed (${put.status})`)
 
       const { error } = await callFunction(`admin-products?id=${product.id}&media=1`, {
         method: 'POST', token: getAdminToken()!,
-        body: { kind, storage_path: path, alt_text: product.name },
+        body: { kind, storage_path: slot.path, alt_text: product.name },
       })
       if (error) throw new Error(error)
-      toast.success({ title: `${kind === 'video' ? 'Video' : 'Image'} added` })
+
+      toast.success({ title: kind === 'video' ? 'Video added' : 'Photo added' })
       load()
     } catch (e) {
       toast.error({ title: 'Could not add that file', body: (e as Error).message })
@@ -238,8 +259,15 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              {/* Media */}
+              {/* Media. Added here, after the product exists, because a file
+                  needs something to belong to. */}
               <div className="flex flex-wrap items-center gap-2 mt-3">
+                {p.product_media.length === 0 && (
+                  <p className="w-full text-xs text-ink-3 mb-1 leading-relaxed">
+                    No pictures yet — add at least one, it is the first thing a
+                    customer looks at.
+                  </p>
+                )}
                 {p.product_media.map(m => (
                   <div key={m.id} className="relative w-16 h-16 rounded-lg overflow-hidden bg-surface-2 group">
                     {m.kind === 'image' ? (
@@ -256,11 +284,17 @@ export default function AdminProductsPage() {
                     </button>
                   </div>
                 ))}
+                {/* Says what it takes. "+ photo" hid the fact that videos
+                    work at all, and a 64px square reads as a thumbnail rather
+                    than as the way to add one. */}
                 <label className={cx(
-                  'w-16 h-16 rounded-lg border border-dashed border-line grid place-items-center',
-                  'text-2xs text-ink-3 cursor-pointer hover:border-ink/30 hover:text-ink-2 transition-colors',
+                  'min-w-[104px] h-16 px-3 rounded-lg border border-dashed border-line',
+                  'grid place-items-center text-2xs text-center leading-tight',
+                  'text-ink-2 cursor-pointer hover:border-ink/40 hover:text-ink transition-colors',
                   uploading === p.id && 'opacity-50 pointer-events-none')}>
-                  {uploading === p.id ? '…' : '+ photo'}
+                  {uploading === p.id
+                    ? 'Uploading…'
+                    : <span>+ Add photo<br /><span className="text-ink-3">or video</span></span>}
                   <input type="file" accept="image/*,video/*" className="sr-only"
                     onChange={e => { const f = e.target.files?.[0]; if (f) upload(p, f); e.target.value = '' }} />
                 </label>
